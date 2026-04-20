@@ -119,5 +119,16 @@
     "recentMatches": "Derniers matchs",
     "upcomingMatches": "Prochains matchs",
     "news": "Actualites du club"
+  },
+  "videos": {
+    "title": "Videos",
+    "noVideos": "Aucune video"
+  },
+  "pages": {
+    "about": "A propos",
+    "contact": "Contact",
+    "legal": "Mentions legales",
+    "privacy": "Politique de confidentialite",
+    "noContent": "Contenu en preparation"
   }
 }
