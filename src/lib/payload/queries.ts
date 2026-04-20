@@ -181,3 +181,57 @@ export async function searchArticles(
     depth: 2,
   });
 }
+
+export async function getCompetitions(locale: string) {
+  const payload = await getPayloadClient();
+  return payload.find({
+    collection: "competitions",
+    locale,
+    limit: 50,
+    sort: "name",
+    depth: 1,
+  });
+}
+
+export async function getCompetitionBySlug(slug: string, locale: string) {
+  const payload = await getPayloadClient();
+  const result = await payload.find({
+    collection: "competitions",
+    where: { slug: { equals: slug } },
+    locale,
+    limit: 1,
+    depth: 1,
+  });
+  return result.docs[0] || null;
+}
+
+export async function getClubBySlug(slug: string, locale: string) {
+  const payload = await getPayloadClient();
+  const result = await payload.find({
+    collection: "clubs",
+    where: { slug: { equals: slug } },
+    locale,
+    limit: 1,
+    depth: 1,
+  });
+  return result.docs[0] || null;
+}
+
+export async function getArticlesByCompetition(
+  competitionCategoryId: string | number,
+  locale: string,
+  limit: number = 6,
+) {
+  const payload = await getPayloadClient();
+  return payload.find({
+    collection: "articles",
+    where: {
+      categories: { equals: competitionCategoryId },
+      status: { equals: "published" },
+    },
+    locale,
+    limit,
+    sort: "-publishedAt",
+    depth: 2,
+  });
+}
