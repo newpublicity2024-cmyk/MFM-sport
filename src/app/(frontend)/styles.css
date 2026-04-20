@@ -1,164 +1,65 @@
-:root {
-  --font-mono: 'Roboto Mono', monospace;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-* {
-  box-sizing: border-box;
-}
+@layer base {
+  :root {
+    /* Backgrounds */
+    --background: 240 6% 6%;           /* #0E0E10 near-black */
+    --foreground: 0 0% 96%;            /* #F5F5F5 */
 
-html {
-  font-size: 18px;
-  line-height: 32px;
+    --card: 240 5% 11%;               /* #1A1A1D surface */
+    --card-foreground: 0 0% 96%;
 
-  background: rgb(0, 0, 0);
-  -webkit-font-smoothing: antialiased;
-}
+    --popover: 240 5% 11%;
+    --popover-foreground: 0 0% 96%;
 
-html,
-body,
-#app {
-  height: 100%;
-}
+    /* Brand */
+    --primary: 355 72% 49%;           /* #D92332 Moroccan red */
+    --primary-foreground: 0 0% 100%;
 
-body {
-  font-family: system-ui;
-  font-size: 18px;
-  line-height: 32px;
+    --secondary: 240 6% 14%;          /* #222226 elevated */
+    --secondary-foreground: 0 0% 96%;
 
-  margin: 0;
-  color: rgb(1000, 1000, 1000);
+    --muted: 240 6% 14%;
+    --muted-foreground: 220 9% 46%;   /* #6B7280 */
 
-  @media (max-width: 1024px) {
-    font-size: 15px;
-    line-height: 24px;
+    --accent: 37 91% 55%;             /* #F5A623 amber */
+    --accent-foreground: 0 0% 6%;
+
+    --destructive: 0 84% 60%;         /* #EF4444 */
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders */
+    --border: 0 0% 100% / 0.08;
+    --input: 0 0% 100% / 0.08;
+    --ring: 355 72% 49%;
+
+    --radius: 0.5rem;
+
+    /* Semantic — football-specific */
+    --win: 160 60% 45%;               /* #10B981 */
+    --loss: 0 84% 60%;                /* #EF4444 */
+    --draw: 38 92% 50%;               /* #F59E0B */
+    --live: 38 92% 50%;               /* #F59E0B */
+
+    /* Sidebar (Payload admin / shadcn default) */
+    --sidebar-background: 240 6% 6%;
+    --sidebar-foreground: 0 0% 96%;
+    --sidebar-primary: 355 72% 49%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 6% 14%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 0 0% 100% / 0.08;
+    --sidebar-ring: 355 72% 49%;
   }
 }
 
-img {
-  max-width: 100%;
-  height: auto;
-  display: block;
-}
-
-h1 {
-  margin: 40px 0;
-  font-size: 64px;
-  line-height: 70px;
-  font-weight: bold;
-
-  @media (max-width: 1024px) {
-    margin: 24px 0;
-    font-size: 42px;
-    line-height: 42px;
+@layer base {
+  * {
+    @apply border-border;
   }
-
-  @media (max-width: 768px) {
-    font-size: 38px;
-    line-height: 38px;
-  }
-
-  @media (max-width: 400px) {
-    font-size: 32px;
-    line-height: 32px;
-  }
-}
-
-p {
-  margin: 24px 0;
-
-  @media (max-width: 1024px) {
-    margin: calc(var(--base) * 0.75) 0;
-  }
-}
-
-a {
-  color: currentColor;
-
-  &:focus {
-    opacity: 0.8;
-    outline: none;
-  }
-
-  &:active {
-    opacity: 0.7;
-    outline: none;
-  }
-}
-
-svg {
-  vertical-align: middle;
-}
-
-.home {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  height: 100vh;
-  padding: 45px;
-  max-width: 1024px;
-  margin: 0 auto;
-  overflow: hidden;
-
-  @media (max-width: 400px) {
-    padding: 24px;
-  }
-
-  .content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    flex-grow: 1;
-
-    h1 {
-      text-align: center;
-    }
-  }
-
-  .links {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-
-    a {
-      text-decoration: none;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-    }
-
-    .admin {
-      color: rgb(0, 0, 0);
-      background: rgb(1000, 1000, 1000);
-      border: 1px solid rgb(0, 0, 0);
-    }
-
-    .docs {
-      color: rgb(1000, 1000, 1000);
-      background: rgb(0, 0, 0);
-      border: 1px solid rgb(1000, 1000, 1000);
-    }
-  }
-
-  .footer {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    @media (max-width: 1024px) {
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    p {
-      margin: 0;
-    }
-
-    .codeLink {
-      text-decoration: none;
-      padding: 0 0.5rem;
-      background: rgb(60, 60, 60);
-      border-radius: 4px;
-    }
+  body {
+    @apply bg-background text-foreground;
   }
 }
