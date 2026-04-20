@@ -38,3 +38,6 @@ next-env.d.ts
 
 # payload
 /src/migrations
+
+# test env (may contain secrets)
+test.env
