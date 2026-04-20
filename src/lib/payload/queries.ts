@@ -235,3 +235,23 @@ export async function getArticlesByCompetition(
     depth: 2,
   });
 }
+
+export async function getVideoArticles(
+  locale: string,
+  page: number = 1,
+  limit: number = 12,
+) {
+  const payload = await getPayloadClient();
+  return payload.find({
+    collection: "articles",
+    where: {
+      isVideo: { equals: true },
+      status: { equals: "published" },
+    },
+    locale,
+    page,
+    limit,
+    sort: "-publishedAt",
+    depth: 2,
+  });
+}
