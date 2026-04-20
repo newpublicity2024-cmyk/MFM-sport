@@ -1,0 +1,37 @@
+{
+  "nav": {
+    "home": "الرئيسية",
+    "news": "أخبار",
+    "competitions": "مسابقات",
+    "matches": "مباريات",
+    "videos": "فيديو"
+  },
+  "footer": {
+    "about": "من نحن",
+    "contact": "اتصل بنا",
+    "legal": "إشعار قانوني",
+    "privacy": "سياسة الخصوصية",
+    "rights": "جميع الحقوق محفوظة",
+    "followUs": "تابعنا"
+  },
+  "common": {
+    "loading": "جاري التحميل...",
+    "error": "حدث خطأ",
+    "readMore": "اقرأ المزيد",
+    "share": "مشاركة",
+    "language": "اللغة",
+    "search": "بحث"
+  },
+  "newsletter": {
+    "title": "اشترك في نشرتنا الإخبارية",
+    "subtitle": "احصل على آخر الأخبار مباشرة في بريدك",
+    "placeholder": "بريدك الإلكتروني",
+    "subscribe": "اشترك الآن",
+    "success": "تم الاشتراك بنجاح!"
+  },
+  "home": {
+    "topNews": "أهم الأخبار",
+    "latestNews": "آخر الأخبار",
+    "todayMatches": "مباريات اليوم"
+  }
+}

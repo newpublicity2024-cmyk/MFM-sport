@@ -1,0 +1,37 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "news": "Actualites",
+    "competitions": "Competitions",
+    "matches": "Matchs",
+    "videos": "Videos"
+  },
+  "footer": {
+    "about": "A propos",
+    "contact": "Contact",
+    "legal": "Mentions legales",
+    "privacy": "Politique de confidentialite",
+    "rights": "Tous droits reserves",
+    "followUs": "Suivez-nous"
+  },
+  "common": {
+    "loading": "Chargement...",
+    "error": "Une erreur est survenue",
+    "readMore": "Lire la suite",
+    "share": "Partager",
+    "language": "Langue",
+    "search": "Rechercher"
+  },
+  "newsletter": {
+    "title": "Inscrivez-vous a notre newsletter",
+    "subtitle": "Recevez les dernieres actualites directement dans votre boite",
+    "placeholder": "Votre email",
+    "subscribe": "S'inscrire",
+    "success": "Inscription reussie !"
+  },
+  "home": {
+    "topNews": "A la une",
+    "latestNews": "Dernieres actualites",
+    "todayMatches": "Matchs du jour"
+  }
+}
