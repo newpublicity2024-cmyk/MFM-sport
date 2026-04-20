@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Sans_Arabic } from "next/font/google";
 import React from "react";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./(frontend)/styles.css";
 
 const plexSans = IBM_Plex_Sans({
@@ -33,6 +35,8 @@ export default function RootLayout({
         className={`${plexSans.variable} ${plexArabic.variable} font-sans antialiased`}
       >
         {children}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
