@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NewsletterForm } from "@/components/newsletter/NewsletterForm";
 
 type Props = {
   locale: string;
@@ -56,6 +57,14 @@ export function Footer({ locale }: Props) {
                 {link.icon}
               </a>
             ))}
+          </div>
+
+          {/* Newsletter */}
+          <div>
+            <h3 className="text-sm font-medium mb-2">
+              {locale === "ar" ? "النشرة الإخبارية" : locale === "fr" ? "Newsletter" : "Newsletter"}
+            </h3>
+            <NewsletterForm locale={locale} />
           </div>
         </div>
 

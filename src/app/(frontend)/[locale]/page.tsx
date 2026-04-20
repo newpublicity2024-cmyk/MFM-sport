@@ -7,6 +7,7 @@ import { HeroSection } from "@/components/home/HeroSection";
 import { NewsSection } from "@/components/home/NewsSection";
 import { MatchList } from "@/components/football/MatchList";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -85,6 +86,10 @@ export default async function HomePage({ params }: Props) {
         viewAllText={tCommon("readMore")}
         columns={3}
       />
+
+      <div className="mt-10">
+        <NewsletterStrip locale={locale} />
+      </div>
     </div>
   );
 }
