@@ -33,5 +33,36 @@
     "topNews": "Top News",
     "latestNews": "Latest News",
     "todayMatches": "Today's Matches"
+  },
+  "article": {
+    "by": "By",
+    "publishedOn": "Published on",
+    "views": "views",
+    "relatedNews": "Related News",
+    "tags": "Tags",
+    "shareArticle": "Share Article",
+    "videoArticle": "Video Article",
+    "allArticles": "All Articles",
+    "noArticles": "No articles found"
+  },
+  "author": {
+    "articles": "Articles",
+    "bio": "Biography",
+    "followOn": "Follow on"
+  },
+  "search": {
+    "title": "Search",
+    "placeholder": "Search articles...",
+    "results": "Results for",
+    "noResults": "No results found",
+    "searching": "Searching..."
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page"
+  },
+  "category": {
+    "allIn": "All articles in"
   }
 }

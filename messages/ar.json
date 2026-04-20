@@ -33,5 +33,36 @@
     "topNews": "أهم الأخبار",
     "latestNews": "آخر الأخبار",
     "todayMatches": "مباريات اليوم"
+  },
+  "article": {
+    "by": "بقلم",
+    "publishedOn": "نشر في",
+    "views": "مشاهدة",
+    "relatedNews": "أخبار ذات صلة",
+    "tags": "الوسوم",
+    "shareArticle": "شارك المقال",
+    "videoArticle": "مقال فيديو",
+    "allArticles": "جميع المقالات",
+    "noArticles": "لا توجد مقالات"
+  },
+  "author": {
+    "articles": "مقالات",
+    "bio": "نبذة",
+    "followOn": "تابع على"
+  },
+  "search": {
+    "title": "البحث",
+    "placeholder": "ابحث عن مقالات...",
+    "results": "نتائج البحث عن",
+    "noResults": "لم يتم العثور على نتائج",
+    "searching": "جاري البحث..."
+  },
+  "pagination": {
+    "previous": "السابق",
+    "next": "التالي",
+    "page": "صفحة"
+  },
+  "category": {
+    "allIn": "جميع المقالات في"
   }
 }

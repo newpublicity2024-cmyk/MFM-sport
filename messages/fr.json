@@ -33,5 +33,36 @@
     "topNews": "A la une",
     "latestNews": "Dernieres actualites",
     "todayMatches": "Matchs du jour"
+  },
+  "article": {
+    "by": "Par",
+    "publishedOn": "Publie le",
+    "views": "vues",
+    "relatedNews": "Articles connexes",
+    "tags": "Tags",
+    "shareArticle": "Partager l'article",
+    "videoArticle": "Article video",
+    "allArticles": "Tous les articles",
+    "noArticles": "Aucun article"
+  },
+  "author": {
+    "articles": "Articles",
+    "bio": "Biographie",
+    "followOn": "Suivre sur"
+  },
+  "search": {
+    "title": "Recherche",
+    "placeholder": "Rechercher des articles...",
+    "results": "Resultats pour",
+    "noResults": "Aucun resultat",
+    "searching": "Recherche en cours..."
+  },
+  "pagination": {
+    "previous": "Precedent",
+    "next": "Suivant",
+    "page": "Page"
+  },
+  "category": {
+    "allIn": "Tous les articles dans"
   }
 }
