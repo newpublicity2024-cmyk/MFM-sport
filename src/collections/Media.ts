@@ -1,16 +1,41 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig } from "payload";
 
 export const Media: CollectionConfig = {
-  slug: 'media',
-  access: {
-    read: () => true,
+  slug: "media",
+  upload: {
+    mimeTypes: ["image/jpeg", "image/png", "image/webp", "image/svg+xml"],
+    imageSizes: [
+      {
+        name: "thumbnail",
+        width: 300,
+        height: 200,
+        position: "centre",
+      },
+      {
+        name: "card",
+        width: 600,
+        height: 400,
+        position: "centre",
+      },
+      {
+        name: "hero",
+        width: 1200,
+        height: 630,
+        position: "centre",
+      },
+    ],
   },
   fields: [
     {
-      name: 'alt',
-      type: 'text',
+      name: "alt",
+      type: "text",
       required: true,
+      localized: true,
+    },
+    {
+      name: "caption",
+      type: "text",
+      localized: true,
     },
   ],
-  upload: true,
-}
+};
