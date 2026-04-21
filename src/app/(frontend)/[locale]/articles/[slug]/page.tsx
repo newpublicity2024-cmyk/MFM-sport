@@ -20,15 +20,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const article = await getArticleBySlug(slug, locale);
   if (!article) return { title: "Not Found" };
 
+  const heroImageUrl = getImageUrl(article.featuredImage, "hero");
+  const category = article.categories?.[0];
+  const categoryName = category && typeof category === "object" ? category.name : "";
+
+  const ogImage = heroImageUrl
+    || `${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/og?title=${encodeURIComponent(article.title)}&category=${encodeURIComponent(categoryName)}`;
+
   return {
     title: `${article.title} | MFM Sport`,
     description: article.excerpt || undefined,
     openGraph: {
       title: article.title,
       description: article.excerpt || undefined,
-      images: getImageUrl(article.featuredImage, "hero")
-        ? [{ url: getImageUrl(article.featuredImage, "hero")! }]
-        : undefined,
+      images: [{ url: ogImage, width: 1200, height: 630 }],
     },
   };
 }
