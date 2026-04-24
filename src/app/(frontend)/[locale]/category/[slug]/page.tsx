@@ -43,7 +43,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
       {result.docs.length > 0 ? (
         <>
-          <ArticleGrid articles={result.docs} locale={locale} columns={3} />
+          <ArticleGrid articles={result.docs} locale={locale} columns={3} withAds />
           <Pagination
             currentPage={result.page!}
             totalPages={result.totalPages}
