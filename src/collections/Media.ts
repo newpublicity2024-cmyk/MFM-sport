@@ -37,5 +37,15 @@ export const Media: CollectionConfig = {
       type: "text",
       localized: true,
     },
+    {
+      name: "wpUrl",
+      type: "text",
+      unique: true,
+      index: true,
+      admin: {
+        description: "Original WordPress URL - used for dedup during migration.",
+        readOnly: true,
+      },
+    },
   ],
 };
