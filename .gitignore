@@ -41,3 +41,6 @@ next-env.d.ts
 
 # test env (may contain secrets)
 test.env
+
+# mcp config (contains API keys)
+.mcp.json
