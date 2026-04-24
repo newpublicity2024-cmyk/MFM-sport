@@ -36,8 +36,10 @@ export function AdSlot({ slotName, format, loading = "lazy", className = "" }: P
     const push = () => {
       if (pushedRef.current) return;
       try {
-        const arr = ((window.adsbygoogle as unknown[]) ||= []);
-        (arr as unknown[]).push({});
+        if (!window.adsbygoogle) {
+          window.adsbygoogle = [];
+        }
+        (window.adsbygoogle as { push: (obj: object) => void }).push({});
         pushedRef.current = true;
       } catch {
         // script blocked or not yet loaded — fail silently

@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 const messages = { ads: { label: "Advertisement" } };
 
@@ -10,38 +10,51 @@ function renderWithIntl(ui: React.ReactElement) {
   );
 }
 
+function mockSlots(clientId: string, slotId: string) {
+  vi.doMock("@/lib/ads/slots", () => ({
+    AD_SLOTS: {
+      headerLeaderboard: slotId,
+      inArticleMid: "",
+      inArticleBottom: "",
+      inGrid: "",
+      stickyMobile: "",
+    },
+    ADSENSE_CLIENT_ID: clientId,
+    isAdsEnabled: () => Boolean(clientId),
+  }));
+}
+
 describe("AdSlot", () => {
   beforeEach(() => {
     vi.resetModules();
     (window as any).adsbygoogle = [];
   });
 
+  afterEach(() => {
+    vi.doUnmock("@/lib/ads/slots");
+    vi.unstubAllEnvs();
+  });
+
   it("renders nothing when ADSENSE_CLIENT_ID is empty", async () => {
-    vi.stubEnv("NEXT_PUBLIC_ADSENSE_CLIENT_ID", "");
+    mockSlots("", "9999");
     const { AdSlot } = await import("../AdSlot");
     const { container } = renderWithIntl(
       <AdSlot slotName="headerLeaderboard" format="leaderboard" />,
     );
     expect(container.firstChild).toBeNull();
-    vi.unstubAllEnvs();
   });
 
   it("renders nothing when slot ID is empty", async () => {
-    vi.stubEnv("NEXT_PUBLIC_ADSENSE_CLIENT_ID", "ca-pub-0000");
-    const slotsModule = await import("../../../lib/ads/slots");
-    slotsModule.AD_SLOTS.headerLeaderboard = "";
+    mockSlots("ca-pub-0000", "");
     const { AdSlot } = await import("../AdSlot");
     const { container } = renderWithIntl(
       <AdSlot slotName="headerLeaderboard" format="leaderboard" />,
     );
     expect(container.firstChild).toBeNull();
-    vi.unstubAllEnvs();
   });
 
   it("renders ins element with ad-client and ad-slot attributes when configured", async () => {
-    vi.stubEnv("NEXT_PUBLIC_ADSENSE_CLIENT_ID", "ca-pub-1234");
-    const slotsModule = await import("../../../lib/ads/slots");
-    slotsModule.AD_SLOTS.headerLeaderboard = "9999";
+    mockSlots("ca-pub-1234", "9999");
     const { AdSlot } = await import("../AdSlot");
     renderWithIntl(
       <AdSlot slotName="headerLeaderboard" format="leaderboard" loading="eager" />,
@@ -52,13 +65,10 @@ describe("AdSlot", () => {
     expect(ins).toHaveAttribute("data-ad-slot", "9999");
     expect(ins).toHaveAttribute("data-ad-format", "auto");
     expect(ins).toHaveAttribute("data-full-width-responsive", "true");
-    vi.unstubAllEnvs();
   });
 
   it("calls adsbygoogle.push immediately when loading is eager", async () => {
-    vi.stubEnv("NEXT_PUBLIC_ADSENSE_CLIENT_ID", "ca-pub-1234");
-    const slotsModule = await import("../../../lib/ads/slots");
-    slotsModule.AD_SLOTS.headerLeaderboard = "9999";
+    mockSlots("ca-pub-1234", "9999");
     const pushSpy = vi.fn();
     (window as any).adsbygoogle = { push: pushSpy };
     const { AdSlot } = await import("../AdSlot");
@@ -66,6 +76,5 @@ describe("AdSlot", () => {
       <AdSlot slotName="headerLeaderboard" format="leaderboard" loading="eager" />,
     );
     expect(pushSpy).toHaveBeenCalledTimes(1);
-    vi.unstubAllEnvs();
   });
 });
