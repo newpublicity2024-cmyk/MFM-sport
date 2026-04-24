@@ -77,4 +77,50 @@ describe("AdSlot", () => {
     );
     expect(pushSpy).toHaveBeenCalledTimes(1);
   });
+
+  it("defers push until the slot intersects the viewport when loading is lazy", async () => {
+    mockSlots("ca-pub-1234", "9999");
+    const pushSpy = vi.fn();
+    (window as any).adsbygoogle = { push: pushSpy };
+
+    let capturedCallback: IntersectionObserverCallback | null = null;
+    class MockIntersectionObserver {
+      constructor(cb: IntersectionObserverCallback) {
+        capturedCallback = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+      takeRecords() {
+        return [];
+      }
+    }
+    const originalIO = (globalThis as any).IntersectionObserver;
+    (globalThis as any).IntersectionObserver = MockIntersectionObserver;
+
+    try {
+      const { AdSlot } = await import("../AdSlot");
+      renderWithIntl(
+        <AdSlot slotName="headerLeaderboard" format="leaderboard" loading="lazy" />,
+      );
+
+      expect(pushSpy).not.toHaveBeenCalled();
+      expect(capturedCallback).not.toBeNull();
+
+      capturedCallback!(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+
+      expect(pushSpy).toHaveBeenCalledTimes(1);
+
+      capturedCallback!(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      expect(pushSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      (globalThis as any).IntersectionObserver = originalIO;
+    }
+  });
 });

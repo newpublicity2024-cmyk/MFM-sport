@@ -8,6 +8,9 @@ const DISMISS_KEY = "ad-sticky-dismissed";
 
 export function StickyMobileAd() {
   const t = useTranslations("common");
+  // SSR renders null (dismissed=true) so the bar cannot flash before we've
+  // read sessionStorage. Trade-off: a one-frame pop-in after hydration
+  // instead of a flash that would clear on dismissed tabs.
   const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
