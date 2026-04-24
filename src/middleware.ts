@@ -16,7 +16,10 @@ function isLegacyCandidate(pathname: string): boolean {
 export default async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // Check if this might be a legacy WordPress URL
+  if (pathname.startsWith("/admin") || pathname.startsWith("/api")) {
+    return NextResponse.next();
+  }
+
   if (isLegacyCandidate(pathname)) {
     try {
       const lookupUrl = new URL(
@@ -44,5 +47,5 @@ export default async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next|_vercel|.*\\..*).*)"],
+  matcher: ["/((?!_next|_vercel|admin|api|.*\\..*).*)"],
 };
