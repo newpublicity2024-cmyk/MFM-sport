@@ -81,18 +81,20 @@ Gated on `NEXT_PUBLIC_ADSENSE_CLIENT_ID`. Dev and staging stay clean by omitting
 
 ### Rendering model
 
-All ad slots are **client components** — `window.adsbygoogle.push()` is browser-only. Server components pass `slotId` as a prop. No hydration mismatch.
+All ad slots are **client components** — `window.adsbygoogle.push()` is browser-only. Server components pass a `slotName` prop that the component resolves against the central registry (`src/lib/ads/slots.ts`). No hydration mismatch.
 
 ### Component API
 
 ```tsx
 <AdSlot
-  slotId="1234567890"
+  slotName="headerLeaderboard" | "inArticleMid" | "inArticleBottom" | "inGrid" | "stickyMobile"
   format="leaderboard" | "in-article" | "in-grid" | "sticky-mobile"
   loading="eager" | "lazy"
   className?: string
 />
 ```
+
+`slotName` resolves to an AdSense slot ID via `AD_SLOTS[slotName]` in the registry. Slot IDs are centralized so they can be filled in one place after AdSense approval.
 
 One component, four visual presets. Label + border applied internally via `<AdLabel>`.
 
