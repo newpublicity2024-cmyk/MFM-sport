@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CategoryBadge } from "@/components/shared/CategoryBadge";
+import { ClickStopper } from "@/components/shared/ClickStopper";
 import { formatDate, getImageUrl, getImageAlt } from "@/lib/utils";
 
 type Props = {
@@ -47,13 +48,13 @@ export function ArticleCard({ article, locale, size = "default" }: Props) {
           )}
           {/* Category badge overlay */}
           {category && typeof category === "object" && (
-            <div className="absolute bottom-2 start-2" onClick={(e) => e.preventDefault()}>
+            <ClickStopper className="absolute bottom-2 start-2">
               <CategoryBadge
                 name={category.name}
                 slug={category.slug}
                 locale={locale}
               />
-            </div>
+            </ClickStopper>
           )}
           {/* Video indicator */}
           {article.isVideo && (

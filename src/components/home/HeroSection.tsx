@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CategoryBadge } from "@/components/shared/CategoryBadge";
+import { ClickStopper } from "@/components/shared/ClickStopper";
 import { formatDate, getImageUrl, getImageAlt } from "@/lib/utils";
 import { ArticleCard } from "@/components/articles/ArticleCard";
 
@@ -40,9 +41,9 @@ export function HeroSection({ featured, secondary, locale }: Props) {
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
           <div className="absolute bottom-0 start-0 end-0 p-6">
             {category && typeof category === "object" && (
-              <div className="mb-2" onClick={(e) => e.preventDefault()}>
+              <ClickStopper className="mb-2">
                 <CategoryBadge name={category.name} slug={category.slug} locale={locale} />
-              </div>
+              </ClickStopper>
             )}
             <h2 className="text-2xl md:text-3xl font-bold text-white leading-tight line-clamp-3">
               {featured.title}
