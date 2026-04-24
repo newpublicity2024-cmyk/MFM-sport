@@ -8,7 +8,8 @@ import { getTranslations } from "next-intl/server";
 import { getArticleBySlug, getRelatedArticles } from "@/lib/payload/queries";
 import { formatDate, formatTime, getImageUrl, getImageAlt } from "@/lib/utils";
 import { CategoryBadge } from "@/components/shared/CategoryBadge";
-import { ArticleBody } from "@/components/articles/ArticleBody";
+import { InArticleAdInjector } from "@/components/articles/InArticleAdInjector";
+import { AdSlot } from "@/components/ads/AdSlot";
 import { RelatedArticles } from "@/components/articles/RelatedArticles";
 import { Badge } from "@/components/ui/badge";
 
@@ -138,7 +139,7 @@ export default async function ArticlePage({ params }: Props) {
       )}
 
       {/* Body */}
-      <ArticleBody content={article.body} />
+      <InArticleAdInjector content={article.body} />
 
       {/* Tags */}
       {article.tags && article.tags.length > 0 && (
@@ -159,6 +160,8 @@ export default async function ArticlePage({ params }: Props) {
           </div>
         </div>
       )}
+
+      <AdSlot slotName="inArticleBottom" format="in-article" loading="lazy" className="my-8" />
 
       {/* Related articles */}
       {related && related.docs.length > 0 && (
