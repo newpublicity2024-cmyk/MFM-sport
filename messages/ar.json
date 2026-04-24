@@ -34,6 +34,9 @@
     "latestNews": "آخر الأخبار",
     "todayMatches": "مباريات اليوم"
   },
+  "ads": {
+    "label": "إعلان"
+  },
   "article": {
     "by": "بقلم",
     "publishedOn": "نشر في",
