@@ -5,6 +5,7 @@ import { routing, type Locale } from "@/i18n/routing";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { AdSlot } from "@/components/ads/AdSlot";
+import { StickyMobileAd } from "@/components/ads/StickyMobileAd";
 
 type Props = {
   children: React.ReactNode;
@@ -37,6 +38,7 @@ export default async function LocaleLayout({ children, params }: Props) {
         <Header locale={locale} />
         <main className="flex-1">{children}</main>
         <Footer locale={locale} />
+        <StickyMobileAd />
       </NextIntlClientProvider>
     </div>
   );
