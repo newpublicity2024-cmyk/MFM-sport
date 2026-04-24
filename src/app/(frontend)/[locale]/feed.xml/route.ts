@@ -1,5 +1,6 @@
 import { getPayload } from "payload";
 import configPromise from "@payload-config";
+import type { Config } from "@/payload-types";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://mfmsport.ma";
 
@@ -34,7 +35,7 @@ export async function GET(
   const articles = await payload.find({
     collection: "articles",
     where: { status: { equals: "published" } },
-    locale,
+    locale: locale as Config["locale"],
     limit: 50,
     sort: "-publishedAt",
     depth: 1,

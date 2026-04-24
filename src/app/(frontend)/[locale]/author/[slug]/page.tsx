@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { Config } from "@/payload-types";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
@@ -14,7 +15,7 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
-  const author = await getAuthorBySlug(slug, locale);
+  const author = await getAuthorBySlug(slug, locale as Config["locale"]);
   if (!author) return { title: "Not Found" };
   return {
     title: `${author.name} | MFM Sport`,
@@ -27,11 +28,11 @@ export default async function AuthorPage({ params, searchParams }: Props) {
   const { page } = await searchParams;
   setRequestLocale(locale);
 
-  const author = await getAuthorBySlug(slug, locale);
+  const author = await getAuthorBySlug(slug, locale as Config["locale"]);
   if (!author) notFound();
 
   const currentPage = Math.max(1, parseInt(page || "1", 10));
-  const result = await getArticlesByAuthor(author.id, locale, currentPage);
+  const result = await getArticlesByAuthor(author.id, locale as Config["locale"], currentPage);
   const t = await getTranslations({ locale, namespace: "author" });
 
   return (

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { Config } from "@/payload-types";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
@@ -17,7 +18,7 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
-  const club = await getClubBySlug(slug, locale);
+  const club = await getClubBySlug(slug, locale as Config["locale"]);
   if (!club) return { title: "Not Found" };
   return { title: `${club.name} | MFM Sport` };
 }
@@ -26,7 +27,7 @@ export default async function ClubPage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const club = await getClubBySlug(slug, locale);
+  const club = await getClubBySlug(slug, locale as Config["locale"]);
   if (!club) notFound();
 
   const tClub = await getTranslations({ locale, namespace: "club" });
@@ -45,7 +46,7 @@ export default async function ClubPage({ params }: Props) {
       where: {
         status: { equals: "published" },
       },
-      locale,
+      locale: locale as Config["locale"],
       limit: 6,
       sort: "-publishedAt",
       depth: 2,

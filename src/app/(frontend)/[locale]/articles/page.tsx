@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { Config } from "@/payload-types";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
 import { getArticles } from "@/lib/payload/queries";
@@ -24,7 +25,7 @@ export default async function ArticlesPage({ params, searchParams }: Props) {
   setRequestLocale(locale);
 
   const currentPage = Math.max(1, parseInt(page || "1", 10));
-  const result = await getArticles({ locale, page: currentPage, limit: 12 });
+  const result = await getArticles({ locale: locale as Config["locale"], page: currentPage, limit: 12 });
   const t = await getTranslations({ locale, namespace: "article" });
 
   return (

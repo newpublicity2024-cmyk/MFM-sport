@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { Config } from "@/payload-types";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
@@ -13,7 +14,7 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
-  const tag = await getTagBySlug(slug, locale);
+  const tag = await getTagBySlug(slug, locale as Config["locale"]);
   if (!tag) return { title: "Not Found" };
   return {
     title: `${tag.name} | MFM Sport`,
@@ -25,11 +26,11 @@ export default async function TagPage({ params, searchParams }: Props) {
   const { page } = await searchParams;
   setRequestLocale(locale);
 
-  const tag = await getTagBySlug(slug, locale);
+  const tag = await getTagBySlug(slug, locale as Config["locale"]);
   if (!tag) notFound();
 
   const currentPage = Math.max(1, parseInt(page || "1", 10));
-  const result = await getArticlesByTag(tag.id, locale, currentPage);
+  const result = await getArticlesByTag(tag.id, locale as Config["locale"], currentPage);
   const t = await getTranslations({ locale, namespace: "article" });
 
   return (

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { Config } from "@/payload-types";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
 import { searchArticles } from "@/lib/payload/queries";
@@ -29,7 +30,7 @@ export default async function SearchPage({ params, searchParams }: Props) {
   const currentPage = Math.max(1, parseInt(page || "1", 10));
 
   const result = query
-    ? await searchArticles(query, locale, currentPage)
+    ? await searchArticles(query, locale as Config["locale"], currentPage)
     : null;
 
   return (

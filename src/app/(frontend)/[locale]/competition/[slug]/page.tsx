@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { Config } from "@/payload-types";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
@@ -16,7 +17,7 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
-  const competition = await getCompetitionBySlug(slug, locale);
+  const competition = await getCompetitionBySlug(slug, locale as Config["locale"]);
   if (!competition) return { title: "Not Found" };
   return { title: `${competition.name} | MFM Sport` };
 }
@@ -25,7 +26,7 @@ export default async function CompetitionPage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const competition = await getCompetitionBySlug(slug, locale);
+  const competition = await getCompetitionBySlug(slug, locale as Config["locale"]);
   if (!competition) notFound();
 
   const tComp = await getTranslations({ locale, namespace: "competition" });
@@ -39,7 +40,7 @@ export default async function CompetitionPage({ params }: Props) {
     getFixturesByLeague(leagueId, season, { last: 10 }),
     getFixturesByLeague(leagueId, season, { next: 10 }),
     competition.category && typeof competition.category === "object"
-      ? getArticlesByCompetition(competition.category.id, locale, 6)
+      ? getArticlesByCompetition(competition.category.id, locale as Config["locale"], 6)
       : Promise.resolve({ docs: [] }),
   ]);
 

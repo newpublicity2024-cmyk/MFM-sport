@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { Config } from "@/payload-types";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
 import { getArticles } from "@/lib/payload/queries";
@@ -36,7 +37,7 @@ export default async function HomePage({ params }: Props) {
   const todayFixtures = await getFixturesByDate(today);
 
   // Fetch latest articles for the homepage
-  const latest = await getArticles({ locale, page: 1, limit: 16 });
+  const latest = await getArticles({ locale: locale as Config["locale"], page: 1, limit: 16 });
   const articles = latest.docs;
 
   // Split articles: 1 hero + 3 secondary + rest

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { Config } from "@/payload-types";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -17,7 +18,7 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
-  const article = await getArticleBySlug(slug, locale);
+  const article = await getArticleBySlug(slug, locale as Config["locale"]);
   if (!article) return { title: "Not Found" };
 
   const heroImageUrl = getImageUrl(article.featuredImage, "hero");
@@ -42,7 +43,7 @@ export default async function ArticlePage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const article = await getArticleBySlug(slug, locale);
+  const article = await getArticleBySlug(slug, locale as Config["locale"]);
   if (!article) notFound();
 
   const t = await getTranslations({ locale, namespace: "article" });
@@ -56,7 +57,7 @@ export default async function ArticlePage({ params }: Props) {
     .filter(Boolean);
 
   const related = categoryIds.length > 0
-    ? await getRelatedArticles(article.id, categoryIds, locale, 4)
+    ? await getRelatedArticles(article.id, categoryIds, locale as Config["locale"], 4)
     : null;
 
   const author = typeof article.author === "object" ? article.author : null;

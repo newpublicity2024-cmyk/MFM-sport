@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { Config } from "@/payload-types";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
 import { getVideoArticles } from "@/lib/payload/queries";
@@ -23,7 +24,7 @@ export default async function VideosPage({ params, searchParams }: Props) {
 
   const t = await getTranslations({ locale, namespace: "videos" });
   const currentPage = Math.max(1, parseInt(page || "1", 10));
-  const result = await getVideoArticles(locale, currentPage);
+  const result = await getVideoArticles(locale as Config["locale"], currentPage);
 
   return (
     <div className="container mx-auto px-4 py-8">

@@ -69,6 +69,15 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    categories: Category;
+    tags: Tag;
+    authors: Author;
+    articles: Article;
+    competitions: Competition;
+    clubs: Club;
+    subscribers: Subscriber;
+    pages: Page;
+    redirects: Redirect;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -78,18 +87,27 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    categories: CategoriesSelect<false> | CategoriesSelect<true>;
+    tags: TagsSelect<false> | TagsSelect<true>;
+    authors: AuthorsSelect<false> | AuthorsSelect<true>;
+    articles: ArticlesSelect<false> | ArticlesSelect<true>;
+    competitions: CompetitionsSelect<false> | CompetitionsSelect<true>;
+    clubs: ClubsSelect<false> | ClubsSelect<true>;
+    subscribers: SubscribersSelect<false> | SubscribersSelect<true>;
+    pages: PagesSelect<false> | PagesSelect<true>;
+    redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
   };
   db: {
-    defaultIDType: string;
+    defaultIDType: number;
   };
-  fallbackLocale: null;
+  fallbackLocale: ('false' | 'none' | 'null') | false | null | ('ar' | 'fr' | 'en') | ('ar' | 'fr' | 'en')[];
   globals: {};
   globalsSelect: {};
-  locale: null;
+  locale: 'ar' | 'fr' | 'en';
   widgets: {
     collections: CollectionsWidget;
   };
@@ -122,7 +140,9 @@ export interface UserAuthOperations {
  * via the `definition` "users".
  */
 export interface User {
-  id: string;
+  id: number;
+  name: string;
+  role: 'admin' | 'editor' | 'viewer';
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -147,8 +167,9 @@ export interface User {
  * via the `definition` "media".
  */
 export interface Media {
-  id: string;
+  id: number;
   alt: string;
+  caption?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -160,13 +181,242 @@ export interface Media {
   height?: number | null;
   focalX?: number | null;
   focalY?: number | null;
+  sizes?: {
+    thumbnail?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+    card?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+    hero?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categories".
+ */
+export interface Category {
+  id: number;
+  name: string;
+  /**
+   * URL-friendly identifier (ASCII, lowercase, hyphens)
+   */
+  slug: string;
+  /**
+   * Parent category for hierarchical structure
+   */
+  parent?: (number | null) | Category;
+  description?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tags".
+ */
+export interface Tag {
+  id: number;
+  name: string;
+  slug: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "authors".
+ */
+export interface Author {
+  id: number;
+  name: string;
+  slug: string;
+  bio?: string | null;
+  avatar?: (number | null) | Media;
+  social?: {
+    twitter?: string | null;
+    facebook?: string | null;
+    instagram?: string | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "articles".
+ */
+export interface Article {
+  id: number;
+  title: string;
+  /**
+   * URL-friendly identifier (ASCII, lowercase, hyphens)
+   */
+  slug: string;
+  /**
+   * Short summary for cards and SEO meta description
+   */
+  excerpt?: string | null;
+  body: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  featuredImage?: (number | null) | Media;
+  author: number | Author;
+  categories?: (number | Category)[] | null;
+  tags?: (number | Tag)[] | null;
+  status: 'draft' | 'published';
+  publishedAt?: string | null;
+  /**
+   * Mark as video article (shows YouTube embed)
+   */
+  isVideo?: boolean | null;
+  /**
+   * YouTube video URL (e.g., https://youtube.com/watch?v=...)
+   */
+  videoUrl?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "competitions".
+ */
+export interface Competition {
+  id: number;
+  name: string;
+  slug: string;
+  logo?: (number | null) | Media;
+  type: 'league' | 'cup';
+  country?: string | null;
+  /**
+   * League ID from API-Football (e.g., 39 for Premier League)
+   */
+  apiFootballId: number;
+  /**
+   * Current season year (e.g., 2025 for 2025-26)
+   */
+  season: number;
+  /**
+   * Links this competition to a news category for article filtering
+   */
+  category?: (number | null) | Category;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "clubs".
+ */
+export interface Club {
+  id: number;
+  name: string;
+  slug: string;
+  logo?: (number | null) | Media;
+  /**
+   * Team ID from API-Football
+   */
+  apiFootballId?: number | null;
+  competitions?: (number | Competition)[] | null;
+  venue?: string | null;
+  country?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "subscribers".
+ */
+export interface Subscriber {
+  id: number;
+  email: string;
+  locale: 'ar' | 'fr' | 'en';
+  status: 'pending' | 'confirmed' | 'unsubscribed';
+  confirmToken?: string | null;
+  confirmedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages".
+ */
+export interface Page {
+  id: number;
+  title: string;
+  /**
+   * URL identifier: about, contact, legal, privacy
+   */
+  slug: string;
+  body: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Legacy URL redirects (WordPress migration)
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "redirects".
+ */
+export interface Redirect {
+  id: number;
+  /**
+   * Old path (e.g., /%D8%A3%D8%AE%D8%A8%D8%A7%D8%B1-old-slug/)
+   */
+  from: string;
+  /**
+   * New path (e.g., /ar/articles/new-slug)
+   */
+  to: string;
+  statusCode: '301' | '302';
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
-  id: string;
+  id: number;
   key: string;
   data:
     | {
@@ -183,20 +433,56 @@ export interface PayloadKv {
  * via the `definition` "payload-locked-documents".
  */
 export interface PayloadLockedDocument {
-  id: string;
+  id: number;
   document?:
     | ({
         relationTo: 'users';
-        value: string | User;
+        value: number | User;
       } | null)
     | ({
         relationTo: 'media';
-        value: string | Media;
+        value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'categories';
+        value: number | Category;
+      } | null)
+    | ({
+        relationTo: 'tags';
+        value: number | Tag;
+      } | null)
+    | ({
+        relationTo: 'authors';
+        value: number | Author;
+      } | null)
+    | ({
+        relationTo: 'articles';
+        value: number | Article;
+      } | null)
+    | ({
+        relationTo: 'competitions';
+        value: number | Competition;
+      } | null)
+    | ({
+        relationTo: 'clubs';
+        value: number | Club;
+      } | null)
+    | ({
+        relationTo: 'subscribers';
+        value: number | Subscriber;
+      } | null)
+    | ({
+        relationTo: 'pages';
+        value: number | Page;
+      } | null)
+    | ({
+        relationTo: 'redirects';
+        value: number | Redirect;
       } | null);
   globalSlug?: string | null;
   user: {
     relationTo: 'users';
-    value: string | User;
+    value: number | User;
   };
   updatedAt: string;
   createdAt: string;
@@ -206,10 +492,10 @@ export interface PayloadLockedDocument {
  * via the `definition` "payload-preferences".
  */
 export interface PayloadPreference {
-  id: string;
+  id: number;
   user: {
     relationTo: 'users';
-    value: string | User;
+    value: number | User;
   };
   key?: string | null;
   value?:
@@ -229,7 +515,7 @@ export interface PayloadPreference {
  * via the `definition` "payload-migrations".
  */
 export interface PayloadMigration {
-  id: string;
+  id: number;
   name?: string | null;
   batch?: number | null;
   updatedAt: string;
@@ -240,6 +526,8 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  name?: T;
+  role?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -263,6 +551,7 @@ export interface UsersSelect<T extends boolean = true> {
  */
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
+  caption?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -274,6 +563,167 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+  sizes?:
+    | T
+    | {
+        thumbnail?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        card?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        hero?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+      };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categories_select".
+ */
+export interface CategoriesSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  parent?: T;
+  description?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tags_select".
+ */
+export interface TagsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "authors_select".
+ */
+export interface AuthorsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  bio?: T;
+  avatar?: T;
+  social?:
+    | T
+    | {
+        twitter?: T;
+        facebook?: T;
+        instagram?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "articles_select".
+ */
+export interface ArticlesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  excerpt?: T;
+  body?: T;
+  featuredImage?: T;
+  author?: T;
+  categories?: T;
+  tags?: T;
+  status?: T;
+  publishedAt?: T;
+  isVideo?: T;
+  videoUrl?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "competitions_select".
+ */
+export interface CompetitionsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  logo?: T;
+  type?: T;
+  country?: T;
+  apiFootballId?: T;
+  season?: T;
+  category?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "clubs_select".
+ */
+export interface ClubsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  logo?: T;
+  apiFootballId?: T;
+  competitions?: T;
+  venue?: T;
+  country?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "subscribers_select".
+ */
+export interface SubscribersSelect<T extends boolean = true> {
+  email?: T;
+  locale?: T;
+  status?: T;
+  confirmToken?: T;
+  confirmedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages_select".
+ */
+export interface PagesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  body?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "redirects_select".
+ */
+export interface RedirectsSelect<T extends boolean = true> {
+  from?: T;
+  to?: T;
+  statusCode?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

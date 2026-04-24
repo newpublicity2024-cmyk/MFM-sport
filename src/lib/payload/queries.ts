@@ -1,12 +1,15 @@
 import { getPayload } from "payload";
 import configPromise from "@payload-config";
+import type { Config } from "@/payload-types";
+
+type Locale = Config["locale"];
 
 export async function getPayloadClient() {
   return getPayload({ config: configPromise });
 }
 
 export async function getArticles(options: {
-  locale: string;
+  locale: Locale;
   page?: number;
   limit?: number;
   sort?: string;
@@ -25,7 +28,7 @@ export async function getArticles(options: {
   });
 }
 
-export async function getArticleBySlug(slug: string, locale: string) {
+export async function getArticleBySlug(slug: string, locale: Locale) {
   const payload = await getPayloadClient();
   const result = await payload.find({
     collection: "articles",
@@ -42,7 +45,7 @@ export async function getArticleBySlug(slug: string, locale: string) {
 
 export async function getArticlesByCategory(
   categoryId: string | number,
-  locale: string,
+  locale: Locale,
   page: number = 1,
   limit: number = 12,
 ) {
@@ -63,7 +66,7 @@ export async function getArticlesByCategory(
 
 export async function getArticlesByTag(
   tagId: string | number,
-  locale: string,
+  locale: Locale,
   page: number = 1,
   limit: number = 12,
 ) {
@@ -84,7 +87,7 @@ export async function getArticlesByTag(
 
 export async function getArticlesByAuthor(
   authorId: string | number,
-  locale: string,
+  locale: Locale,
   page: number = 1,
   limit: number = 12,
 ) {
@@ -106,7 +109,7 @@ export async function getArticlesByAuthor(
 export async function getRelatedArticles(
   articleId: string | number,
   categoryIds: (string | number)[],
-  locale: string,
+  locale: Locale,
   limit: number = 4,
 ) {
   const payload = await getPayloadClient();
@@ -124,7 +127,7 @@ export async function getRelatedArticles(
   });
 }
 
-export async function getCategoryBySlug(slug: string, locale: string) {
+export async function getCategoryBySlug(slug: string, locale: Locale) {
   const payload = await getPayloadClient();
   const result = await payload.find({
     collection: "categories",
@@ -135,7 +138,7 @@ export async function getCategoryBySlug(slug: string, locale: string) {
   return result.docs[0] || null;
 }
 
-export async function getTagBySlug(slug: string, locale: string) {
+export async function getTagBySlug(slug: string, locale: Locale) {
   const payload = await getPayloadClient();
   const result = await payload.find({
     collection: "tags",
@@ -146,7 +149,7 @@ export async function getTagBySlug(slug: string, locale: string) {
   return result.docs[0] || null;
 }
 
-export async function getAuthorBySlug(slug: string, locale: string) {
+export async function getAuthorBySlug(slug: string, locale: Locale) {
   const payload = await getPayloadClient();
   const result = await payload.find({
     collection: "authors",
@@ -160,7 +163,7 @@ export async function getAuthorBySlug(slug: string, locale: string) {
 
 export async function searchArticles(
   query: string,
-  locale: string,
+  locale: Locale,
   page: number = 1,
   limit: number = 12,
 ) {
@@ -182,7 +185,7 @@ export async function searchArticles(
   });
 }
 
-export async function getCompetitions(locale: string) {
+export async function getCompetitions(locale: Locale) {
   const payload = await getPayloadClient();
   return payload.find({
     collection: "competitions",
@@ -193,7 +196,7 @@ export async function getCompetitions(locale: string) {
   });
 }
 
-export async function getCompetitionBySlug(slug: string, locale: string) {
+export async function getCompetitionBySlug(slug: string, locale: Locale) {
   const payload = await getPayloadClient();
   const result = await payload.find({
     collection: "competitions",
@@ -205,7 +208,7 @@ export async function getCompetitionBySlug(slug: string, locale: string) {
   return result.docs[0] || null;
 }
 
-export async function getClubBySlug(slug: string, locale: string) {
+export async function getClubBySlug(slug: string, locale: Locale) {
   const payload = await getPayloadClient();
   const result = await payload.find({
     collection: "clubs",
@@ -219,7 +222,7 @@ export async function getClubBySlug(slug: string, locale: string) {
 
 export async function getArticlesByCompetition(
   competitionCategoryId: string | number,
-  locale: string,
+  locale: Locale,
   limit: number = 6,
 ) {
   const payload = await getPayloadClient();
@@ -237,7 +240,7 @@ export async function getArticlesByCompetition(
 }
 
 export async function getVideoArticles(
-  locale: string,
+  locale: Locale,
   page: number = 1,
   limit: number = 12,
 ) {
@@ -256,7 +259,7 @@ export async function getVideoArticles(
   });
 }
 
-export async function getPageBySlug(slug: string, locale: string) {
+export async function getPageBySlug(slug: string, locale: Locale) {
   const payload = await getPayloadClient();
   const result = await payload.find({
     collection: "pages",
