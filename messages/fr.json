@@ -20,7 +20,8 @@
     "readMore": "Lire la suite",
     "share": "Partager",
     "language": "Langue",
-    "search": "Rechercher"
+    "search": "Rechercher",
+    "close": "Fermer"
   },
   "newsletter": {
     "title": "Inscrivez-vous a notre newsletter",
@@ -33,6 +34,9 @@
     "topNews": "A la une",
     "latestNews": "Dernieres actualites",
     "todayMatches": "Matchs du jour"
+  },
+  "ads": {
+    "label": "Publicité"
   },
   "article": {
     "by": "Par",

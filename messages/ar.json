@@ -20,7 +20,8 @@
     "readMore": "اقرأ المزيد",
     "share": "مشاركة",
     "language": "اللغة",
-    "search": "بحث"
+    "search": "بحث",
+    "close": "إغلاق"
   },
   "newsletter": {
     "title": "اشترك في نشرتنا الإخبارية",
@@ -33,6 +34,9 @@
     "topNews": "أهم الأخبار",
     "latestNews": "آخر الأخبار",
     "todayMatches": "مباريات اليوم"
+  },
+  "ads": {
+    "label": "إعلان"
   },
   "article": {
     "by": "بقلم",

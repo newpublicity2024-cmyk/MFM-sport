@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Sans_Arabic } from "next/font/google";
+import Script from "next/script";
 import React from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -24,6 +25,8 @@ export const metadata: Metadata = {
   description: "Moroccan Football News Portal",
 };
 
+const adsenseClientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
+
 export default function FrontendLayout({ children }: { children: React.ReactNode }) {
   return (
     <html suppressHydrationWarning>
@@ -31,6 +34,14 @@ export default function FrontendLayout({ children }: { children: React.ReactNode
         className={`${plexSans.variable} ${plexArabic.variable} font-sans antialiased`}
       >
         {children}
+        {adsenseClientId && (
+          <Script
+            id="adsbygoogle"
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}`}
+            strategy="afterInteractive"
+            crossOrigin="anonymous"
+          />
+        )}
         <Analytics />
         <SpeedInsights />
       </body>

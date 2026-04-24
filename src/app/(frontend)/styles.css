@@ -63,3 +63,7 @@
     @apply bg-background text-foreground;
   }
 }
+
+.ad-container:has(ins.adsbygoogle[data-ad-status="unfilled"]) {
+  display: none;
+}
