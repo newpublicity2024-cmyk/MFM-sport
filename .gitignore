@@ -44,3 +44,6 @@ test.env
 
 # mcp config (contains API keys)
 .mcp.json
+
+# WordPress export archives (too large for GitHub)
+mfmsport.WordPress.*.xml
