@@ -33,3 +33,7 @@ export async function getFixturesByTeam(
   if (options?.next) params.next = options.next;
   return fetchApi<ApiFixture>("/fixtures", params, 60);
 }
+
+export async function getLiveFixtures(): Promise<ApiFixture[]> {
+  return fetchApi<ApiFixture>("/fixtures", { live: "all" }, 30);
+}
