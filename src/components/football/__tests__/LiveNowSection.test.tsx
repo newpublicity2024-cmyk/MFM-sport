@@ -17,7 +17,7 @@ vi.mock("@/components/football/MatchList", () => ({
   ),
 }));
 
-const messages = { match: { liveNow: "Live Now" }, common: { readMore: "View all" } };
+const messages = { match: { live: "LIVE", liveNow: "Live Now" }, common: { readMore: "View all" } };
 
 function renderWithIntl(ui: React.ReactElement) {
   return render(

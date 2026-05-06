@@ -6,7 +6,7 @@ export async function getFixturesByDate(date: string): Promise<ApiFixture[]> {
 }
 
 export async function getFixtureById(id: number): Promise<ApiFixture | null> {
-  const fixtures = await fetchApi<ApiFixture>("/fixtures", { id }, 60);
+  const fixtures = await fetchApi<ApiFixture>("/fixtures", { id }, 30);
   return fixtures[0] || null;
 }
 
