@@ -11,6 +11,13 @@ export const Clubs: CollectionConfig = {
     { name: "slug", type: "text", required: true, unique: true },
     { name: "logo", type: "upload", relationTo: "media" },
     {
+      name: "logoUrl",
+      type: "text",
+      admin: {
+        description: "Optional external logo URL fallback (used when 'logo' upload is empty). Useful for seeded preview data referencing API-Football's CDN.",
+      },
+    },
+    {
       name: "apiFootballId",
       type: "number",
       unique: true,
