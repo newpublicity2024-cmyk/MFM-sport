@@ -7,7 +7,7 @@ import { getTranslations } from "next-intl/server";
 import { getClubBySlug } from "@/lib/payload/queries";
 import { getPayloadClient } from "@/lib/payload/queries";
 import { getFixturesByTeam } from "@/lib/api-football/fixtures";
-import { getEntityLogoUrl, getImageUrl } from "@/lib/utils";
+import { getEntityLogoUrl } from "@/lib/utils";
 import { MatchList } from "@/components/football/MatchList";
 import { ArticleGrid } from "@/components/articles/ArticleGrid";
 import { SectionHeader } from "@/components/shared/SectionHeader";
