@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Facebook, Instagram, Twitter, Youtube } from "lucide-react";
 import { NewsletterForm } from "@/components/newsletter/NewsletterForm";
 
 type Props = {
@@ -6,10 +7,10 @@ type Props = {
 };
 
 const socialLinks = [
-  { name: "Facebook", href: "https://facebook.com/mfmsport", icon: "FB" },
-  { name: "Instagram", href: "https://instagram.com/mfmsport", icon: "IG" },
-  { name: "X", href: "https://x.com/mfmsport", icon: "X" },
-  { name: "YouTube", href: "https://youtube.com/mfmsport", icon: "YT" },
+  { name: "Facebook", href: "https://facebook.com/mfmsport", Icon: Facebook },
+  { name: "Instagram", href: "https://instagram.com/mfmsport", Icon: Instagram },
+  { name: "X", href: "https://x.com/mfmsport", Icon: Twitter },
+  { name: "YouTube", href: "https://youtube.com/mfmsport", Icon: Youtube },
 ];
 
 export function Footer({ locale }: Props) {
@@ -45,16 +46,16 @@ export function Footer({ locale }: Props) {
 
           {/* Social */}
           <div className="flex gap-3">
-            {socialLinks.map((link) => (
+            {socialLinks.map(({ name, href, Icon }) => (
               <a
-                key={link.name}
-                href={link.href}
+                key={name}
+                href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center w-8 h-8 rounded-md bg-secondary text-muted-foreground hover:text-primary hover:bg-secondary/80 transition-colors text-xs font-bold"
-                aria-label={link.name}
+                className="flex items-center justify-center w-9 h-9 rounded-md bg-secondary text-muted-foreground hover:text-primary hover:bg-secondary/80 transition-colors"
+                aria-label={name}
               >
-                {link.icon}
+                <Icon className="h-4 w-4" aria-hidden />
               </a>
             ))}
           </div>
