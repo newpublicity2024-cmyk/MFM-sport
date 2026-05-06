@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Nav } from "./Nav";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -12,9 +13,15 @@ export function Header({ locale }: Props) {
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
         {/* Logo */}
-        <Link href={`/${locale}`} className="flex items-center gap-2">
-          <span className="text-xl font-bold text-primary">MFM</span>
-          <span className="text-xl font-bold text-foreground">Sport</span>
+        <Link href={`/${locale}`} className="flex items-center" aria-label="MFM Sport">
+          <Image
+            src="/images/logo.svg"
+            alt="MFM Sport"
+            width={120}
+            height={40}
+            priority
+            className="h-8 w-auto"
+          />
         </Link>
 
         {/* Desktop nav */}
