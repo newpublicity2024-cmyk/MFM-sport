@@ -3,7 +3,8 @@ import type { Config } from "@/payload-types";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
 import { getArticles } from "@/lib/payload/queries";
-import { getFixturesByDate } from "@/lib/api-football/fixtures";
+import { getFixturesByDate, getLiveFixtures } from "@/lib/api-football/fixtures";
+import { LiveNowSection } from "@/components/football/LiveNowSection";
 import { HeroSection } from "@/components/home/HeroSection";
 import { NewsSection } from "@/components/home/NewsSection";
 import { MatchList } from "@/components/football/MatchList";
@@ -34,7 +35,10 @@ export default async function HomePage({ params }: Props) {
   const tCommon = await getTranslations({ locale, namespace: "common" });
 
   const today = new Date().toISOString().split("T")[0];
-  const todayFixtures = await getFixturesByDate(today);
+  const [todayFixtures, liveFixtures] = await Promise.all([
+    getFixturesByDate(today),
+    getLiveFixtures(),
+  ]);
 
   // Fetch latest articles for the homepage
   const latest = await getArticles({ locale: locale as Config["locale"], page: 1, limit: 16 });
@@ -58,6 +62,8 @@ export default async function HomePage({ params }: Props) {
   return (
     <div className="container mx-auto px-4 py-6">
       <HeroSection featured={featured} secondary={secondary} locale={locale} />
+
+      <LiveNowSection initial={liveFixtures} locale={locale} />
 
       {todayFixtures.length > 0 && (
         <section className="mt-10">
