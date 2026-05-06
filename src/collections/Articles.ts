@@ -42,6 +42,13 @@ export const Articles: CollectionConfig = {
       relationTo: "media",
     },
     {
+      name: "featuredImageUrl",
+      type: "text",
+      admin: {
+        description: "Optional external image URL fallback (used when 'featuredImage' upload is empty). Used for preview seed data.",
+      },
+    },
+    {
       name: "author",
       type: "relationship",
       relationTo: "authors",
