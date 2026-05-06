@@ -60,6 +60,26 @@ async function findBySlug(
   return res.docs[0];
 }
 
+const TRANSLATIONS: Record<string, { fr: string; en: string }> = {
+  "el-botola": { fr: "Botola", en: "Botola" },
+  "continental": { fr: "Continental", en: "Continental" },
+  "europe": { fr: "Europe", en: "Europe" },
+  "world-cup-2026": { fr: "Coupe du Monde 2026", en: "World Cup 2026" },
+  "botola-pro-1-cat": { fr: "Botola Pro 1", en: "Botola Pro 1" },
+  "africa-cup-of-nations-cat": { fr: "CAN", en: "AFCON" },
+  "caf-champions-league-cat": { fr: "LDC Afrique", en: "CAF Champions League" },
+  "premier-league-cat": { fr: "Premier League", en: "Premier League" },
+  "la-liga-cat": { fr: "La Liga", en: "La Liga" },
+};
+
+async function updateCategoryLocales(payload: Payload, id: string | number, slug: string) {
+  const t = TRANSLATIONS[slug];
+  if (!t) return;
+  await payload.update({ collection: "categories", id, data: { name: t.fr }, locale: "fr", overrideAccess: true });
+  await payload.update({ collection: "categories", id, data: { name: t.en }, locale: "en", overrideAccess: true });
+  console.log(`  [localized fr+en] ${slug}`);
+}
+
 async function seedCategories(payload: Payload) {
   console.log("\n--- Seeding Categories ---");
 
@@ -76,6 +96,7 @@ async function seedCategories(payload: Payload) {
     if (existing) {
       parentMap.set(c.slug, existing.id);
       console.log(`  [skip] ${c.name} (${c.slug})`);
+      await updateCategoryLocales(payload, existing.id, c.slug);
       continue;
     }
     const created = await payload.create({
@@ -86,6 +107,7 @@ async function seedCategories(payload: Payload) {
     });
     parentMap.set(c.slug, created.id);
     console.log(`  [created] ${c.name} (${c.slug})`);
+    await updateCategoryLocales(payload, created.id, c.slug);
   }
 
   const children = [
@@ -100,9 +122,10 @@ async function seedCategories(payload: Payload) {
     const existing = await findBySlug(payload, "categories", c.slug);
     if (existing) {
       console.log(`  [skip] ${c.name} (${c.slug})`);
+      await updateCategoryLocales(payload, existing.id, c.slug);
       continue;
     }
-    await payload.create({
+    const created = await payload.create({
       collection: "categories",
       data: {
         name: c.name,
@@ -113,6 +136,7 @@ async function seedCategories(payload: Payload) {
       overrideAccess: true,
     });
     console.log(`  [created] ${c.name} (${c.slug})`);
+    await updateCategoryLocales(payload, created.id, c.slug);
   }
 }
 
