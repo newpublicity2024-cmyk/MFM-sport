@@ -7,7 +7,7 @@ import { getTranslations } from "next-intl/server";
 import { getClubBySlug } from "@/lib/payload/queries";
 import { getPayloadClient } from "@/lib/payload/queries";
 import { getFixturesByTeam } from "@/lib/api-football/fixtures";
-import { getImageUrl } from "@/lib/utils";
+import { getEntityLogoUrl, getImageUrl } from "@/lib/utils";
 import { MatchList } from "@/components/football/MatchList";
 import { ArticleGrid } from "@/components/articles/ArticleGrid";
 import { SectionHeader } from "@/components/shared/SectionHeader";
@@ -53,7 +53,7 @@ export default async function ClubPage({ params }: Props) {
     }),
   ]);
 
-  const logoUrl = getImageUrl(club.logo, "thumbnail");
+  const logoUrl = getEntityLogoUrl(club);
 
   return (
     <div className="container mx-auto px-4 py-8">

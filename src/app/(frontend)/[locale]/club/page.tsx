@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { getClubs } from "@/lib/payload/queries";
+import { getEntityLogoUrl } from "@/lib/utils";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -31,7 +32,7 @@ export default async function ClubsIndexPage({ params }: Props) {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {result.docs.map((club: any) => {
-            const logoUrl = club.logo?.url ?? null;
+            const logoUrl = getEntityLogoUrl(club);
             return (
               <Link
                 key={club.id}

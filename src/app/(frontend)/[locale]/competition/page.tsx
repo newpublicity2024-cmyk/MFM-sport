@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { getCompetitions } from "@/lib/payload/queries";
+import { getEntityLogoUrl } from "@/lib/utils";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -56,7 +57,7 @@ export default async function CompetitionsIndexPage({ params }: Props) {
 }
 
 function CompetitionCard({ competition, locale }: { competition: any; locale: string }) {
-  const logoUrl = competition.logo?.url ?? null;
+  const logoUrl = getEntityLogoUrl(competition);
   return (
     <Link
       href={`/${locale}/competition/${competition.slug}`}

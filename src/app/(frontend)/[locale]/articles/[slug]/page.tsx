@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
 import { getArticleBySlug, getRelatedArticles } from "@/lib/payload/queries";
-import { formatDate, formatTime, getImageUrl, getImageAlt } from "@/lib/utils";
+import { formatDate, formatTime, getArticleHeroUrl, getImageUrl, getImageAlt } from "@/lib/utils";
 import { CategoryBadge } from "@/components/shared/CategoryBadge";
 import { InArticleAdInjector } from "@/components/articles/InArticleAdInjector";
 import { AdSlot } from "@/components/ads/AdSlot";
@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const article = await getArticleBySlug(slug, locale as Config["locale"]);
   if (!article) return { title: "Not Found" };
 
-  const heroImageUrl = getImageUrl(article.featuredImage, "hero");
+  const heroImageUrl = getArticleHeroUrl(article, "hero");
   const category = article.categories?.[0];
   const categoryName = category && typeof category === "object" ? category.name : "";
 
@@ -49,7 +49,7 @@ export default async function ArticlePage({ params }: Props) {
 
   const t = await getTranslations({ locale, namespace: "article" });
 
-  const heroImage = getImageUrl(article.featuredImage, "hero");
+  const heroImage = getArticleHeroUrl(article, "hero");
   const heroAlt = getImageAlt(article.featuredImage);
 
   // Get related articles from same categories

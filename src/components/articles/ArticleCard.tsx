@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CategoryBadge } from "@/components/shared/CategoryBadge";
-import { formatDate, getImageUrl, getImageAlt } from "@/lib/utils";
+import { formatDate, getArticleHeroUrl, getImageAlt } from "@/lib/utils";
 
 type Props = {
   article: {
@@ -17,10 +17,7 @@ type Props = {
 };
 
 export function ArticleCard({ article, locale, size = "default" }: Props) {
-  const imageUrl = getImageUrl(
-    article.featuredImage,
-    size === "large" ? "hero" : "card",
-  );
+  const imageUrl = getArticleHeroUrl(article, size === "large" ? "hero" : "card");
   const imageAlt = getImageAlt(article.featuredImage);
   const category = article.categories?.[0];
 

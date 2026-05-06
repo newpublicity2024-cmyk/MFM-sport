@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CategoryBadge } from "@/components/shared/CategoryBadge";
-import { formatDate, getImageUrl, getImageAlt } from "@/lib/utils";
+import { formatDate, getArticleHeroUrl, getImageAlt } from "@/lib/utils";
 import { ArticleCard } from "@/components/articles/ArticleCard";
 
 type Props = {
@@ -11,7 +11,7 @@ type Props = {
 };
 
 export function HeroSection({ featured, secondary, locale }: Props) {
-  const heroImage = getImageUrl(featured.featuredImage, "hero");
+  const heroImage = getArticleHeroUrl(featured, "hero");
   const heroAlt = getImageAlt(featured.featuredImage);
   const category = featured.categories?.[0];
 
