@@ -44,8 +44,8 @@ export default async function ClubsIndexPage({ params }: Props) {
                   <div className="h-12 w-12 rounded bg-muted" aria-hidden />
                 )}
                 <span className="text-sm font-medium text-center">{club.name}</span>
-                {club.city && (
-                  <span className="text-xs text-muted-foreground">{club.city}</span>
+                {club.country && (
+                  <span className="text-xs text-muted-foreground">{club.country}</span>
                 )}
               </Link>
             );
