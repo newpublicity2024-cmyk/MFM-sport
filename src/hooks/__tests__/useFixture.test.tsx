@@ -68,4 +68,19 @@ describe("useFixture", () => {
     );
     await waitFor(() => expect(result.current.error).not.toBeNull());
   });
+
+  it("skips fetch when document is hidden", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ fixture: { fixture: { id: 7 } } }));
+    const original = Object.getOwnPropertyDescriptor(Document.prototype, "visibilityState");
+    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+    try {
+      renderHook(() => useFixture(7, { initial: { fixture: { id: 7 } } as never, intervalMs: 30000, enabled: true }));
+      await act(async () => {
+        vi.advanceTimersByTime(60000);
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      if (original) Object.defineProperty(Document.prototype, "visibilityState", original);
+    }
+  });
 });

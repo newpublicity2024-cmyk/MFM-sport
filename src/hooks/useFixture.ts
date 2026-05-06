@@ -22,23 +22,26 @@ export function useFixture(id: number, options: UseFixtureOptions): UseFixtureRe
   const [error, setError] = useState<Error | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const hadInitialRef = useRef<boolean>(initial !== null);
+  const isMountedRef = useRef(true);
 
   const fetchOnce = useCallback(async () => {
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
-    setIsLoading(true);
+    if (isMountedRef.current) setIsLoading(true);
     try {
       const res = await fetch(`/api/fixtures/${id}`, { signal: ctrl.signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = (await res.json()) as { fixture: ApiFixture };
+      if (!isMountedRef.current) return;
       setFixture(json.fixture);
       setError(null);
     } catch (e) {
       if ((e as Error).name === "AbortError") return;
+      if (!isMountedRef.current) return;
       setError(e as Error);
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) setIsLoading(false);
     }
   }, [id]);
 
@@ -56,6 +59,7 @@ export function useFixture(id: number, options: UseFixtureOptions): UseFixtureRe
     }, intervalMs);
 
     return () => {
+      isMountedRef.current = false;
       clearInterval(interval);
       abortRef.current?.abort();
     };
