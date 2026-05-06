@@ -11,11 +11,11 @@
  *
  * What it seeds (per SETUP_CHECKLIST.md):
  *   1. Categories — Arabic taxonomy matching old site
- *   2. Competitions — 12 leagues with API-Football IDs
- *   3. Clubs — Moroccan top-tier clubs with API-Football IDs
- *   4. Pages — 4 static pages (about/contact/legal/privacy) with placeholder body
+ *   2. Competitions — 12 leagues with API-Football IDs + logoUrl
+ *   3. Clubs — Moroccan top-tier clubs with API-Football IDs + logoUrl
+ *   4. Pages — 4 static pages (about/contact/legal/privacy) with real Arabic content
  *
- * Idempotent: safe to re-run. Skips anything that already exists by slug.
+ * Idempotent: safe to re-run. Skips or updates anything that already exists by slug.
  */
 
 import "dotenv/config";
@@ -24,34 +24,24 @@ import config from "../src/payload.config";
 
 type Payload = Awaited<ReturnType<typeof getPayload>>;
 
-function placeholderBody(arabicTitle: string) {
+function paragraphBody(paragraphs: string[], direction: "ltr" | "rtl" = "rtl") {
   return {
     root: {
       type: "root",
       format: "",
       indent: 0,
       version: 1,
-      direction: "rtl",
-      children: [
-        {
-          type: "paragraph",
-          format: "",
-          indent: 0,
-          version: 1,
-          direction: "rtl",
-          children: [
-            {
-              type: "text",
-              text: `${arabicTitle} — محتوى قيد الإعداد.`,
-              format: 0,
-              style: "",
-              mode: "normal",
-              detail: 0,
-              version: 1,
-            },
-          ],
-        },
-      ],
+      direction,
+      children: paragraphs.map((text) => ({
+        type: "paragraph",
+        format: "",
+        indent: 0,
+        version: 1,
+        direction,
+        children: [
+          { type: "text", text, format: 0, style: "", mode: "normal", detail: 0, version: 1 },
+        ],
+      })),
     },
   };
 }
@@ -155,7 +145,17 @@ async function seedCompetitions(payload: Payload) {
   for (const c of competitions) {
     const existing = await findBySlug(payload, "competitions", c.slug);
     if (existing) {
-      console.log(`  [skip] ${c.name}`);
+      if (!(existing as any).logoUrl) {
+        await payload.update({
+          collection: "competitions",
+          id: existing.id,
+          data: { logoUrl: `https://media.api-sports.io/football/leagues/${c.apiFootballId}.png` },
+          overrideAccess: true,
+        });
+        console.log(`  [updated logoUrl] ${c.name}`);
+      } else {
+        console.log(`  [skip] ${c.name}`);
+      }
       continue;
     }
 
@@ -175,6 +175,7 @@ async function seedCompetitions(payload: Payload) {
         season: c.season,
         country: c.country,
         category: categoryId as any,
+        logoUrl: `https://media.api-sports.io/football/leagues/${c.apiFootballId}.png`,
       },
       locale: "ar",
       overrideAccess: true,
@@ -194,17 +195,28 @@ async function seedClubs(payload: Payload) {
     apiFootballId: number;
     country: string;
     venue?: string;
+    logoUrl: string;
   }> = [
-    { name: "Wydad AC", slug: "wydad-ac", apiFootballId: 965, country: "Morocco", venue: "Stade Mohammed V" },
-    { name: "Raja CA", slug: "raja-ca", apiFootballId: 967, country: "Morocco", venue: "Stade Mohammed V" },
-    { name: "FAR Rabat", slug: "far-rabat", apiFootballId: 973, country: "Morocco", venue: "Stade El Bachir" },
-    { name: "RS Berkane", slug: "rs-berkane", apiFootballId: 981, country: "Morocco", venue: "Stade Municipal de Berkane" },
+    { name: "Wydad AC", slug: "wydad-ac", apiFootballId: 965, country: "Morocco", venue: "Stade Mohammed V", logoUrl: "https://media.api-sports.io/football/teams/965.png" },
+    { name: "Raja CA", slug: "raja-ca", apiFootballId: 967, country: "Morocco", venue: "Stade Mohammed V", logoUrl: "https://media.api-sports.io/football/teams/967.png" },
+    { name: "FAR Rabat", slug: "far-rabat", apiFootballId: 973, country: "Morocco", venue: "Stade El Bachir", logoUrl: "https://media.api-sports.io/football/teams/973.png" },
+    { name: "RS Berkane", slug: "rs-berkane", apiFootballId: 981, country: "Morocco", venue: "Stade Municipal de Berkane", logoUrl: "https://media.api-sports.io/football/teams/981.png" },
   ];
 
   for (const c of clubs) {
     const existing = await findBySlug(payload, "clubs", c.slug);
     if (existing) {
-      console.log(`  [skip] ${c.name}`);
+      if (!(existing as any).logoUrl) {
+        await payload.update({
+          collection: "clubs",
+          id: existing.id,
+          data: { logoUrl: c.logoUrl },
+          overrideAccess: true,
+        });
+        console.log(`  [updated logoUrl] ${c.name}`);
+      } else {
+        console.log(`  [skip] ${c.name}`);
+      }
       continue;
     }
     await payload.create({
@@ -215,6 +227,7 @@ async function seedClubs(payload: Payload) {
         apiFootballId: c.apiFootballId,
         country: c.country,
         venue: c.venue,
+        logoUrl: c.logoUrl,
         competitions: botola ? [botola.id as any] : [],
       },
       locale: "ar",
@@ -227,26 +240,53 @@ async function seedClubs(payload: Payload) {
 async function seedPages(payload: Payload) {
   console.log("\n--- Seeding Pages ---");
 
-  const pages = [
-    { title: "من نحن", slug: "about" },
-    { title: "اتصل بنا", slug: "contact" },
-    { title: "إشعار قانوني", slug: "legal" },
-    { title: "سياسة الخصوصية", slug: "privacy" },
+  const aboutBody = [
+    "MFM Sport هي بوابة مغربية متخصصة في كرة القدم، تقدم تغطية شاملة لأخبار البطولة الوطنية، المنتخبات المغربية والأفريقية، والدوريات الأوروبية الكبرى.",
+    "نهدف إلى تقديم محتوى تحريري عميق ومحدث لحظة بلحظة، مع تركيز خاص على الكرة المغربية وإنجازات أسود الأطلس.",
+    "فريقنا التحريري يعمل على مدار الساعة لتزويدكم بأحدث الأخبار، التحليلات، والإحصائيات من ملاعب كرة القدم حول العالم.",
+  ];
+
+  const contactBody = [
+    "للتواصل مع فريق التحرير: editorial@mfmsport.ma",
+    "للإعلان والشراكات: ads@mfmsport.ma",
+    "نرحب بمساهماتكم وأفكاركم. تابعونا أيضاً على شبكاتنا الاجتماعية للتفاعل المباشر.",
+  ];
+
+  const legalBody = [
+    "جميع المحتويات المنشورة على موقع MFM Sport محمية بموجب قوانين الملكية الفكرية المغربية والدولية.",
+    "يحظر إعادة نشر أي محتوى دون إذن خطي مسبق من إدارة الموقع.",
+    "MFM Sport غير مسؤولة عن محتوى المواقع الخارجية المرتبطة عبر روابط من هذا الموقع.",
+  ];
+
+  const privacyBody = [
+    "نحترم خصوصيتكم. لا نجمع بياناتكم الشخصية إلا عند الاشتراك في النشرة الإخبارية أو التواصل معنا.",
+    "نستخدم ملفات تعريف الارتباط (cookies) لتحسين تجربة التصفح وقياس أداء الموقع عبر Google Analytics وVercel Analytics.",
+    "يمكنكم طلب حذف بياناتكم في أي وقت عبر التواصل على privacy@mfmsport.ma.",
+  ];
+
+  const pages: Array<{ title: string; slug: string; body: string[] }> = [
+    { title: "من نحن", slug: "about", body: aboutBody },
+    { title: "اتصل بنا", slug: "contact", body: contactBody },
+    { title: "إشعار قانوني", slug: "legal", body: legalBody },
+    { title: "سياسة الخصوصية", slug: "privacy", body: privacyBody },
   ];
 
   for (const p of pages) {
     const existing = await findBySlug(payload, "pages", p.slug);
     if (existing) {
-      console.log(`  [skip] ${p.title}`);
+      await payload.update({
+        collection: "pages",
+        id: existing.id,
+        data: { body: paragraphBody(p.body, "rtl") as any },
+        locale: "ar",
+        overrideAccess: true,
+      });
+      console.log(`  [updated body] ${p.title}`);
       continue;
     }
     await payload.create({
       collection: "pages",
-      data: {
-        title: p.title,
-        slug: p.slug,
-        body: placeholderBody(p.title) as any,
-      },
+      data: { title: p.title, slug: p.slug, body: paragraphBody(p.body, "rtl") as any },
       locale: "ar",
       overrideAccess: true,
     });
