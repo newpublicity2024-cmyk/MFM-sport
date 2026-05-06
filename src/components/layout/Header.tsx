@@ -17,10 +17,9 @@ export function Header({ locale }: Props) {
           <Image
             src="/images/logo.svg"
             alt="MFM Sport"
-            width={120}
-            height={40}
+            width={144}
+            height={32}
             priority
-            className="h-8 w-auto"
           />
         </Link>
 
