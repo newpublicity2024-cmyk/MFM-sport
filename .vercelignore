@@ -1,0 +1,20 @@
+# Large local-only assets that should not be uploaded to Vercel
+mfmsport.WordPress.*.xml
+
+# Local QA artifacts from Playwright sessions
+qa-*.png
+qa-*.jpeg
+.playwright-mcp/
+
+# Test / dev outputs
+coverage/
+.next/cache/
+
+# Local Claude Code state
+.claude/
+
+# Documentation that doesn't need to ship
+docs/superpowers/
+
+# Local DB migrations (gitignored — not needed in Vercel build, push mode handles schema)
+src/migrations/
