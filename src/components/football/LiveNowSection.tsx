@@ -30,7 +30,7 @@ export function LiveNowSection({ initial, locale }: Props) {
         linkText={tCommon("readMore")}
       />
       <div className="flex items-center gap-2 mb-2 text-xs text-live">
-        <span className="inline-block h-2 w-2 rounded-full bg-live animate-pulse" />
+        <span aria-hidden="true" className="inline-block h-2 w-2 rounded-full bg-live animate-pulse" />
         {t("live")}
       </div>
       <MatchList fixtures={fixtures.slice(0, 10)} locale={locale} />
