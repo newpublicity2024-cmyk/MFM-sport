@@ -13,5 +13,22 @@ export const ChevronLeft = IconStub;
 export const Menu = IconStub;
 export const Search = IconStub;
 export const User = IconStub;
+export const Sun = IconStub;
+export const Moon = IconStub;
+export const Monitor = IconStub;
 
-export default { Check, ChevronRight, Circle, X, ChevronDown, ChevronUp, ChevronLeft, Menu, Search, User };
+export default {
+  Check,
+  ChevronRight,
+  Circle,
+  X,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  Menu,
+  Search,
+  User,
+  Sun,
+  Moon,
+  Monitor,
+};
