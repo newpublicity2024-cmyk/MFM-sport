@@ -5,29 +5,83 @@
 @layer base {
   :root {
     /* Backgrounds */
+    --background: 0 0% 99%;            /* near-white */
+    --foreground: 240 6% 10%;          /* near-black */
+
+    --card: 0 0% 100%;                 /* pure white surface */
+    --card-foreground: 240 6% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 6% 10%;
+
+    /* Brand — unchanged across themes */
+    --primary: 355 72% 49%;            /* #D92332 Moroccan red */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 5% 96%;           /* light gray surface */
+    --secondary-foreground: 240 6% 10%;
+
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;    /* readable gray on white */
+
+    --accent: 37 91% 55%;              /* #F5A623 amber */
+    --accent-foreground: 0 0% 6%;
+
+    --destructive: 0 84% 60%;          /* #EF4444 */
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders */
+    --border: 240 6% 90%;              /* light gray (solid, not alpha) */
+    --input: 240 6% 90%;
+    --ring: 355 72% 49%;
+
+    --radius: 0.5rem;
+
+    /* Semantic — football-specific (theme-agnostic hues) */
+    --win: 160 60% 45%;
+    --loss: 0 84% 60%;
+    --draw: 38 92% 50%;
+    --live: 38 92% 50%;
+
+    /* Scrim — image overlay; always dark regardless of theme */
+    --scrim: 240 6% 3%;
+
+    /* Sidebar (Payload admin / shadcn default) */
+    --sidebar-background: 0 0% 99%;
+    --sidebar-foreground: 240 6% 10%;
+    --sidebar-primary: 355 72% 49%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 5% 96%;
+    --sidebar-accent-foreground: 240 6% 10%;
+    --sidebar-border: 240 6% 90%;
+    --sidebar-ring: 355 72% 49%;
+  }
+
+  .dark {
+    /* Backgrounds */
     --background: 240 6% 6%;           /* #0E0E10 near-black */
     --foreground: 0 0% 96%;            /* #F5F5F5 */
 
-    --card: 240 5% 11%;               /* #1A1A1D surface */
+    --card: 240 5% 11%;                /* #1A1A1D surface */
     --card-foreground: 0 0% 96%;
 
     --popover: 240 5% 11%;
     --popover-foreground: 0 0% 96%;
 
-    /* Brand */
-    --primary: 355 72% 49%;           /* #D92332 Moroccan red */
+    /* Brand — unchanged */
+    --primary: 355 72% 49%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 6% 14%;          /* #222226 elevated */
+    --secondary: 240 6% 14%;           /* #222226 elevated */
     --secondary-foreground: 0 0% 96%;
 
     --muted: 240 6% 14%;
-    --muted-foreground: 220 9% 46%;   /* #6B7280 */
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 37 91% 55%;             /* #F5A623 amber */
+    --accent: 37 91% 55%;
     --accent-foreground: 0 0% 6%;
 
-    --destructive: 0 84% 60%;         /* #EF4444 */
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     /* Borders */
@@ -35,18 +89,7 @@
     --input: 0 0% 100% / 0.08;
     --ring: 355 72% 49%;
 
-    --radius: 0.5rem;
-
-    /* Semantic — football-specific */
-    --win: 160 60% 45%;               /* #10B981 */
-    --loss: 0 84% 60%;                /* #EF4444 */
-    --draw: 38 92% 50%;               /* #F59E0B */
-    --live: 38 92% 50%;               /* #F59E0B */
-
-    /* Scrim — for text-on-image overlays */
-    --scrim: 240 6% 3%;
-
-    /* Sidebar (Payload admin / shadcn default) */
+    /* Sidebar */
     --sidebar-background: 240 6% 6%;
     --sidebar-foreground: 0 0% 96%;
     --sidebar-primary: 355 72% 49%;
