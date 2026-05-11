@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { NewsletterForm } from "@/components/newsletter/NewsletterForm";
 
 type Props = {
@@ -46,8 +47,10 @@ const socialLinks = [
   { name: "YouTube", href: "https://youtube.com/mfmsport", Icon: YoutubeIcon },
 ];
 
-export function Footer({ locale }: Props) {
+export async function Footer({ locale }: Props) {
   const currentYear = new Date().getFullYear();
+  const t = await getTranslations({ locale, namespace: "footer" });
+  const tNewsletter = await getTranslations({ locale, namespace: "newsletter" });
 
   return (
     <footer className="border-t border-border bg-card">
@@ -64,16 +67,16 @@ export function Footer({ locale }: Props) {
           {/* Links */}
           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
             <Link href={`/${locale}/about`} className="hover:text-foreground transition-colors">
-              {locale === "ar" ? "من نحن" : locale === "fr" ? "A propos" : "About"}
+              {t("about")}
             </Link>
             <Link href={`/${locale}/contact`} className="hover:text-foreground transition-colors">
-              {locale === "ar" ? "اتصل بنا" : locale === "fr" ? "Contact" : "Contact"}
+              {t("contact")}
             </Link>
             <Link href={`/${locale}/legal`} className="hover:text-foreground transition-colors">
-              {locale === "ar" ? "إشعار قانوني" : locale === "fr" ? "Mentions legales" : "Legal"}
+              {t("legal")}
             </Link>
             <Link href={`/${locale}/privacy`} className="hover:text-foreground transition-colors">
-              {locale === "ar" ? "الخصوصية" : locale === "fr" ? "Confidentialite" : "Privacy"}
+              {t("privacy")}
             </Link>
           </div>
 
@@ -85,7 +88,7 @@ export function Footer({ locale }: Props) {
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center w-9 h-9 rounded-md bg-secondary text-muted-foreground hover:text-primary hover:bg-secondary/80 transition-colors"
+                className="flex items-center justify-center w-11 h-11 rounded-md bg-secondary text-muted-foreground hover:text-primary hover:bg-secondary/80 transition-colors"
                 aria-label={name}
               >
                 <Icon className="h-4 w-4" aria-hidden />
@@ -95,22 +98,14 @@ export function Footer({ locale }: Props) {
 
           {/* Newsletter */}
           <div>
-            <h3 className="text-sm font-medium mb-2">
-              {locale === "ar" ? "النشرة الإخبارية" : locale === "fr" ? "Newsletter" : "Newsletter"}
-            </h3>
+            <h3 className="text-sm font-medium mb-2">{tNewsletter("label")}</h3>
             <NewsletterForm locale={locale} />
           </div>
         </div>
 
         {/* Copyright */}
         <div className="mt-8 pt-4 border-t border-border text-center text-xs text-muted-foreground">
-          &copy; {currentYear} MFM Sport.{" "}
-          {locale === "ar"
-            ? "جميع الحقوق محفوظة"
-            : locale === "fr"
-              ? "Tous droits reserves"
-              : "All rights reserved"}
-          .
+          &copy; {currentYear} MFM Sport. {t("rights")}.
         </div>
       </div>
     </footer>

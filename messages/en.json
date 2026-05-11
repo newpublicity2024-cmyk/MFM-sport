@@ -25,6 +25,7 @@
     "close": "Close"
   },
   "newsletter": {
+    "label": "Newsletter",
     "title": "Subscribe to our newsletter",
     "subtitle": "Get the latest news directly in your inbox",
     "placeholder": "Your email",

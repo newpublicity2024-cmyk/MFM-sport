@@ -8,11 +8,11 @@
     "clubs": "Clubs"
   },
   "footer": {
-    "about": "A propos",
+    "about": "À propos",
     "contact": "Contact",
-    "legal": "Mentions legales",
-    "privacy": "Politique de confidentialite",
-    "rights": "Tous droits reserves",
+    "legal": "Mentions légales",
+    "privacy": "Politique de confidentialité",
+    "rights": "Tous droits réservés",
     "followUs": "Suivez-nous"
   },
   "common": {
@@ -25,8 +25,9 @@
     "close": "Fermer"
   },
   "newsletter": {
-    "title": "Inscrivez-vous a notre newsletter",
-    "subtitle": "Recevez les dernieres actualites directement dans votre boite",
+    "label": "Newsletter",
+    "title": "Inscrivez-vous à notre newsletter",
+    "subtitle": "Recevez les dernières actualités directement dans votre boîte",
     "placeholder": "Votre email",
     "subscribe": "S'inscrire",
     "success": "Inscription reussie !"
