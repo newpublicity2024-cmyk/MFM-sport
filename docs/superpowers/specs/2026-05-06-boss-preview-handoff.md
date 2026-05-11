@@ -38,6 +38,20 @@
 - Full club hubs with squads / player profiles (Phase 2 per `PROJECT_MEMORY.md` §10)
 - Live event timeline beyond the current scoreboard polling (already shipped on prior `feat/live-sports-surface`)
 
+## Round 2 polish (2026-05-11)
+
+Plan: [docs/superpowers/plans/2026-05-11-site-complete-polish.md](../plans/2026-05-11-site-complete-polish.md)
+
+- ESLint 9 flat config repaired (`pnpm lint` now runs)
+- FR + EN bodies seeded for About / Contact / Legal / Privacy — all three locale variants now render real copy
+- Localized 404 page added for `/ar`, `/fr`, `/en` — unknown routes hit a polished, RTL-aware page instead of Next's default (verified at `/ar/this-route-does-not-exist`, etc.)
+- Glyph-only favicon (32×32) replaces the unreadable scaled wordmark
+- Ligue 1 + FIFA WC 2026 crests verified rendering correctly on current seed (handoff note about placeholders was stale — both render fine)
+
+**Built from commit:** `2c7e6b8`
+**Preview URL:** Push pending — auto-deploy will trigger once main is pushed to origin
+**Push status:** failed: `Permission to newpublicity2024-cmyk/MFM-sport.git denied to Ben776ya` (HTTP 403) — same credentials issue noted below; user must configure correct GitHub account and push manually
+
 ## Known visual nits (not blockers)
 
 - Ligue 1 + FIFA World Cup 2026 competition cards show a generic placeholder where API-Football's CDN doesn't host their crest at the expected ID. Other 10 competitions render correctly.
