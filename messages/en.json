@@ -136,5 +136,11 @@
     "legal": "Legal Notice",
     "privacy": "Privacy Policy",
     "noContent": "Content coming soon"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "Sorry, the page you're looking for doesn't exist or has been moved.",
+    "backToHome": "Back to home",
+    "browseArticles": "Browse the latest news"
   }
 }

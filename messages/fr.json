@@ -136,5 +136,11 @@
     "legal": "Mentions legales",
     "privacy": "Politique de confidentialite",
     "noContent": "Contenu en preparation"
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "description": "Désolé, la page que vous cherchez n'existe pas ou a été déplacée.",
+    "backToHome": "Retour à l'accueil",
+    "browseArticles": "Parcourir les dernières actualités"
   }
 }
