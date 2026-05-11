@@ -54,9 +54,9 @@ export type ApiEvent = {
 
 export type ApiLineup = {
   team: { id: number; name: string; logo: string; colors: any };
-  formation: string;
-  startXI: { player: { id: number; name: string; number: number; pos: string } }[];
-  substitutes: { player: { id: number; name: string; number: number; pos: string } }[];
+  formation: string | null;
+  startXI: { player: { id: number; name: string; number: number; pos: string } }[] | null;
+  substitutes: { player: { id: number; name: string; number: number; pos: string } }[] | null;
   coach: { id: number | null; name: string | null; photo: string | null };
 };
 
