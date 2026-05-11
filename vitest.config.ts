@@ -13,6 +13,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@payload-config": path.resolve(__dirname, "./src/payload.config.ts"),
       "lucide-react": path.resolve(__dirname, "./src/test/mocks/lucide-react.ts"),
     },
   },

@@ -196,6 +196,17 @@ export async function getCompetitions(locale: Locale) {
   });
 }
 
+export async function getClubs(locale: Locale) {
+  const payload = await getPayloadClient();
+  return payload.find({
+    collection: "clubs",
+    locale,
+    limit: 50,
+    sort: "name",
+    depth: 1,
+  });
+}
+
 export async function getCompetitionBySlug(slug: string, locale: Locale) {
   const payload = await getPayloadClient();
   const result = await payload.find({

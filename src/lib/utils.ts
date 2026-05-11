@@ -38,3 +38,34 @@ export function getImageAlt(image: any): string {
   if (!image || typeof image === "string") return "";
   return image.alt || "";
 }
+
+type WithLogo = { logo?: unknown; logoUrl?: string | null };
+
+export function getEntityLogoUrl(entity: WithLogo | null | undefined): string | null {
+  if (!entity) return null;
+  const logo = entity.logo;
+  if (logo && typeof logo === "object" && "url" in logo && typeof (logo as { url: unknown }).url === "string") {
+    return (logo as { url: string }).url;
+  }
+  if (typeof entity.logoUrl === "string" && entity.logoUrl.length > 0) {
+    return entity.logoUrl;
+  }
+  return null;
+}
+
+type WithHero = { featuredImage?: unknown; featuredImageUrl?: string | null };
+
+export function getArticleHeroUrl(article: WithHero | null | undefined, size: "thumbnail" | "card" | "hero" = "hero"): string | null {
+  if (!article) return null;
+  const upload = article.featuredImage;
+  if (upload && typeof upload === "object") {
+    const u = upload as { url?: string; sizes?: Record<string, { url?: string }> };
+    const sized = u.sizes?.[size]?.url;
+    if (sized) return sized;
+    if (u.url) return u.url;
+  }
+  if (typeof article.featuredImageUrl === "string" && article.featuredImageUrl.length > 0) {
+    return article.featuredImageUrl;
+  }
+  return null;
+}

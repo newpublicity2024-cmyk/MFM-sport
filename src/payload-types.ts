@@ -291,6 +291,10 @@ export interface Article {
     [k: string]: unknown;
   };
   featuredImage?: (number | null) | Media;
+  /**
+   * Optional external image URL fallback (used when 'featuredImage' upload is empty). Used for preview seed data.
+   */
+  featuredImageUrl?: string | null;
   author: number | Author;
   categories?: (number | Category)[] | null;
   tags?: (number | Tag)[] | null;
@@ -316,6 +320,10 @@ export interface Competition {
   name: string;
   slug: string;
   logo?: (number | null) | Media;
+  /**
+   * Optional external logo URL fallback (used when 'logo' upload is empty). Useful for seeded preview data referencing API-Football's CDN.
+   */
+  logoUrl?: string | null;
   type: 'league' | 'cup';
   country?: string | null;
   /**
@@ -342,6 +350,10 @@ export interface Club {
   name: string;
   slug: string;
   logo?: (number | null) | Media;
+  /**
+   * Optional external logo URL fallback (used when 'logo' upload is empty). Useful for seeded preview data referencing API-Football's CDN.
+   */
+  logoUrl?: string | null;
   /**
    * Team ID from API-Football
    */
@@ -654,6 +666,7 @@ export interface ArticlesSelect<T extends boolean = true> {
   excerpt?: T;
   body?: T;
   featuredImage?: T;
+  featuredImageUrl?: T;
   author?: T;
   categories?: T;
   tags?: T;
@@ -672,6 +685,7 @@ export interface CompetitionsSelect<T extends boolean = true> {
   name?: T;
   slug?: T;
   logo?: T;
+  logoUrl?: T;
   type?: T;
   country?: T;
   apiFootballId?: T;
@@ -688,6 +702,7 @@ export interface ClubsSelect<T extends boolean = true> {
   name?: T;
   slug?: T;
   logo?: T;
+  logoUrl?: T;
   apiFootballId?: T;
   competitions?: T;
   venue?: T;

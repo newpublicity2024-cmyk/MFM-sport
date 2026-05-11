@@ -252,6 +252,12 @@ const DEMO_ARTICLES: DemoArticle[] = [
   },
 ];
 
+const SEED_IMAGE_COUNT = 12;
+function seedImageFor(index: number): string {
+  const n = String((index % SEED_IMAGE_COUNT) + 1).padStart(2, "0");
+  return `/images/seed/articles/${n}.jpg`;
+}
+
 async function seedArticles(payload: Payload, authorId: string | number) {
   console.log("\n--- Seeding demo articles ---");
   const categories = await payload.find({
@@ -266,8 +272,10 @@ async function seedArticles(payload: Payload, authorId: string | number) {
 
   const now = Date.now();
 
+  let articleIndex = 0;
   for (const a of DEMO_ARTICLES) {
     const slug = `${DEMO_PREFIX}${a.slugSuffix}`;
+    const featuredImageUrl = seedImageFor(articleIndex++);
     const existing = await payload.find({
       collection: "articles",
       where: { slug: { equals: slug } },
@@ -275,7 +283,17 @@ async function seedArticles(payload: Payload, authorId: string | number) {
       overrideAccess: true,
     });
     if (existing.docs[0]) {
-      console.log(`  [skip] ${slug}`);
+      if (!(existing.docs[0] as any).featuredImageUrl) {
+        await payload.update({
+          collection: "articles",
+          id: existing.docs[0].id,
+          data: { featuredImageUrl },
+          overrideAccess: true,
+        });
+        console.log(`  [backfilled image] ${slug}`);
+      } else {
+        console.log(`  [skip] ${slug}`);
+      }
       continue;
     }
 
@@ -293,6 +311,7 @@ async function seedArticles(payload: Payload, authorId: string | number) {
         categories: categoryId ? [categoryId as any] : [],
         status: "published",
         publishedAt,
+        featuredImageUrl,
       },
       locale: "ar",
       overrideAccess: true,

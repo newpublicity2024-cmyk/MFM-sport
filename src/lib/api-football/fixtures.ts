@@ -6,7 +6,7 @@ export async function getFixturesByDate(date: string): Promise<ApiFixture[]> {
 }
 
 export async function getFixtureById(id: number): Promise<ApiFixture | null> {
-  const fixtures = await fetchApi<ApiFixture>("/fixtures", { id }, 60);
+  const fixtures = await fetchApi<ApiFixture>("/fixtures", { id }, 30);
   return fixtures[0] || null;
 }
 
@@ -32,4 +32,8 @@ export async function getFixturesByTeam(
   if (options?.last) params.last = options.last;
   if (options?.next) params.next = options.next;
   return fetchApi<ApiFixture>("/fixtures", params, 60);
+}
+
+export async function getLiveFixtures(): Promise<ApiFixture[]> {
+  return fetchApi<ApiFixture>("/fixtures", { live: "all" }, 30);
 }

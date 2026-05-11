@@ -55,8 +55,7 @@ vi.mock("../MobileNav", () => ({
 describe("Header", () => {
   it("renders the MFM Sport logo", () => {
     render(<Header locale="ar" />);
-    expect(screen.getByText("MFM")).toBeInTheDocument();
-    expect(screen.getByText("Sport")).toBeInTheDocument();
+    expect(screen.getByAltText("MFM Sport")).toBeInTheDocument();
   });
 
   it("renders navigation links", () => {

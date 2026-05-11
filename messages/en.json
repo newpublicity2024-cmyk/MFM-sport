@@ -4,7 +4,8 @@
     "news": "News",
     "competitions": "Competitions",
     "matches": "Matches",
-    "videos": "Videos"
+    "videos": "Videos",
+    "clubs": "Clubs"
   },
   "footer": {
     "about": "About",
@@ -78,6 +79,7 @@
     "halfTime": "Half Time",
     "fullTime": "Full Time",
     "live": "LIVE",
+    "liveNow": "Live Now",
     "scheduled": "Scheduled",
     "finished": "Finished",
     "minute": "min",
@@ -134,5 +136,11 @@
     "legal": "Legal Notice",
     "privacy": "Privacy Policy",
     "noContent": "Content coming soon"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "Sorry, the page you're looking for doesn't exist or has been moved.",
+    "backToHome": "Back to home",
+    "browseArticles": "Browse the latest news"
   }
 }

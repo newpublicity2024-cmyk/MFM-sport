@@ -4,7 +4,8 @@
     "news": "Actualites",
     "competitions": "Competitions",
     "matches": "Matchs",
-    "videos": "Videos"
+    "videos": "Videos",
+    "clubs": "Clubs"
   },
   "footer": {
     "about": "A propos",
@@ -78,6 +79,7 @@
     "halfTime": "Mi-temps",
     "fullTime": "Termine",
     "live": "En direct",
+    "liveNow": "En direct",
     "scheduled": "Programme",
     "finished": "Termine",
     "minute": "min",
@@ -134,5 +136,11 @@
     "legal": "Mentions legales",
     "privacy": "Politique de confidentialite",
     "noContent": "Contenu en preparation"
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "description": "Désolé, la page que vous cherchez n'existe pas ou a été déplacée.",
+    "backToHome": "Retour à l'accueil",
+    "browseArticles": "Parcourir les dernières actualités"
   }
 }

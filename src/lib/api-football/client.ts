@@ -33,8 +33,16 @@ export async function fetchApi<T>(
 
   const data: ApiResponse<T[]> = await res.json();
 
-  if (data.errors && Object.keys(data.errors).length > 0) {
-    console.error("[API-Football] API errors:", data.errors);
+  const errs = data.errors;
+  const errEntries = Array.isArray(errs)
+    ? errs
+    : errs && typeof errs === "object"
+      ? Object.entries(errs).filter(([, v]) => v != null && v !== "")
+      : [];
+  if (errEntries.length > 0) {
+    console.error(
+      `[API-Football] errors for ${endpoint} ${JSON.stringify(params)}: ${JSON.stringify(errs)}`,
+    );
     return [] as T[];
   }
 
