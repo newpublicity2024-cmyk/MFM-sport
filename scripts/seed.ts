@@ -152,31 +152,38 @@ async function seedCompetitions(payload: Payload) {
     country?: string;
     categorySlug?: string;
   }> = [
-    { name: "Botola Pro 1", slug: "botola-pro-1", type: "league", apiFootballId: 200, season: 2025, country: "Morocco", categorySlug: "botola-pro-1-cat" },
-    { name: "CAF Champions League", slug: "caf-champions-league", type: "cup", apiFootballId: 12, season: 2025, categorySlug: "caf-champions-league-cat" },
-    { name: "CAF Confederation Cup", slug: "caf-confederation-cup", type: "cup", apiFootballId: 20, season: 2025 },
-    { name: "Africa Cup of Nations", slug: "africa-cup-of-nations", type: "cup", apiFootballId: 6, season: 2025, categorySlug: "africa-cup-of-nations-cat" },
-    { name: "FIFA World Cup 2026", slug: "world-cup-2026-competition", type: "cup", apiFootballId: 1, season: 2026, categorySlug: "world-cup-2026" },
-    { name: "Premier League", slug: "premier-league", type: "league", apiFootballId: 39, season: 2025, country: "England", categorySlug: "premier-league-cat" },
-    { name: "La Liga", slug: "la-liga", type: "league", apiFootballId: 140, season: 2025, country: "Spain", categorySlug: "la-liga-cat" },
-    { name: "Bundesliga", slug: "bundesliga", type: "league", apiFootballId: 78, season: 2025, country: "Germany" },
-    { name: "Serie A", slug: "serie-a", type: "league", apiFootballId: 135, season: 2025, country: "Italy" },
-    { name: "Ligue 1", slug: "ligue-1", type: "league", apiFootballId: 61, season: 2025, country: "France" },
-    { name: "UEFA Champions League", slug: "uefa-champions-league", type: "cup", apiFootballId: 2, season: 2025 },
-    { name: "UEFA Europa League", slug: "uefa-europa-league", type: "cup", apiFootballId: 3, season: 2025 },
+    { name: "Botola Pro 1", slug: "botola-pro-1", type: "league", apiFootballId: 200, season: 2024, country: "Morocco", categorySlug: "botola-pro-1-cat" },
+    { name: "CAF Champions League", slug: "caf-champions-league", type: "cup", apiFootballId: 12, season: 2024, categorySlug: "caf-champions-league-cat" },
+    { name: "CAF Confederation Cup", slug: "caf-confederation-cup", type: "cup", apiFootballId: 20, season: 2024 },
+    { name: "Africa Cup of Nations", slug: "africa-cup-of-nations", type: "cup", apiFootballId: 6, season: 2024, categorySlug: "africa-cup-of-nations-cat" },
+    { name: "FIFA World Cup 2026", slug: "world-cup-2026-competition", type: "cup", apiFootballId: 1, season: 2022, categorySlug: "world-cup-2026" },
+    { name: "Premier League", slug: "premier-league", type: "league", apiFootballId: 39, season: 2024, country: "England", categorySlug: "premier-league-cat" },
+    { name: "La Liga", slug: "la-liga", type: "league", apiFootballId: 140, season: 2024, country: "Spain", categorySlug: "la-liga-cat" },
+    { name: "Bundesliga", slug: "bundesliga", type: "league", apiFootballId: 78, season: 2024, country: "Germany" },
+    { name: "Serie A", slug: "serie-a", type: "league", apiFootballId: 135, season: 2024, country: "Italy" },
+    { name: "Ligue 1", slug: "ligue-1", type: "league", apiFootballId: 61, season: 2024, country: "France" },
+    { name: "UEFA Champions League", slug: "uefa-champions-league", type: "cup", apiFootballId: 2, season: 2024 },
+    { name: "UEFA Europa League", slug: "uefa-europa-league", type: "cup", apiFootballId: 3, season: 2024 },
   ];
 
   for (const c of competitions) {
     const existing = await findBySlug(payload, "competitions", c.slug);
     if (existing) {
+      const patch: Record<string, unknown> = {};
       if (!(existing as any).logoUrl) {
+        patch.logoUrl = `https://media.api-sports.io/football/leagues/${c.apiFootballId}.png`;
+      }
+      if ((existing as any).season !== c.season) {
+        patch.season = c.season;
+      }
+      if (Object.keys(patch).length > 0) {
         await payload.update({
           collection: "competitions",
           id: existing.id,
-          data: { logoUrl: `https://media.api-sports.io/football/leagues/${c.apiFootballId}.png` },
+          data: patch,
           overrideAccess: true,
         });
-        console.log(`  [updated logoUrl] ${c.name}`);
+        console.log(`  [updated ${Object.keys(patch).join(",")}] ${c.name}`);
       } else {
         console.log(`  [skip] ${c.name}`);
       }
