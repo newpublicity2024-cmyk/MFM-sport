@@ -46,5 +46,5 @@ export async function fetchApi<T>(
     return [] as T[];
   }
 
-  return data.response;
+  return (data.response ?? []) as T[];
 }
