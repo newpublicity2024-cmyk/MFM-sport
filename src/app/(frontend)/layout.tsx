@@ -4,6 +4,7 @@ import Script from "next/script";
 import React from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import "./styles.css";
 
 const plexSans = IBM_Plex_Sans({
@@ -33,7 +34,14 @@ export default function FrontendLayout({ children }: { children: React.ReactNode
       <body
         className={`${plexSans.variable} ${plexArabic.variable} font-sans antialiased`}
       >
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
         {adsenseClientId && (
           <Script
             id="adsbygoogle"
