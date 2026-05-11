@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Nav } from "./Nav";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { ThemeSwitcher } from "./ThemeSwitcher";
 import { MobileNav } from "./MobileNav";
 
 type Props = {
@@ -28,6 +29,7 @@ export function Header({ locale }: Props) {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
+          <ThemeSwitcher />
           <LanguageSwitcher locale={locale} />
           <MobileNav locale={locale} />
         </div>
