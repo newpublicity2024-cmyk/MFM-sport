@@ -288,33 +288,145 @@ async function seedPages(payload: Payload) {
     "يمكنكم طلب حذف بياناتكم في أي وقت عبر التواصل على privacy@mfmsport.ma.",
   ];
 
-  const pages: Array<{ title: string; slug: string; body: string[] }> = [
-    { title: "من نحن", slug: "about", body: aboutBody },
-    { title: "اتصل بنا", slug: "contact", body: contactBody },
-    { title: "إشعار قانوني", slug: "legal", body: legalBody },
-    { title: "سياسة الخصوصية", slug: "privacy", body: privacyBody },
+  const aboutBodyFr = [
+    "MFM Sport est le portail marocain de référence dédié au football, offrant une couverture complète du championnat national, des sélections marocaines et africaines, ainsi que des grands championnats européens.",
+    "Notre mission : proposer un journalisme de fond, mis à jour en temps réel, avec un focus particulier sur le football marocain et les exploits des Lions de l'Atlas.",
+    "Notre équipe éditoriale travaille 24 heures sur 24 pour vous apporter les dernières actualités, analyses et statistiques des terrains du monde entier.",
+  ];
+
+  const aboutBodyEn = [
+    "MFM Sport is Morocco's dedicated football portal, providing comprehensive coverage of the national league, the Moroccan and African national teams, and Europe's top leagues.",
+    "We aim to deliver in-depth, real-time editorial content with a particular focus on Moroccan football and the achievements of the Atlas Lions.",
+    "Our editorial team works around the clock to bring you the latest news, analysis, and statistics from football grounds around the world.",
+  ];
+
+  const contactBodyFr = [
+    "Contacter la rédaction : editorial@mfmsport.ma",
+    "Publicité et partenariats : ads@mfmsport.ma",
+    "Vos contributions et suggestions sont les bienvenues. Suivez-nous également sur nos réseaux sociaux pour un échange direct.",
+  ];
+
+  const contactBodyEn = [
+    "Editorial team: editorial@mfmsport.ma",
+    "Advertising and partnerships: ads@mfmsport.ma",
+    "We welcome your contributions and feedback. Follow us on social media for direct interaction.",
+  ];
+
+  const legalBodyFr = [
+    "Tous les contenus publiés sur MFM Sport sont protégés par les lois marocaines et internationales sur la propriété intellectuelle.",
+    "Toute reproduction du contenu sans autorisation écrite préalable de la direction du site est interdite.",
+    "MFM Sport décline toute responsabilité quant au contenu des sites externes accessibles via les liens présents sur ce site.",
+  ];
+
+  const legalBodyEn = [
+    "All content published on MFM Sport is protected by Moroccan and international intellectual property law.",
+    "Republication of any content without prior written permission from the site's management is prohibited.",
+    "MFM Sport is not responsible for the content of external sites linked from this website.",
+  ];
+
+  const privacyBodyFr = [
+    "Nous respectons votre vie privée. Nous ne collectons vos données personnelles qu'à l'occasion de votre inscription à la newsletter ou de votre prise de contact avec nous.",
+    "Nous utilisons des cookies pour améliorer votre expérience de navigation et mesurer l'audience du site via Google Analytics et Vercel Analytics.",
+    "Vous pouvez demander la suppression de vos données à tout moment en écrivant à privacy@mfmsport.ma.",
+  ];
+
+  const privacyBodyEn = [
+    "We respect your privacy. We only collect personal data when you subscribe to our newsletter or contact us directly.",
+    "We use cookies to improve your browsing experience and measure site performance via Google Analytics and Vercel Analytics.",
+    "You may request deletion of your data at any time by writing to privacy@mfmsport.ma.",
+  ];
+
+  const pages: Array<{
+    title: { ar: string; fr: string; en: string };
+    slug: string;
+    body: { ar: string[]; fr: string[]; en: string[] };
+  }> = [
+    {
+      title: { ar: "من نحن", fr: "À propos", en: "About" },
+      slug: "about",
+      body: { ar: aboutBody, fr: aboutBodyFr, en: aboutBodyEn },
+    },
+    {
+      title: { ar: "اتصل بنا", fr: "Contact", en: "Contact" },
+      slug: "contact",
+      body: { ar: contactBody, fr: contactBodyFr, en: contactBodyEn },
+    },
+    {
+      title: { ar: "إشعار قانوني", fr: "Mentions légales", en: "Legal Notice" },
+      slug: "legal",
+      body: { ar: legalBody, fr: legalBodyFr, en: legalBodyEn },
+    },
+    {
+      title: { ar: "سياسة الخصوصية", fr: "Politique de confidentialité", en: "Privacy Policy" },
+      slug: "privacy",
+      body: { ar: privacyBody, fr: privacyBodyFr, en: privacyBodyEn },
+    },
   ];
 
   for (const p of pages) {
     const existing = await findBySlug(payload, "pages", p.slug);
-    if (existing) {
-      await payload.update({
+    const id = existing?.id;
+
+    // Ensure the page exists (AR is the base locale and required by Payload).
+    if (!id) {
+      const created = await payload.create({
         collection: "pages",
-        id: existing.id,
-        data: { body: paragraphBody(p.body, "rtl") as any },
+        data: {
+          title: p.title.ar,
+          slug: p.slug,
+          body: paragraphBody(p.body.ar, "rtl") as any,
+        },
         locale: "ar",
         overrideAccess: true,
       });
-      console.log(`  [updated body] ${p.title}`);
+      console.log(`  [created ar] ${p.title.ar}`);
+      // Then layer FR + EN onto the just-created row.
+      await payload.update({
+        collection: "pages",
+        id: created.id,
+        data: { title: p.title.fr, body: paragraphBody(p.body.fr, "ltr") as any },
+        locale: "fr",
+        overrideAccess: true,
+      });
+      console.log(`  [created fr] ${p.title.fr}`);
+      await payload.update({
+        collection: "pages",
+        id: created.id,
+        data: { title: p.title.en, body: paragraphBody(p.body.en, "ltr") as any },
+        locale: "en",
+        overrideAccess: true,
+      });
+      console.log(`  [created en] ${p.title.en}`);
       continue;
     }
-    await payload.create({
+
+    // Page exists — re-write each locale (idempotent: replaces the localized body).
+    await payload.update({
       collection: "pages",
-      data: { title: p.title, slug: p.slug, body: paragraphBody(p.body, "rtl") as any },
+      id,
+      data: { title: p.title.ar, body: paragraphBody(p.body.ar, "rtl") as any },
       locale: "ar",
       overrideAccess: true,
     });
-    console.log(`  [created] ${p.title}`);
+    console.log(`  [updated ar] ${p.title.ar}`);
+
+    await payload.update({
+      collection: "pages",
+      id,
+      data: { title: p.title.fr, body: paragraphBody(p.body.fr, "ltr") as any },
+      locale: "fr",
+      overrideAccess: true,
+    });
+    console.log(`  [updated fr] ${p.title.fr}`);
+
+    await payload.update({
+      collection: "pages",
+      id,
+      data: { title: p.title.en, body: paragraphBody(p.body.en, "ltr") as any },
+      locale: "en",
+      overrideAccess: true,
+    });
+    console.log(`  [updated en] ${p.title.en}`);
   }
 }
 
