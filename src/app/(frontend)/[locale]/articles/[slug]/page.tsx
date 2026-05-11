@@ -77,7 +77,7 @@ export default async function ArticlePage({ params }: Props) {
       )}
 
       {/* Title */}
-      <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-4">
+      <h1 className="text-[clamp(1.875rem,4vw+1rem,2.5rem)] font-bold leading-tight mb-4">
         {article.title}
       </h1>
 

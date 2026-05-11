@@ -18,7 +18,7 @@ export function HeroSection({ featured, secondary, locale }: Props) {
   return (
     <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Main hero */}
-      <article className="lg:col-span-2 group relative aspect-video rounded-lg overflow-hidden">
+      <article className="lg:col-span-2 group relative aspect-video rounded-2xl overflow-hidden">
         {heroImage ? (
           <Image
             src={heroImage}
@@ -40,7 +40,7 @@ export function HeroSection({ featured, secondary, locale }: Props) {
               <CategoryBadge name={category.name} slug={category.slug} locale={locale} />
             </div>
           )}
-          <h2 className="text-2xl md:text-3xl font-bold text-white leading-tight line-clamp-3">
+          <h2 className="text-[clamp(1.5rem,3vw+1rem,2.25rem)] font-bold text-white leading-tight line-clamp-3">
             <Link
               href={`/${locale}/articles/${featured.slug}`}
               className="after:absolute after:inset-0 after:content-['']"
