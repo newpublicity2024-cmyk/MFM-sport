@@ -104,7 +104,7 @@ export default async function ArticlePage({ params }: Props) {
           </>
         )}
         {article.publishedAt && (
-          <time>
+          <time dateTime={article.publishedAt}>
             {formatDate(article.publishedAt, locale)} &middot;{" "}
             {formatTime(article.publishedAt, locale)}
           </time>

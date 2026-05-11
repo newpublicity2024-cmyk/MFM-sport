@@ -49,7 +49,7 @@ export function HeroSection({ featured, secondary, locale }: Props) {
             </Link>
           </h2>
           {featured.publishedAt && (
-            <time className="mt-2 block text-sm text-white/70">
+            <time dateTime={featured.publishedAt} className="mt-2 block text-sm text-white/70">
               {formatDate(featured.publishedAt, locale)}
             </time>
           )}

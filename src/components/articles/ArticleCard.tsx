@@ -75,7 +75,7 @@ export function ArticleCard({ article, locale, size = "default" }: Props) {
           </Link>
         </h3>
         {article.publishedAt && (
-          <time className="mt-1 block text-xs text-muted-foreground">
+          <time dateTime={article.publishedAt} className="mt-1 block text-xs text-muted-foreground">
             {formatDate(article.publishedAt, locale)}
           </time>
         )}

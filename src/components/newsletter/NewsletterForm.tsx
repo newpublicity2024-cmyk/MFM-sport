@@ -50,6 +50,7 @@ export function NewsletterForm({ locale }: Props) {
         name="email"
         required
         placeholder={t("placeholder")}
+        aria-label={t("placeholder")}
         className="bg-background/50"
         disabled={status === "loading"}
       />
