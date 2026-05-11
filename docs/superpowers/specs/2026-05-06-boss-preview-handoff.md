@@ -52,31 +52,26 @@ Plan: [docs/superpowers/plans/2026-05-11-site-complete-polish.md](../plans/2026-
 **Preview URL:** Push pending — auto-deploy will trigger once main is pushed to origin
 **Push status:** failed: `Permission to newpublicity2024-cmyk/MFM-sport.git denied to Ben776ya` (HTTP 403) — same credentials issue noted below; user must configure correct GitHub account and push manually
 
-## Known visual nits (not blockers)
-
-- Ligue 1 + FIFA World Cup 2026 competition cards show a generic placeholder where API-Football's CDN doesn't host their crest at the expected ID. Other 10 competitions render correctly.
-- Favicon at 32×32 is wordmark-shaped; the "MFM Sport" text is technically present but not legible at that size. Apple-icon at 180×180 reads cleanly.
-
 ## To swap to production content after approval
 
 1. Run `pnpm seed:preview:reset` (deletes all `demo-` prefixed docs)
 2. Follow [WP_MIGRATION_HANDOFF.md](../../../WP_MIGRATION_HANDOFF.md) to import the first 200 real articles
 3. After WP import: real `featuredImage` uploads land in Vercel Blob; the `featuredImageUrl` URL fallback simply stays empty (no migration of preview data needed)
 
-## Branch state
+## Branch state (post Round 2)
 
-- 16 commits on `feat/boss-preview-polish` (including 1 controller fix-up for a Task 1 test regression)
+- `feat/boss-preview-polish` merged into local `main` via merge commit `2c7e6b8`
 - All 51 unit tests pass
 - Production build succeeds (`pnpm build`)
-- Lint command has a pre-existing ESLint 9 / config-next compatibility issue (not introduced by this branch) — does not block deploy
+- `pnpm lint` runs to completion (ESLint 9 flat config repaired in Round 2). One pre-existing hard error remains in `src/components/ads/StickyMobileAd.tsx` from the earlier ad-banners branch; out of scope for this milestone.
 
 ## Push status
 
-The branch is **not yet pushed to GitHub** — current local git credentials don't have push access to `newpublicity2024-cmyk/MFM-sport`. To push:
+Local `main` is ahead of `origin/main` by the merge commit + the Round 2 handoff commit. The remote push fails with HTTP 403 because the current git credentials authenticate as `Ben776ya`, which lacks write access to `newpublicity2024-cmyk/MFM-sport`. To push:
 
 ```bash
 # Configure credentials for the right GitHub account, then:
-git push -u origin feat/boss-preview-polish
+git push origin main
 ```
 
-After push, opening a PR will give a clean diff for code review beyond what the deployed URL shows.
+Vercel will auto-deploy from `main` after push, refreshing the `https://mfm-sport.vercel.app` alias within a few minutes.
