@@ -48,6 +48,7 @@ const config: Config = {
         loss: "hsl(var(--loss))",
         draw: "hsl(var(--draw))",
         live: "hsl(var(--live))",
+        scrim: "hsl(var(--scrim))",
       },
       borderRadius: {
         lg: "var(--radius)",

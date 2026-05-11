@@ -43,6 +43,9 @@
     --draw: 38 92% 50%;               /* #F59E0B */
     --live: 38 92% 50%;               /* #F59E0B */
 
+    /* Scrim — for text-on-image overlays */
+    --scrim: 240 6% 3%;
+
     /* Sidebar (Payload admin / shadcn default) */
     --sidebar-background: 240 6% 6%;
     --sidebar-foreground: 0 0% 96%;

@@ -33,7 +33,7 @@ export function HeroSection({ featured, secondary, locale }: Props) {
             <span className="text-muted-foreground">MFM Sport</span>
           </div>
         )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-scrim/80 via-transparent to-transparent" />
         <div className="absolute bottom-0 start-0 end-0 p-6">
           {category && typeof category === "object" && (
             <div className="relative z-10 mb-2 inline-block">
