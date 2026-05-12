@@ -3,8 +3,7 @@ import type { Config } from "@/payload-types";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
 import { getArticles } from "@/lib/payload/queries";
-import { getFixturesByDate, getLiveFixtures } from "@/lib/api-football/fixtures";
-import { LiveNowSection } from "@/components/football/LiveNowSection";
+import { getFixturesByDate } from "@/lib/api-football/fixtures";
 import { HeroSection } from "@/components/home/HeroSection";
 import { NewsSection } from "@/components/home/NewsSection";
 import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";
@@ -34,18 +33,20 @@ export default async function HomePage({ params }: Props) {
   const tArticle = await getTranslations({ locale, namespace: "article" });
 
   const today = new Date().toISOString().split("T")[0];
-  const [todayFixtures, liveFixtures] = await Promise.all([
-    getFixturesByDate(today),
-    getLiveFixtures(),
-  ]);
+  const todayFixtures = await getFixturesByDate(today);
 
-  // Fetch latest articles: featured + 6 top + 6 more = 13 needed; fetch 16 for headroom
   const latest = await getArticles({ locale: locale as Config["locale"], page: 1, limit: 16 });
   const articles = latest.docs;
 
   const featured = articles[0];
   const topNews = articles.slice(1, 7);
   const moreNews = articles.slice(7, 13);
+
+  const statusLabels = {
+    finished: t("matchStatus.finished"),
+    live: t("matchStatus.live"),
+    scheduled: t("matchStatus.scheduled"),
+  };
 
   if (!featured) {
     return (
@@ -60,9 +61,12 @@ export default async function HomePage({ params }: Props) {
     <div className="container mx-auto px-4 py-6">
       <h1 className="sr-only">MFM Sport</h1>
 
-      <HeroSection featured={featured} fixtures={todayFixtures} locale={locale} />
-
-      <LiveNowSection initial={liveFixtures} locale={locale} />
+      <HeroSection
+        featured={featured}
+        fixtures={todayFixtures}
+        locale={locale}
+        statusLabels={statusLabels}
+      />
 
       <NewsSection
         title={t("topNews")}
