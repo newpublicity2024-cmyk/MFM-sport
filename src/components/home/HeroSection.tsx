@@ -2,23 +2,24 @@ import Image from "next/image";
 import Link from "next/link";
 import { CategoryBadge } from "@/components/shared/CategoryBadge";
 import { formatDate, getArticleHeroUrl, getImageAlt } from "@/lib/utils";
-import { ArticleCard } from "@/components/articles/ArticleCard";
+import { MatchesPanel } from "@/components/home/MatchesPanel";
+import type { ApiFixture } from "@/lib/api-football/types";
 
 type Props = {
   featured: any;
-  secondary: any[];
+  fixtures: ApiFixture[];
   locale: string;
 };
 
-export function HeroSection({ featured, secondary, locale }: Props) {
+export function HeroSection({ featured, fixtures, locale }: Props) {
   const heroImage = getArticleHeroUrl(featured, "hero");
   const heroAlt = getImageAlt(featured.featuredImage);
   const category = featured.categories?.[0];
 
   return (
-    <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      {/* Main hero */}
-      <article className="lg:col-span-2 group relative aspect-video rounded-2xl overflow-hidden">
+    <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:h-[500px]">
+      {/* Main hero — fills grid cell height on desktop */}
+      <article className="lg:col-span-2 group relative rounded-2xl overflow-hidden h-56 lg:h-full">
         {heroImage ? (
           <Image
             src={heroImage}
@@ -56,11 +57,9 @@ export function HeroSection({ featured, secondary, locale }: Props) {
         </div>
       </article>
 
-      {/* Secondary stories */}
-      <div className="flex flex-col gap-4">
-        {secondary.slice(0, 3).map((article: any) => (
-          <ArticleCard key={article.id} article={article} locale={locale} />
-        ))}
+      {/* Matches panel — same height as hero, scrollable */}
+      <div className="lg:h-full overflow-y-auto">
+        <MatchesPanel fixtures={fixtures} locale={locale} />
       </div>
     </section>
   );
