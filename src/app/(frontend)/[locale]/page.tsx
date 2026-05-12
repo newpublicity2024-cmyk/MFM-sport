@@ -7,8 +7,6 @@ import { getFixturesByDate, getLiveFixtures } from "@/lib/api-football/fixtures"
 import { LiveNowSection } from "@/components/football/LiveNowSection";
 import { HeroSection } from "@/components/home/HeroSection";
 import { NewsSection } from "@/components/home/NewsSection";
-import { MatchList } from "@/components/football/MatchList";
-import { SectionHeader } from "@/components/shared/SectionHeader";
 import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";
 
 type Props = {
@@ -18,11 +16,12 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   return {
-    title: locale === "ar"
-      ? "MFM Sport - أخبار الكرة المغربية"
-      : locale === "fr"
-        ? "MFM Sport - Actualites du football marocain"
-        : "MFM Sport - Moroccan Football News",
+    title:
+      locale === "ar"
+        ? "MFM Sport - أخبار الكرة المغربية"
+        : locale === "fr"
+          ? "MFM Sport - Actualites du football marocain"
+          : "MFM Sport - Moroccan Football News",
   };
 }
 
@@ -31,8 +30,8 @@ export default async function HomePage({ params }: Props) {
   setRequestLocale(locale);
 
   const t = await getTranslations({ locale, namespace: "home" });
-  const tArticle = await getTranslations({ locale, namespace: "article" });
   const tCommon = await getTranslations({ locale, namespace: "common" });
+  const tArticle = await getTranslations({ locale, namespace: "article" });
 
   const today = new Date().toISOString().split("T")[0];
   const [todayFixtures, liveFixtures] = await Promise.all([
@@ -40,15 +39,13 @@ export default async function HomePage({ params }: Props) {
     getLiveFixtures(),
   ]);
 
-  // Fetch latest articles for the homepage
+  // Fetch latest articles: featured + 6 top + 6 more = 13 needed; fetch 16 for headroom
   const latest = await getArticles({ locale: locale as Config["locale"], page: 1, limit: 16 });
   const articles = latest.docs;
 
-  // Split articles: 1 hero + 3 secondary + rest
   const featured = articles[0];
-  const secondary = articles.slice(1, 4);
-  const topNews = articles.slice(4, 10);
-  const moreNews = articles.slice(10, 16);
+  const topNews = articles.slice(1, 7);
+  const moreNews = articles.slice(7, 13);
 
   if (!featured) {
     return (
@@ -62,20 +59,10 @@ export default async function HomePage({ params }: Props) {
   return (
     <div className="container mx-auto px-4 py-6">
       <h1 className="sr-only">MFM Sport</h1>
-      <HeroSection featured={featured} secondary={secondary} locale={locale} />
+
+      <HeroSection featured={featured} fixtures={todayFixtures} locale={locale} />
 
       <LiveNowSection initial={liveFixtures} locale={locale} />
-
-      {todayFixtures.length > 0 && (
-        <section className="mt-10">
-          <SectionHeader
-            title={t("todayMatches")}
-            href={`/${locale}/matches`}
-            linkText={tCommon("readMore")}
-          />
-          <MatchList fixtures={todayFixtures.slice(0, 10)} locale={locale} />
-        </section>
-      )}
 
       <NewsSection
         title={t("topNews")}
