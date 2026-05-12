@@ -66,7 +66,7 @@ export function MatchesPanel({ fixtures, locale }: Props) {
   if (groups.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-2 h-full">
+    <div className="flex flex-col gap-2">
       {groups.map((group) => {
         const isOpen = openIds.has(group.league.id);
         const panelId = `matches-panel-${group.league.id}`;
