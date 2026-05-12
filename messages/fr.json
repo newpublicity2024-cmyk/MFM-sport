@@ -34,8 +34,7 @@
   },
   "home": {
     "topNews": "A la une",
-    "latestNews": "Dernieres actualites",
-    "todayMatches": "Matchs du jour"
+    "latestNews": "Dernieres actualites"
   },
   "ads": {
     "label": "Publicité"
