@@ -191,7 +191,7 @@ export async function getCompetitions(locale: Locale) {
     collection: "competitions",
     locale,
     limit: 50,
-    sort: "name",
+    sort: "slug",
     depth: 1,
   });
 }
@@ -202,7 +202,7 @@ export async function getClubs(locale: Locale) {
     collection: "clubs",
     locale,
     limit: 50,
-    sort: "name",
+    sort: "slug",
     depth: 1,
   });
 }

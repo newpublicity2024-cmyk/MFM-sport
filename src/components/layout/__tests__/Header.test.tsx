@@ -52,10 +52,16 @@ vi.mock("../MobileNav", () => ({
   ),
 }));
 
+// Mock ThemeSwitcher to avoid next-themes / dropdown chain
+vi.mock("../ThemeSwitcher", () => ({
+  ThemeSwitcher: () => <button data-testid="theme-switcher" aria-label="Toggle theme" />,
+}));
+
 describe("Header", () => {
   it("renders the MFM Sport logo", () => {
     render(<Header locale="ar" />);
-    expect(screen.getByAltText("MFM Sport")).toBeInTheDocument();
+    expect(screen.getByText("MFM")).toBeInTheDocument();
+    expect(screen.getByText(/Sport/)).toBeInTheDocument();
   });
 
   it("renders navigation links", () => {

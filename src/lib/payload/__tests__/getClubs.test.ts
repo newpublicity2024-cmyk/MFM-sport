@@ -15,13 +15,13 @@ describe("getClubs", () => {
     findMock.mockResolvedValue({ docs: [{ id: "1", name: "Wydad" }] });
   });
 
-  it("queries clubs collection with locale and sort by name", async () => {
+  it("queries clubs collection with locale and sort by non-localized slug", async () => {
     await getClubs("en");
     expect(findMock).toHaveBeenCalledWith({
       collection: "clubs",
       locale: "en",
       limit: 50,
-      sort: "name",
+      sort: "slug",
       depth: 1,
     });
   });

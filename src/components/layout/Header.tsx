@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Nav } from "./Nav";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -15,13 +14,10 @@ export function Header({ locale }: Props) {
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
         {/* Logo */}
         <Link href={`/${locale}`} className="flex items-center" aria-label="MFM Sport">
-          <Image
-            src="/images/logo.svg"
-            alt="MFM Sport"
-            width={144}
-            height={32}
-            priority
-          />
+          <span className="text-xl font-bold leading-none">
+            <span className="text-primary">MFM</span>
+            <span className="text-foreground"> Sport</span>
+          </span>
         </Link>
 
         {/* Desktop nav */}
