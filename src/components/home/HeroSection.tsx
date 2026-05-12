@@ -9,9 +9,14 @@ type Props = {
   featured: any;
   fixtures: ApiFixture[];
   locale: string;
+  statusLabels: {
+    finished: string;
+    live: string;
+    scheduled: string;
+  };
 };
 
-export function HeroSection({ featured, fixtures, locale }: Props) {
+export function HeroSection({ featured, fixtures, locale, statusLabels }: Props) {
   const heroImage = getArticleHeroUrl(featured, "hero");
   const heroAlt = getImageAlt(featured.featuredImage);
   const category = featured.categories?.[0];
@@ -59,7 +64,7 @@ export function HeroSection({ featured, fixtures, locale }: Props) {
 
       {/* Matches panel — same height as hero, scrollable */}
       <div className="lg:h-full overflow-y-auto">
-        <MatchesPanel fixtures={fixtures} locale={locale} />
+        <MatchesPanel fixtures={fixtures} locale={locale} statusLabels={statusLabels} />
       </div>
     </section>
   );
