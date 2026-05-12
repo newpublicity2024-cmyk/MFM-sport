@@ -34,7 +34,12 @@
   },
   "home": {
     "topNews": "A la une",
-    "latestNews": "Dernieres actualites"
+    "latestNews": "Dernieres actualites",
+    "matchStatus": {
+      "finished": "Terminés",
+      "live": "En direct",
+      "scheduled": "À venir"
+    }
   },
   "ads": {
     "label": "Publicité"

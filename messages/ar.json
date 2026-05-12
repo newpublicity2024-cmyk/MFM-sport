@@ -34,7 +34,12 @@
   },
   "home": {
     "topNews": "أهم الأخبار",
-    "latestNews": "آخر الأخبار"
+    "latestNews": "آخر الأخبار",
+    "matchStatus": {
+      "finished": "منتهية",
+      "live": "مباشر",
+      "scheduled": "قادمة"
+    }
   },
   "ads": {
     "label": "إعلان"

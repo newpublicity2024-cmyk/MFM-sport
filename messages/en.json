@@ -34,7 +34,12 @@
   },
   "home": {
     "topNews": "Top News",
-    "latestNews": "Latest News"
+    "latestNews": "Latest News",
+    "matchStatus": {
+      "finished": "Ended",
+      "live": "Live",
+      "scheduled": "Upcoming"
+    }
   },
   "ads": {
     "label": "Advertisement"
