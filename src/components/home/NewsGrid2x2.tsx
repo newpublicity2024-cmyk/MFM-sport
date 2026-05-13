@@ -1,14 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
-import type { MockLeagueArticle } from "@/lib/home/mockLeagueNews";
+import type { MockLeagueArticle, MockLocaleString } from "@/lib/home/mockLeagueNews";
 
 type Props = {
   articles: MockLeagueArticle[];
   locale: string;
 };
 
-function pickLocalized(s: { en: string; ar: string; fr: string }, locale: string): string {
+function pickLocalized(s: MockLocaleString, locale: string): string {
   if (locale === "ar") return s.ar;
   if (locale === "fr") return s.fr;
   return s.en;
