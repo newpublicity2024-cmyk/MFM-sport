@@ -31,11 +31,11 @@ export function VideosSection({ title, locale }: Props) {
   return (
     <section className="mt-10">
       <SectionHeader title={title} />
-      <div className="grid grid-cols-1 gap-4 lg:h-[500px] lg:grid-cols-3">
-        <div className="lg:col-span-2 lg:h-full">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
           <VideoPlayer videoId={selected.id} title={pickTitle(selected.title, locale)} />
         </div>
-        <div className="lg:h-full overflow-y-auto">
+        <div>
           <VideoList
             videos={MOCK_VIDEOS}
             selectedId={selectedId}
