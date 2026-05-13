@@ -16,11 +16,11 @@ function pickLocalized(s: MockLocaleString, locale: string): string {
 
 export function NewsGrid2x2({ articles, locale }: Props) {
   return (
-    <div className="grid h-full grid-cols-1 gap-3 sm:grid-cols-2 sm:grid-rows-2">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {articles.map((article) => (
         <article
           key={article.id}
-          className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card transition-colors hover:border-primary/30"
+          className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-colors hover:border-primary/30"
         >
           <div className="relative aspect-video overflow-hidden">
             <Image
