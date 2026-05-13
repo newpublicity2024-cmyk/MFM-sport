@@ -52,8 +52,8 @@ export const MOCK_LEAGUES: MockLeague[] = [
 function makeArticle(
   leagueId: string,
   index: number,
-  base: { en: string; ar: string; fr: string },
-  category: { en: string; ar: string; fr: string },
+  base: MockLocaleString,
+  category: MockLocaleString,
   daysAgo: number,
 ): MockLeagueArticle {
   const date = new Date();
