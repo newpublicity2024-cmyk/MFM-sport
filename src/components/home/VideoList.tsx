@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Play } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import type { MockVideo } from "@/lib/home/mockVideos";
+import type { MockLocaleString } from "@/lib/home/mockLeagueNews";
 
 type Props = {
   videos: MockVideo[];
@@ -12,10 +13,10 @@ type Props = {
   onSelect: (videoId: string) => void;
 };
 
-function pickTitle(video: MockVideo, locale: string): string {
-  if (locale === "ar") return video.title.ar;
-  if (locale === "fr") return video.title.fr;
-  return video.title.en;
+function pickLocalized(s: MockLocaleString, locale: string): string {
+  if (locale === "ar") return s.ar;
+  if (locale === "fr") return s.fr;
+  return s.en;
 }
 
 export function VideoList({ videos, selectedId, locale, onSelect }: Props) {
@@ -45,7 +46,7 @@ export function VideoList({ videos, selectedId, locale, onSelect }: Props) {
               />
               {isActive && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                  <Play className="h-5 w-5 text-white" fill="white" />
+                  <Play className="h-5 w-5 fill-white stroke-white" />
                 </div>
               )}
               <span className="absolute bottom-0.5 end-0.5 rounded bg-black/70 px-1 text-[10px] font-medium text-white">
@@ -54,7 +55,7 @@ export function VideoList({ videos, selectedId, locale, onSelect }: Props) {
             </div>
             <div className="flex flex-1 flex-col justify-between py-0.5">
               <span className="text-xs font-medium leading-snug line-clamp-2">
-                {pickTitle(video, locale)}
+                {pickLocalized(video.title, locale)}
               </span>
               <time
                 dateTime={video.publishedAt}
