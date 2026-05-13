@@ -5,7 +5,8 @@ import { getTranslations } from "next-intl/server";
 import { getArticles } from "@/lib/payload/queries";
 import { getFixturesByDate } from "@/lib/api-football/fixtures";
 import { HeroSection } from "@/components/home/HeroSection";
-import { NewsSection } from "@/components/home/NewsSection";
+import { LeagueNewsSection } from "@/components/home/LeagueNewsSection";
+import { VideosSection } from "@/components/home/VideosSection";
 import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";
 
 type Props = {
@@ -29,18 +30,13 @@ export default async function HomePage({ params }: Props) {
   setRequestLocale(locale);
 
   const t = await getTranslations({ locale, namespace: "home" });
-  const tCommon = await getTranslations({ locale, namespace: "common" });
   const tArticle = await getTranslations({ locale, namespace: "article" });
 
   const today = new Date().toISOString().split("T")[0];
   const todayFixtures = await getFixturesByDate(today);
 
-  const latest = await getArticles({ locale: locale as Config["locale"], page: 1, limit: 16 });
-  const articles = latest.docs;
-
-  const featured = articles[0];
-  const topNews = articles.slice(1, 7);
-  const moreNews = articles.slice(7, 13);
+  const latest = await getArticles({ locale: locale as Config["locale"], page: 1, limit: 1 });
+  const featured = latest.docs[0];
 
   const statusLabels = {
     finished: t("matchStatus.finished"),
@@ -68,23 +64,9 @@ export default async function HomePage({ params }: Props) {
         statusLabels={statusLabels}
       />
 
-      <NewsSection
-        title={t("topNews")}
-        articles={topNews}
-        locale={locale}
-        viewAllHref={`/${locale}/articles`}
-        viewAllText={tCommon("readMore")}
-        columns={3}
-      />
+      <LeagueNewsSection title={t("byLeague")} locale={locale} />
 
-      <NewsSection
-        title={t("latestNews")}
-        articles={moreNews}
-        locale={locale}
-        viewAllHref={`/${locale}/articles`}
-        viewAllText={tCommon("readMore")}
-        columns={3}
-      />
+      <VideosSection title={t("latestVideos")} locale={locale} />
 
       <div className="mt-10">
         <NewsletterStrip locale={locale} />
