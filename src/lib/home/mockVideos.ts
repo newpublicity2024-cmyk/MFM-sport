@@ -8,12 +8,6 @@ export type MockVideo = {
   publishedAt: string;
 };
 
-function daysAgo(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString();
-}
-
 export const MOCK_VIDEOS: MockVideo[] = [
   {
     id: "dQw4w9WgXcQ",
@@ -24,7 +18,7 @@ export const MOCK_VIDEOS: MockVideo[] = [
     },
     thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
     duration: "10:24",
-    publishedAt: daysAgo(0),
+    publishedAt: "2026-05-13T12:00:00.000Z",
   },
   {
     id: "9bZkp7q19f0",
@@ -35,7 +29,7 @@ export const MOCK_VIDEOS: MockVideo[] = [
     },
     thumbnailUrl: "https://i.ytimg.com/vi/9bZkp7q19f0/hqdefault.jpg",
     duration: "08:12",
-    publishedAt: daysAgo(1),
+    publishedAt: "2026-05-12T12:00:00.000Z",
   },
   {
     id: "kJQP7kiw5Fk",
@@ -46,7 +40,7 @@ export const MOCK_VIDEOS: MockVideo[] = [
     },
     thumbnailUrl: "https://i.ytimg.com/vi/kJQP7kiw5Fk/hqdefault.jpg",
     duration: "05:45",
-    publishedAt: daysAgo(2),
+    publishedAt: "2026-05-11T12:00:00.000Z",
   },
   {
     id: "L_jWHffIx5E",
@@ -57,7 +51,7 @@ export const MOCK_VIDEOS: MockVideo[] = [
     },
     thumbnailUrl: "https://i.ytimg.com/vi/L_jWHffIx5E/hqdefault.jpg",
     duration: "07:33",
-    publishedAt: daysAgo(2),
+    publishedAt: "2026-05-11T12:00:00.000Z",
   },
   {
     id: "fJ9rUzIMcZQ",
@@ -68,7 +62,7 @@ export const MOCK_VIDEOS: MockVideo[] = [
     },
     thumbnailUrl: "https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg",
     duration: "12:01",
-    publishedAt: daysAgo(3),
+    publishedAt: "2026-05-10T12:00:00.000Z",
   },
   {
     id: "OPf0YbXqDm0",
@@ -79,7 +73,7 @@ export const MOCK_VIDEOS: MockVideo[] = [
     },
     thumbnailUrl: "https://i.ytimg.com/vi/OPf0YbXqDm0/hqdefault.jpg",
     duration: "09:18",
-    publishedAt: daysAgo(4),
+    publishedAt: "2026-05-09T12:00:00.000Z",
   },
   {
     id: "RgKAFK5djSk",
@@ -90,7 +84,7 @@ export const MOCK_VIDEOS: MockVideo[] = [
     },
     thumbnailUrl: "https://i.ytimg.com/vi/RgKAFK5djSk/hqdefault.jpg",
     duration: "11:42",
-    publishedAt: daysAgo(5),
+    publishedAt: "2026-05-08T12:00:00.000Z",
   },
   {
     id: "JGwWNGJdvx8",
@@ -101,6 +95,6 @@ export const MOCK_VIDEOS: MockVideo[] = [
     },
     thumbnailUrl: "https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg",
     duration: "06:27",
-    publishedAt: daysAgo(6),
+    publishedAt: "2026-05-07T12:00:00.000Z",
   },
 ];
