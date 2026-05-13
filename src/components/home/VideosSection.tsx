@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { MockLocaleString } from "@/lib/home/mockLeagueNews";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { VideoPlayer } from "./VideoPlayer";
 import { VideoList } from "./VideoList";
@@ -11,10 +12,7 @@ type Props = {
   locale: string;
 };
 
-function pickTitle(
-  title: { en: string; ar: string; fr: string },
-  locale: string,
-): string {
+function pickTitle(title: MockLocaleString, locale: string): string {
   if (locale === "ar") return title.ar;
   if (locale === "fr") return title.fr;
   return title.en;
