@@ -16,6 +16,7 @@ export const User = IconStub;
 export const Sun = IconStub;
 export const Moon = IconStub;
 export const Monitor = IconStub;
+export const Play = IconStub;
 
 export default {
   Check,
@@ -31,4 +32,5 @@ export default {
   Sun,
   Moon,
   Monitor,
+  Play,
 };
