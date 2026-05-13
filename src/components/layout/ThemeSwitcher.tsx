@@ -10,18 +10,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { useIsClient } from "@/hooks/useIsClient";
 
 export function ThemeSwitcher() {
   const { setTheme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  const isClient = useIsClient();
 
   // Render a stable placeholder server-side / pre-hydration to avoid mismatch.
   // The Sun icon is shown until we know the resolved theme on the client.
-  const ActiveIcon = !mounted ? Sun : resolvedTheme === "dark" ? Moon : Sun;
+  const ActiveIcon = !isClient ? Sun : resolvedTheme === "dark" ? Moon : Sun;
 
   return (
     <DropdownMenu>

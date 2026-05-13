@@ -1,21 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { AdSlot } from "./AdSlot";
+import { useIsClient } from "@/hooks/useIsClient";
 
 const DISMISS_KEY = "ad-sticky-dismissed";
 
 export function StickyMobileAd() {
   const t = useTranslations("common");
-  // SSR renders null (dismissed=true) so the bar cannot flash before we've
-  // read sessionStorage. Trade-off: a one-frame pop-in after hydration
-  // instead of a flash that would clear on dismissed tabs.
-  const [dismissed, setDismissed] = useState(true);
+  const isClient = useIsClient();
+  const [userDismissed, setUserDismissed] = useState(false);
 
-  useEffect(() => {
-    setDismissed(sessionStorage.getItem(DISMISS_KEY) === "1");
-  }, []);
+  // On the server or before hydration, hide the bar (isClient=false).
+  // After hydration, show unless the user has dismissed this session or clicked ×.
+  const dismissed =
+    !isClient ||
+    userDismissed ||
+    (typeof window !== "undefined" && sessionStorage.getItem(DISMISS_KEY) === "1");
 
   if (dismissed) return null;
 
@@ -29,7 +31,7 @@ export function StickyMobileAd() {
         aria-label={t("close")}
         onClick={() => {
           sessionStorage.setItem(DISMISS_KEY, "1");
-          setDismissed(true);
+          setUserDismissed(true);
         }}
         className="absolute top-0 right-1 text-xs text-muted-foreground px-1"
       >
