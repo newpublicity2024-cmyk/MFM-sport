@@ -35,6 +35,8 @@
   "home": {
     "topNews": "Top News",
     "latestNews": "Latest News",
+    "byLeague": "News by League",
+    "latestVideos": "Latest Videos",
     "matchStatus": {
       "finished": "Ended",
       "live": "Live",

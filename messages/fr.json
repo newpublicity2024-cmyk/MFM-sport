@@ -35,6 +35,8 @@
   "home": {
     "topNews": "A la une",
     "latestNews": "Dernieres actualites",
+    "byLeague": "Actualités par championnat",
+    "latestVideos": "Dernières vidéos",
     "matchStatus": {
       "finished": "Terminés",
       "live": "En direct",

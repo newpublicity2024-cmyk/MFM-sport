@@ -35,6 +35,8 @@
   "home": {
     "topNews": "أهم الأخبار",
     "latestNews": "آخر الأخبار",
+    "byLeague": "الأخبار حسب البطولة",
+    "latestVideos": "أحدث الفيديوهات",
     "matchStatus": {
       "finished": "منتهية",
       "live": "مباشر",
