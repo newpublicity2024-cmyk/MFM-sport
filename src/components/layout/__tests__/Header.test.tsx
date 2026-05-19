@@ -52,6 +52,11 @@ vi.mock("../MobileNav", () => ({
   ),
 }));
 
+// Mock BrandLogo to render a plain img the test can find by alt
+vi.mock("../BrandLogo", () => ({
+  BrandLogo: () => <img src="/images/mfm-sport-logo.png" alt="MFM Sport" />,
+}));
+
 // Mock ThemeSwitcher to avoid next-themes / dropdown chain
 vi.mock("../ThemeSwitcher", () => ({
   ThemeSwitcher: () => <button data-testid="theme-switcher" aria-label="Toggle theme" />,
@@ -60,8 +65,9 @@ vi.mock("../ThemeSwitcher", () => ({
 describe("Header", () => {
   it("renders the MFM Sport logo", () => {
     render(<Header locale="ar" />);
-    expect(screen.getByText("MFM")).toBeInTheDocument();
-    expect(screen.getByText(/Sport/)).toBeInTheDocument();
+    const logo = screen.getByAltText("MFM Sport");
+    expect(logo).toBeInTheDocument();
+    expect(logo.getAttribute("src")).toBe("/images/mfm-sport-logo.png");
   });
 
   it("renders navigation links", () => {

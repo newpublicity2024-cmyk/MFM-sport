@@ -3,6 +3,7 @@ import { Nav } from "./Nav";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { MobileNav } from "./MobileNav";
+import { BrandLogo } from "./BrandLogo";
 
 type Props = {
   locale: string;
@@ -14,10 +15,7 @@ export function Header({ locale }: Props) {
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
         {/* Logo */}
         <Link href={`/${locale}`} className="flex items-center" aria-label="MFM Sport">
-          <span className="text-xl font-bold leading-none">
-            <span className="text-primary">MFM</span>
-            <span className="text-foreground"> Sport</span>
-          </span>
+          <BrandLogo size="sm" priority />
         </Link>
 
         {/* Desktop nav */}
