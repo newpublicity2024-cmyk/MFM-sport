@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { NewsletterForm } from "@/components/newsletter/NewsletterForm";
+import { BrandLogo } from "./BrandLogo";
 
 type Props = {
   locale: string;
@@ -58,9 +59,12 @@ export async function Footer({ locale }: Props) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand */}
           <div>
-            <Link href={`/${locale}`} className="inline-block">
-              <span className="text-xl font-bold text-primary">MFM</span>
-              <span className="text-xl font-bold text-foreground"> Sport</span>
+            <Link
+              href={`/${locale}`}
+              className="inline-block"
+              aria-label="MFM Sport"
+            >
+              <BrandLogo size="md" />
             </Link>
           </div>
 
