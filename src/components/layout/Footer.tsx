@@ -64,7 +64,7 @@ export async function Footer({ locale }: Props) {
               className="inline-block"
               aria-label="MFM Sport"
             >
-              <BrandLogo size="md" />
+              <BrandLogo size="lg" />
             </Link>
           </div>
 

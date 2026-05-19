@@ -15,7 +15,7 @@ export function Header({ locale }: Props) {
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
         {/* Logo */}
         <Link href={`/${locale}`} className="flex items-center" aria-label="MFM Sport">
-          <BrandLogo size="sm" priority />
+          <BrandLogo size="md" priority />
         </Link>
 
         {/* Desktop nav */}
