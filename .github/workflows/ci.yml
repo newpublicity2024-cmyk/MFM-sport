@@ -8,6 +8,10 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    # Exposes whether a CI database secret is configured, so the build step
+    # can be skipped when it isn't (Vercel builds every PR regardless).
+    env:
+      HAS_DB: ${{ secrets.CI_DATABASE_URL != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -20,11 +24,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm test:run
+      # The Payload build connects to the DB, so it only runs when a CI database
+      # secret is provided. Without it, Vercel's per-PR build is the build gate.
       - run: pnpm build
+        if: env.HAS_DB == 'true'
         env:
-          # Build needs these present; use throwaway/CI-safe values.
-          # If the Payload build requires a live DB, set CI_DATABASE_URL in repo
-          # secrets (e.g. a Neon CI branch) — otherwise rely on Vercel for build.
           DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
           PAYLOAD_SECRET: ci-only-secret-not-used-at-runtime-0000000000000000
           NEXT_PUBLIC_SITE_URL: http://localhost:3000
