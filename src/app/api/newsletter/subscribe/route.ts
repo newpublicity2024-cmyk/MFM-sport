@@ -3,12 +3,21 @@ import { getPayload } from "payload";
 import configPromise from "@payload-config";
 import crypto from "crypto";
 import { sendConfirmationEmail } from "@/lib/resend";
+import { checkRateLimit } from "@/lib/rate-limit";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anon";
+    const { success } = await checkRateLimit(`newsletter:${ip}`);
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const { email, locale = "ar" } = await request.json();
 
-    if (!email || typeof email !== "string" || !email.includes("@")) {
+    if (!email || typeof email !== "string" || !EMAIL_RE.test(email)) {
       return NextResponse.json({ error: "Invalid email" }, { status: 400 });
     }
 
