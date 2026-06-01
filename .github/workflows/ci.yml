@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm test:run
+      - run: pnpm build
+        env:
+          # Build needs these present; use throwaway/CI-safe values.
+          # If the Payload build requires a live DB, set CI_DATABASE_URL in repo
+          # secrets (e.g. a Neon CI branch) — otherwise rely on Vercel for build.
+          DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
+          PAYLOAD_SECRET: ci-only-secret-not-used-at-runtime-0000000000000000
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
