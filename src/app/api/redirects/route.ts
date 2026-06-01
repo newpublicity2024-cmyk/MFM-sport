@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const from = searchParams.get("from");
 
-  if (!from) {
+  if (!from || from.length > 512) {
     return NextResponse.json({ to: null });
   }
 
