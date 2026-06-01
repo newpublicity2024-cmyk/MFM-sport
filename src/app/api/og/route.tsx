@@ -4,8 +4,8 @@ export const runtime = "edge";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const title = searchParams.get("title") || "MFM Sport";
-  const category = searchParams.get("category") || "";
+  const title = (searchParams.get("title") || "MFM Sport").slice(0, 120);
+  const category = (searchParams.get("category") || "").slice(0, 60);
 
   return new ImageResponse(
     (
