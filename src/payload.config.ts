@@ -17,6 +17,7 @@ import { Clubs } from './collections/Clubs'
 import { Subscribers } from './collections/Subscribers'
 import { Pages } from './collections/Pages'
 import { Redirects } from './collections/Redirects'
+import { Videos } from './collections/Videos'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -45,7 +46,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Categories, Tags, Authors, Articles, Competitions, Clubs, Subscribers, Pages, Redirects],
+  collections: [Users, Media, Categories, Tags, Authors, Articles, Competitions, Clubs, Subscribers, Pages, Redirects, Videos],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET,
   typescript: {

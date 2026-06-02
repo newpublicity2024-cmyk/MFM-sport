@@ -3,6 +3,7 @@ import type { Config } from "@/payload-types";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
 import { getArticles } from "@/lib/payload/queries";
+import { getVideos } from "@/lib/videos";
 import { getFixturesByDate } from "@/lib/api-football/fixtures";
 import { HeroSection } from "@/components/home/HeroSection";
 import { LeagueNewsSection } from "@/components/home/LeagueNewsSection";
@@ -43,6 +44,11 @@ export default async function HomePage({ params }: Props) {
   const heroSlides = latest.docs.slice(0, 5).map(toHeroSlide);
   const articlesByLeague = buildLeagueArticles(latest.docs.slice(5), LEAGUES);
 
+  const [thirdHalfVideos, fromStadiumsVideos] = await Promise.all([
+    getVideos("the-third-half"),
+    getVideos("from-the-stadiums"),
+  ]);
+
   const statusLabels = {
     finished: t("matchStatus.finished"),
     live: t("matchStatus.live"),
@@ -75,7 +81,17 @@ export default async function HomePage({ params }: Props) {
         articlesByLeague={articlesByLeague}
       />
 
-      <VideosSection title={t("latestVideos")} locale={locale} />
+      <VideosSection
+        title={t("videoThirdHalf")}
+        locale={locale}
+        videos={thirdHalfVideos}
+      />
+
+      <VideosSection
+        title={t("videoFromStadiums")}
+        locale={locale}
+        videos={fromStadiumsVideos}
+      />
 
       <div className="mt-10">
         <NewsletterStrip locale={locale} />

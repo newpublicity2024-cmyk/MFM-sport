@@ -18,6 +18,8 @@
     "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.mts",
     "migrate:wp": "tsx scripts/migrate-wp.ts",
     "migrate:wp:sample": "tsx scripts/migrate-wp.ts --dry-run --limit=10",
+    "sync:videos": "tsx scripts/sync-videos.ts",
+    "sync:videos:dry": "tsx scripts/sync-videos.ts --dry-run",
     "seed": "tsx scripts/seed.ts",
     "seed:preview": "tsx scripts/seed-preview.ts",
     "seed:preview:reset": "tsx scripts/seed-preview.ts --reset",

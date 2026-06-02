@@ -3,32 +3,25 @@
 import Image from "next/image";
 import { Play } from "lucide-react";
 import { formatDate } from "@/lib/utils";
-import type { MockVideo } from "@/lib/home/mockVideos";
-import type { MockLocaleString } from "@/lib/home/mockLeagueNews";
+import type { HomeVideo } from "@/lib/videos";
 
 type Props = {
-  videos: MockVideo[];
+  videos: HomeVideo[];
   selectedId: string;
   locale: string;
   onSelect: (videoId: string) => void;
 };
 
-function pickLocalized(s: MockLocaleString, locale: string): string {
-  if (locale === "ar") return s.ar;
-  if (locale === "fr") return s.fr;
-  return s.en;
-}
-
 export function VideoList({ videos, selectedId, locale, onSelect }: Props) {
   return (
     <div className="flex h-full flex-col gap-2 overflow-y-auto rounded-xl border border-border bg-card p-2">
       {videos.map((video) => {
-        const isActive = video.id === selectedId;
+        const isActive = video.youtubeId === selectedId;
         return (
           <button
-            key={video.id}
+            key={video.youtubeId}
             type="button"
-            onClick={() => onSelect(video.id)}
+            onClick={() => onSelect(video.youtubeId)}
             aria-pressed={isActive}
             className={`flex items-stretch gap-2 rounded-lg p-1.5 text-start transition-colors ${
               isActive
@@ -55,14 +48,16 @@ export function VideoList({ videos, selectedId, locale, onSelect }: Props) {
             </div>
             <div className="flex flex-1 flex-col justify-between py-0.5">
               <span className="text-xs font-medium leading-snug line-clamp-2">
-                {pickLocalized(video.title, locale)}
+                {video.title}
               </span>
-              <time
-                dateTime={video.publishedAt}
-                className="text-[10px] text-muted-foreground"
-              >
-                {formatDate(video.publishedAt, locale)}
-              </time>
+              {video.publishedAt && (
+                <time
+                  dateTime={video.publishedAt}
+                  className="text-[10px] text-muted-foreground"
+                >
+                  {formatDate(video.publishedAt, locale)}
+                </time>
+              )}
             </div>
           </button>
         );

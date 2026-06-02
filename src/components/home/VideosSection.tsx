@@ -1,29 +1,23 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { MockLocaleString } from "@/lib/home/mockLeagueNews";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { VideoPlayer } from "./VideoPlayer";
 import { VideoList } from "./VideoList";
-import { MOCK_VIDEOS } from "@/lib/home/mockVideos";
+import type { HomeVideo } from "@/lib/videos";
 
 type Props = {
   title: string;
   locale: string;
+  videos: HomeVideo[];
 };
 
-function pickTitle(title: MockLocaleString, locale: string): string {
-  if (locale === "ar") return title.ar;
-  if (locale === "fr") return title.fr;
-  return title.en;
-}
-
-export function VideosSection({ title, locale }: Props) {
-  const [selectedId, setSelectedId] = useState<string>(MOCK_VIDEOS[0]?.id ?? "");
+export function VideosSection({ title, locale, videos }: Props) {
+  const [selectedId, setSelectedId] = useState<string>(videos[0]?.youtubeId ?? "");
 
   const selected = useMemo(
-    () => MOCK_VIDEOS.find((v) => v.id === selectedId) ?? MOCK_VIDEOS[0],
-    [selectedId],
+    () => videos.find((v) => v.youtubeId === selectedId) ?? videos[0],
+    [selectedId, videos],
   );
 
   if (!selected) return null;
@@ -33,11 +27,11 @@ export function VideosSection({ title, locale }: Props) {
       <SectionHeader title={title} />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <VideoPlayer videoId={selected.id} title={pickTitle(selected.title, locale)} />
+          <VideoPlayer videoId={selected.youtubeId} title={selected.title} />
         </div>
         <div>
           <VideoList
-            videos={MOCK_VIDEOS}
+            videos={videos}
             selectedId={selectedId}
             locale={locale}
             onSelect={setSelectedId}

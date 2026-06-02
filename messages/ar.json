@@ -37,6 +37,8 @@
     "latestNews": "آخر الأخبار",
     "byLeague": "الأخبار حسب البطولة",
     "latestVideos": "أحدث الفيديوهات",
+    "videoThirdHalf": "الشوط الثالث",
+    "videoFromStadiums": "من الملاعب الرياضية",
     "matchStatus": {
       "finished": "منتهية",
       "live": "مباشر",
