@@ -8,6 +8,8 @@ import { HeroSection } from "@/components/home/HeroSection";
 import { LeagueNewsSection } from "@/components/home/LeagueNewsSection";
 import { VideosSection } from "@/components/home/VideosSection";
 import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";
+import { LEAGUES } from "@/lib/home/leagues";
+import { toHeroSlide, buildLeagueArticles } from "@/lib/home/cards";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -35,8 +37,11 @@ export default async function HomePage({ params }: Props) {
   const today = new Date().toISOString().split("T")[0];
   const todayFixtures = await getFixturesByDate(today);
 
-  const latest = await getArticles({ locale: locale as Config["locale"], page: 1, limit: 1 });
-  const featured = latest.docs[0];
+  // One query feeds both sections: first 5 = hero slider, the rest are split
+  // into a distinct chunk per league.
+  const latest = await getArticles({ locale: locale as Config["locale"], page: 1, limit: 30 });
+  const heroSlides = latest.docs.slice(0, 5).map(toHeroSlide);
+  const articlesByLeague = buildLeagueArticles(latest.docs.slice(5), LEAGUES);
 
   const statusLabels = {
     finished: t("matchStatus.finished"),
@@ -44,7 +49,7 @@ export default async function HomePage({ params }: Props) {
     scheduled: t("matchStatus.scheduled"),
   };
 
-  if (!featured) {
+  if (heroSlides.length === 0) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <h1 className="text-4xl font-bold text-primary mb-4">MFM Sport</h1>
@@ -58,13 +63,17 @@ export default async function HomePage({ params }: Props) {
       <h1 className="sr-only">MFM Sport</h1>
 
       <HeroSection
-        featured={featured}
+        slides={heroSlides}
         fixtures={todayFixtures}
         locale={locale}
         statusLabels={statusLabels}
       />
 
-      <LeagueNewsSection title={t("byLeague")} locale={locale} />
+      <LeagueNewsSection
+        title={t("byLeague")}
+        locale={locale}
+        articlesByLeague={articlesByLeague}
+      />
 
       <VideosSection title={t("latestVideos")} locale={locale} />
 

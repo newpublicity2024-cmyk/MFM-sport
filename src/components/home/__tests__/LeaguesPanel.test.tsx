@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { LeaguesPanel } from "@/components/home/LeaguesPanel";
-import type { MockLeague } from "@/lib/home/mockLeagueNews";
+import type { League } from "@/lib/home/leagues";
 
-const leagues: MockLeague[] = [
+const leagues: League[] = [
   { id: "a", name: { en: "Alpha", ar: "ألفا", fr: "Alpha" }, logoUrl: "/a.png" },
   { id: "b", name: { en: "Beta", ar: "بيتا", fr: "Beta" }, logoUrl: "/b.png" },
 ];

@@ -1,16 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import type { MockLeague } from "@/lib/home/mockLeagueNews";
+import type { League } from "@/lib/home/leagues";
 
 type Props = {
-  leagues: MockLeague[];
+  leagues: League[];
   selectedId: string;
   locale: string;
   onSelect: (leagueId: string) => void;
 };
 
-function pickName(league: MockLeague, locale: string): string {
+function pickName(league: League, locale: string): string {
   if (locale === "ar") return league.name.ar;
   if (locale === "fr") return league.name.fr;
   return league.name.en;
