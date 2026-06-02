@@ -37,6 +37,8 @@
     "latestNews": "Latest News",
     "byLeague": "News by League",
     "latestVideos": "Latest Videos",
+    "videoThirdHalf": "The Third Half",
+    "videoFromStadiums": "From the Stadiums",
     "matchStatus": {
       "finished": "Ended",
       "live": "Live",
