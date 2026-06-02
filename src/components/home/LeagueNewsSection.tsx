@@ -1,26 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { LeaguesPanel } from "./LeaguesPanel";
 import { NewsGrid2x2 } from "./NewsGrid2x2";
 import { SectionHeader } from "@/components/shared/SectionHeader";
-import {
-  MOCK_LEAGUES,
-  getArticlesForLeague,
-} from "@/lib/home/mockLeagueNews";
+import { LEAGUES } from "@/lib/home/leagues";
+import type { LeagueCardArticle } from "@/lib/home/cards";
 
 type Props = {
   title: string;
   locale: string;
+  articlesByLeague: Record<string, LeagueCardArticle[]>;
 };
 
-export function LeagueNewsSection({ title, locale }: Props) {
-  const [selectedId, setSelectedId] = useState<string>(MOCK_LEAGUES[0]?.id ?? "");
-
-  const articles = useMemo(
-    () => getArticlesForLeague(selectedId),
-    [selectedId],
-  );
+export function LeagueNewsSection({ title, locale, articlesByLeague }: Props) {
+  const [selectedId, setSelectedId] = useState<string>(LEAGUES[0]?.id ?? "");
+  const articles = articlesByLeague[selectedId] ?? [];
 
   return (
     <section className="mt-10">
@@ -31,7 +26,7 @@ export function LeagueNewsSection({ title, locale }: Props) {
         </div>
         <div>
           <LeaguesPanel
-            leagues={MOCK_LEAGUES}
+            leagues={LEAGUES}
             selectedId={selectedId}
             locale={locale}
             onSelect={setSelectedId}
