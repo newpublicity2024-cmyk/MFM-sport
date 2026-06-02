@@ -23,9 +23,19 @@ type FetchedVideo = {
   title: string;
   thumbnailUrl: string;
   duration: string;
-  publishedAt: string;
+  publishedAt: string | undefined;
   sortOrder: number;
 };
+
+type PlaylistItemsResponse = {
+  items?: { contentDetails?: { videoId?: string } }[];
+};
+type VideoDetail = {
+  id: string;
+  snippet?: { title?: string; publishedAt?: string };
+  contentDetails?: { duration?: string };
+};
+type VideosResponse = { items?: VideoDetail[] };
 
 const API = "https://www.googleapis.com/youtube/v3";
 
@@ -36,7 +46,7 @@ function parseArgs(argv: string[]): { dryRun: boolean; prune: boolean } {
   };
 }
 
-async function ytGet(path: string, params: Record<string, string>): Promise<any> {
+async function ytGet<T>(path: string, params: Record<string, string>): Promise<T> {
   const url = new URL(`${API}/${path}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   const res = await fetch(url.toString());
@@ -44,29 +54,33 @@ async function ytGet(path: string, params: Record<string, string>): Promise<any>
     const body = await res.text();
     throw new Error(`YouTube API ${path} failed: ${res.status} ${body}`);
   }
-  return res.json();
+  return res.json() as Promise<T>;
 }
 
 /** Fetch the latest N videos of one playlist, in playlist order. */
 async function fetchPlaylist(playlistId: string, apiKey: string): Promise<FetchedVideo[]> {
-  const items = await ytGet("playlistItems", {
+  if (VIDEOS_PER_PLAYLIST > 50) {
+    throw new Error("VIDEOS_PER_PLAYLIST exceeds the YouTube single-page limit (50); add pagination.");
+  }
+
+  const items = await ytGet<PlaylistItemsResponse>("playlistItems", {
     part: "contentDetails",
     maxResults: String(VIDEOS_PER_PLAYLIST),
     playlistId,
     key: apiKey,
   });
   const ids: string[] = (items.items ?? [])
-    .map((it: any) => it.contentDetails?.videoId)
-    .filter(Boolean);
+    .map((it) => it.contentDetails?.videoId)
+    .filter(Boolean) as string[];
   if (ids.length === 0) return [];
 
-  const details = await ytGet("videos", {
+  const details = await ytGet<VideosResponse>("videos", {
     part: "snippet,contentDetails",
     id: ids.join(","),
     key: apiKey,
   });
 
-  const byId = new Map<string, any>();
+  const byId = new Map<string, VideoDetail>();
   for (const v of details.items ?? []) byId.set(v.id, v);
 
   // Preserve playlist order via the ids array.
@@ -79,7 +93,7 @@ async function fetchPlaylist(playlistId: string, apiKey: string): Promise<Fetche
         title: v.snippet?.title ?? "(untitled)",
         thumbnailUrl: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
         duration: parseIsoDuration(v.contentDetails?.duration ?? ""),
-        publishedAt: v.snippet?.publishedAt ?? "",
+        publishedAt: v.snippet?.publishedAt ?? undefined,
         sortOrder: index,
       } as FetchedVideo;
     })
@@ -104,7 +118,7 @@ async function main() {
   }
 
   if (dryRun) {
-    console.log("\n--dry-run: no database connection opened, nothing written.");
+    console.log(`\n--dry-run: no database connection opened, nothing written.${prune ? " (--prune would have run)" : ""}`);
     return;
   }
 
@@ -129,7 +143,7 @@ async function main() {
         title: v.title,
         thumbnailUrl: v.thumbnailUrl,
         duration: v.duration,
-        publishedAt: v.publishedAt || undefined,
+        publishedAt: v.publishedAt,
         sortOrder: v.sortOrder,
       };
       if (existing.docs[0]) {
@@ -157,7 +171,6 @@ async function main() {
   }
 
   console.log("\nSync complete.");
-  process.exit(0);
 }
 
 main().catch((err) => {
