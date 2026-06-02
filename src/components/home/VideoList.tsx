@@ -50,12 +50,14 @@ export function VideoList({ videos, selectedId, locale, onSelect }: Props) {
               <span className="text-xs font-medium leading-snug line-clamp-2">
                 {video.title}
               </span>
-              <time
-                dateTime={video.publishedAt}
-                className="text-[10px] text-muted-foreground"
-              >
-                {formatDate(video.publishedAt, locale)}
-              </time>
+              {video.publishedAt && (
+                <time
+                  dateTime={video.publishedAt}
+                  className="text-[10px] text-muted-foreground"
+                >
+                  {formatDate(video.publishedAt, locale)}
+                </time>
+              )}
             </div>
           </button>
         );
