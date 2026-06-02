@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { CategoryBadge } from "@/components/shared/CategoryBadge";
-import { FillImage } from "@/components/shared/FillImage";
 import { formatDate } from "@/lib/utils";
 import type { HeroSlide } from "@/lib/home/cards";
 
@@ -83,11 +83,13 @@ export function HeroSlider({ slides, locale }: Props) {
             aria-hidden={!active}
           >
             {slide.heroUrl ? (
-              <FillImage
+              <Image
                 src={slide.heroUrl}
                 alt={slide.alt}
+                fill
                 sizes="(max-width: 1024px) 100vw, 66vw"
                 priority={i === 0}
+                className="object-cover transition-transform duration-300 group-hover/slider:scale-105"
               />
             ) : (
               <div className="flex h-full items-center justify-center bg-secondary">
