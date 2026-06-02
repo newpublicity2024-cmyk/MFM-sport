@@ -1,6 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
-import { FillImage } from "@/components/shared/FillImage";
 import type { LeagueCardArticle } from "@/lib/home/cards";
 
 type Props = {
@@ -18,10 +18,12 @@ export function NewsGrid2x2({ articles, locale }: Props) {
         >
           <div className="relative aspect-video overflow-hidden">
             {article.heroUrl ? (
-              <FillImage
+              <Image
                 src={article.heroUrl}
                 alt={article.title}
+                fill
                 sizes="(max-width: 1024px) 100vw, 33vw"
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
               />
             ) : (
               <div className="flex h-full items-center justify-center bg-secondary">
