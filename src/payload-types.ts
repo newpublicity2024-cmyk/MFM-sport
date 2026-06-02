@@ -78,6 +78,7 @@ export interface Config {
     subscribers: Subscriber;
     pages: Page;
     redirects: Redirect;
+    videos: Video;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -96,6 +97,7 @@ export interface Config {
     subscribers: SubscribersSelect<false> | SubscribersSelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
+    videos: VideosSelect<false> | VideosSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -429,6 +431,28 @@ export interface Redirect {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "videos".
+ */
+export interface Video {
+  id: number;
+  /**
+   * The 11-character YouTube video ID.
+   */
+  youtubeId: string;
+  playlist: 'the-third-half' | 'from-the-stadiums';
+  title: string;
+  thumbnailUrl: string;
+  duration?: string | null;
+  publishedAt?: string | null;
+  /**
+   * Lower = earlier. Set from playlist order on sync.
+   */
+  sortOrder?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -494,6 +518,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'redirects';
         value: number | Redirect;
+      } | null)
+    | ({
+        relationTo: 'videos';
+        value: number | Video;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -742,6 +770,21 @@ export interface RedirectsSelect<T extends boolean = true> {
   from?: T;
   to?: T;
   statusCode?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "videos_select".
+ */
+export interface VideosSelect<T extends boolean = true> {
+  youtubeId?: T;
+  playlist?: T;
+  title?: T;
+  thumbnailUrl?: T;
+  duration?: T;
+  publishedAt?: T;
+  sortOrder?: T;
   updatedAt?: T;
   createdAt?: T;
 }
