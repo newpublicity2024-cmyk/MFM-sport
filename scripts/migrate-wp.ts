@@ -98,6 +98,23 @@ function slugify(text: string): string {
     .trim();
 }
 
+/**
+ * WordPress returns post_name slugs percent-encoded for non-ASCII (Arabic)
+ * titles, e.g. "%d8%a7%d9%84...". Storing that literal breaks the URL round
+ * trip: Next.js decodes the route param before our slug lookup, so the
+ * decoded Arabic never matches the stored "%xx" string (-> 404). Decode to
+ * the human-readable slug, which re-encodes identically in the browser and
+ * matches on lookup. Falls back to the raw value if it isn't valid encoding.
+ */
+function decodeSlug(raw: string): string {
+  if (!raw) return raw;
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
 function log(msg: string): void {
   console.log(msg);
 }
@@ -560,7 +577,8 @@ async function migrateArticle(
   migratedCount: { value: number },
   totalEstimate: number,
 ): Promise<void> {
-  const newSlug = wpPost.slug || slugify(wpPost.title?.rendered ?? "");
+  const newSlug =
+    decodeSlug(wpPost.slug) || slugify(wpPost.title?.rendered ?? "");
 
   try {
     const existing = await payload.find({
