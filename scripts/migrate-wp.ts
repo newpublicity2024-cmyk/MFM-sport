@@ -14,9 +14,9 @@
  *
  * What it does:
  *   1. Preflight: verifies WP API reachability + required env vars
- *   2. Migrates categories, tags, authors from WordPress
- *   3. For each article (published), fetches with ?_embed=1 so featured media
- *      is inline. Migrates:
+ *   2. For each article (published), fetches with ?_embed=1 so featured media,
+ *      categories, tags, and author are inline. Creates ONLY the taxonomies
+ *      referenced by imported articles (lazy / on-demand). Migrates:
  *        - featured image -> Payload Media -> article.featuredImage
  *        - every <img> in body HTML -> Payload Media, replaced in-place
  *        - body HTML -> Lexical JSON via convertHTMLToLexical
@@ -100,32 +100,6 @@ function slugify(text: string): string {
 
 function log(msg: string): void {
   console.log(msg);
-}
-
-async function fetchWpPages<T>(endpoint: string): Promise<T[]> {
-  const all: T[] = [];
-  let page = 1;
-  let hasMore = true;
-
-  while (hasMore) {
-    const url = `${WP_API_URL}/${endpoint}?per_page=${BATCH_SIZE}&page=${page}`;
-    log(`  Fetching ${url}`);
-
-    const res = await fetch(url);
-    if (!res.ok) {
-      if (res.status === 400) break;
-      throw new Error(`WP API error: ${res.status} for ${url}`);
-    }
-
-    const data: T[] = await res.json();
-    all.push(...data);
-
-    const totalPages = parseInt(res.headers.get("x-wp-totalpages") || "1", 10);
-    hasMore = page < totalPages;
-    page++;
-  }
-
-  return all;
 }
 
 // ---------------------------------------------------------------------------
@@ -286,128 +260,148 @@ async function ensureMedia(
 }
 
 // ---------------------------------------------------------------------------
-// Taxonomy migration (unchanged logic, updated to use stats)
+// Taxonomy migration — lazy / on-demand
+//
+// We do NOT bulk-import every category/tag/author up front. Each article
+// carries its own categories, tags, and author inline via ?_embed=1
+// (`_embedded['wp:term']` and `_embedded.author`). We create only the
+// taxonomies actually referenced by the articles we import — keeps the DB
+// lean when importing a capped subset (e.g. 200 of ~37k posts).
+//
+// Idempotent: skip-by-slug + in-memory id maps. The `once()` in-flight cache
+// dedupes concurrent create attempts when sibling articles (processed
+// ARTICLE_CONCURRENCY at a time) reference the same new term in one batch.
 // ---------------------------------------------------------------------------
 
-async function migrateCategories(payload: any) {
-  log("\n--- Migrating Categories ---");
-  const wpCategories = await fetchWpPages<any>("categories");
-  log(`Found ${wpCategories.length} WP categories`);
+// key -> in-flight Promise, dedupes concurrent ensure() calls for the same term
+const inflight = new Map<string, Promise<string | number | null>>();
 
-  for (const wpCat of wpCategories) {
-    const slug = wpCat.slug || slugify(wpCat.name);
+function once(
+  key: string,
+  fn: () => Promise<string | number | null>,
+): Promise<string | number | null> {
+  const existing = inflight.get(key);
+  if (existing) return existing;
+  const p = fn();
+  inflight.set(key, p);
+  return p;
+}
+
+async function ensureCategory(
+  payload: any,
+  term: any,
+): Promise<string | number | null> {
+  if (!term?.id || !term.name) return null;
+  if (categoryMap.has(term.id)) return categoryMap.get(term.id)!;
+  return once(`cat:${term.id}`, async () => {
     try {
+      const slug = term.slug || slugify(term.name);
       const existing = await payload.find({
         collection: "categories",
         where: { slug: { equals: slug } },
         limit: 1,
       });
-
       if (existing.docs[0]) {
-        categoryMap.set(wpCat.id, existing.docs[0].id);
-        continue;
+        categoryMap.set(term.id, existing.docs[0].id);
+        return existing.docs[0].id;
       }
-
       if (DRY_RUN) {
-        categoryMap.set(wpCat.id, `dry-cat-${wpCat.id}`);
-        log(`  [dry-create] Category "${wpCat.name}"`);
-        continue;
+        const id = `dry-cat-${term.id}`;
+        categoryMap.set(term.id, id);
+        return id;
       }
-
       const created = await payload.create({
         collection: "categories",
         data: {
-          name: wpCat.name,
+          name: term.name,
           slug,
-          description: wpCat.description || undefined,
+          description: term.description || undefined,
         },
         locale: "ar",
       });
-
-      categoryMap.set(wpCat.id, created.id);
-      log(`  [created] Category "${wpCat.name}" -> ${created.id}`);
+      categoryMap.set(term.id, created.id);
+      log(`  [created] Category "${term.name}" -> ${created.id}`);
+      return created.id;
     } catch (error: any) {
-      console.error(`  [error] Category "${wpCat.name}": ${error.message}`);
+      console.error(`  [error] Category "${term.name}": ${error.message}`);
+      return null;
     }
-  }
+  });
 }
 
-async function migrateTags(payload: any) {
-  log("\n--- Migrating Tags ---");
-  const wpTags = await fetchWpPages<any>("tags");
-  log(`Found ${wpTags.length} WP tags`);
-
-  for (const wpTag of wpTags) {
-    const slug = wpTag.slug || slugify(wpTag.name);
+async function ensureTag(
+  payload: any,
+  term: any,
+): Promise<string | number | null> {
+  if (!term?.id || !term.name) return null;
+  if (tagMap.has(term.id)) return tagMap.get(term.id)!;
+  return once(`tag:${term.id}`, async () => {
     try {
+      const slug = term.slug || slugify(term.name);
       const existing = await payload.find({
         collection: "tags",
         where: { slug: { equals: slug } },
         limit: 1,
       });
-
       if (existing.docs[0]) {
-        tagMap.set(wpTag.id, existing.docs[0].id);
-        continue;
+        tagMap.set(term.id, existing.docs[0].id);
+        return existing.docs[0].id;
       }
-
       if (DRY_RUN) {
-        tagMap.set(wpTag.id, `dry-tag-${wpTag.id}`);
-        continue;
+        const id = `dry-tag-${term.id}`;
+        tagMap.set(term.id, id);
+        return id;
       }
-
       const created = await payload.create({
         collection: "tags",
-        data: { name: wpTag.name, slug },
+        data: { name: term.name, slug },
         locale: "ar",
       });
-
-      tagMap.set(wpTag.id, created.id);
+      tagMap.set(term.id, created.id);
+      return created.id;
     } catch (error: any) {
-      console.error(`  [error] Tag "${wpTag.name}": ${error.message}`);
+      console.error(`  [error] Tag "${term.name}": ${error.message}`);
+      return null;
     }
-  }
+  });
 }
 
-async function migrateAuthors(payload: any) {
-  log("\n--- Migrating Authors ---");
-  const wpUsers = await fetchWpPages<any>("users");
-  log(`Found ${wpUsers.length} WP users`);
-
-  for (const wpUser of wpUsers) {
-    const slug = wpUser.slug || slugify(wpUser.name);
+async function ensureAuthor(
+  payload: any,
+  user: any,
+): Promise<string | number | null> {
+  if (!user?.id || !user.name) return null;
+  if (authorMap.has(user.id)) return authorMap.get(user.id)!;
+  return once(`author:${user.id}`, async () => {
     try {
+      const slug = user.slug || slugify(user.name);
       const existing = await payload.find({
         collection: "authors",
         where: { slug: { equals: slug } },
         limit: 1,
       });
-
       if (existing.docs[0]) {
-        authorMap.set(wpUser.id, existing.docs[0].id);
-        continue;
+        authorMap.set(user.id, existing.docs[0].id);
+        return existing.docs[0].id;
       }
-
       if (DRY_RUN) {
-        authorMap.set(wpUser.id, `dry-author-${wpUser.id}`);
-        continue;
+        const id = `dry-author-${user.id}`;
+        authorMap.set(user.id, id);
+        return id;
       }
-
       const created = await payload.create({
         collection: "authors",
-        data: {
-          name: wpUser.name,
-          slug,
-          bio: wpUser.description || undefined,
-        },
+        data: { name: user.name, slug, bio: user.description || undefined },
         locale: "ar",
       });
-
-      authorMap.set(wpUser.id, created.id);
+      authorMap.set(user.id, created.id);
+      log(`  [created] Author "${user.name}" -> ${created.id}`);
+      return created.id;
     } catch (error: any) {
-      console.error(`  [error] Author "${wpUser.name}": ${error.message}`);
+      console.error(`  [error] Author "${user.name}": ${error.message}`);
+      return null;
     }
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -579,18 +573,32 @@ async function migrateArticle(
       return;
     }
 
-    const categoryIds = (wpPost.categories || [])
-      .map((id: number) => categoryMap.get(id))
-      .filter(Boolean);
-    const tagIds = (wpPost.tags || [])
-      .map((id: number) => tagMap.get(id))
-      .filter(Boolean);
-    const authorId = authorMap.get(wpPost.author);
+    // Categories, tags, and author arrive inline via ?_embed=1. Create only
+    // the taxonomies this article actually references.
+    const embeddedTerms: any[] = (wpPost._embedded?.["wp:term"] || []).flat();
+    const categoryIds: (string | number)[] = [];
+    const tagIds: (string | number)[] = [];
+    for (const term of embeddedTerms) {
+      if (term?.taxonomy === "category") {
+        const id = await ensureCategory(payload, term);
+        if (id) categoryIds.push(id);
+      } else if (term?.taxonomy === "post_tag") {
+        const id = await ensureTag(payload, term);
+        if (id) tagIds.push(id);
+      }
+    }
+
+    // WP returns an error object (with `.code`) here if the author embed failed.
+    const embeddedAuthor = wpPost._embedded?.author?.[0];
+    const authorId =
+      embeddedAuthor && !embeddedAuthor.code
+        ? await ensureAuthor(payload, embeddedAuthor)
+        : null;
 
     if (!authorId) {
       stats.articleFailures++;
       console.error(
-        `  [skip] No author mapping for WP author ID ${wpPost.author} (post ${wpPost.id})`,
+        `  [skip] No author for WP post ${wpPost.id} (author ID ${wpPost.author})`,
       );
       return;
     }
@@ -795,9 +803,6 @@ async function main() {
     config: payload.config,
   });
 
-  await migrateCategories(payload);
-  await migrateTags(payload);
-  await migrateAuthors(payload);
   await migrateArticles(payload, editorConfig);
 
   log("\n=== Migration Complete ===");
