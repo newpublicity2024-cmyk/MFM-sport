@@ -65,6 +65,7 @@ export default async function ArticlePage({ params }: Props) {
 
   return (
     <article className="container py-8 max-w-4xl">
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6 lg:p-8">
       {/* Categories */}
       {article.categories && article.categories.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
@@ -171,6 +172,7 @@ export default async function ArticlePage({ params }: Props) {
           title={t("relatedNews")}
         />
       )}
+      </div>
     </article>
   );
 }

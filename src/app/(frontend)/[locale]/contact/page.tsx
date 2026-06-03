@@ -21,12 +21,14 @@ export default async function ContactPage({ params }: Props) {
 
   return (
     <div className="container py-8 max-w-3xl">
-      <h1 className="text-2xl font-bold mb-6">{page?.title || t("contact")}</h1>
-      {page?.body ? (
-        <ArticleBody content={page.body} />
-      ) : (
-        <p className="text-muted-foreground">{t("noContent")}</p>
-      )}
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+        <h1 className="text-2xl font-bold mb-6">{page?.title || t("contact")}</h1>
+        {page?.body ? (
+          <ArticleBody content={page.body} />
+        ) : (
+          <p className="text-muted-foreground">{t("noContent")}</p>
+        )}
+      </div>
     </div>
   );
 }
