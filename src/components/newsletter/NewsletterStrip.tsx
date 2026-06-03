@@ -9,12 +9,10 @@ export function NewsletterStrip({ locale }: Props) {
   const t = useTranslations("newsletter");
 
   return (
-    <section className="bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 py-10">
-      <div className="container text-center">
-        <h2 className="text-xl font-bold mb-2">{t("title")}</h2>
-        <p className="text-sm text-muted-foreground mb-4">{t("subtitle")}</p>
-        <NewsletterForm locale={locale} />
-      </div>
+    <section className="rounded-2xl border border-border bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 px-4 py-10 text-center shadow-sm">
+      <h2 className="text-xl font-bold mb-2">{t("title")}</h2>
+      <p className="text-sm text-muted-foreground mb-4">{t("subtitle")}</p>
+      <NewsletterForm locale={locale} />
     </section>
   );
 }

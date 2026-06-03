@@ -112,9 +112,7 @@ export default async function HomePage({ params }: Props) {
         labels={matchLabels}
       />
 
-      <div className="mt-10">
-        <NewsletterStrip locale={locale} />
-      </div>
+      <NewsletterStrip locale={locale} />
     </div>
   );
 }
