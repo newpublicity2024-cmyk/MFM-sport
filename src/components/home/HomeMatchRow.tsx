@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
@@ -34,6 +34,32 @@ export function HomeMatchRow({ fixture, locale, labels, defaultOpen = false }: P
   const abortRef = useRef<AbortController | null>(null);
   const fetchingRef = useRef(false);
 
+  const status = getMatchStatus(fixture.fixture.status.short);
+  const { home, away } = fixture.teams;
+  const goals = fixture.goals;
+  const fixtureId = fixture.fixture.id;
+  const panelId = `home-match-${fixtureId}`;
+
+  const loadDetail = useCallback(async () => {
+    if (detail || fetchingRef.current) return;
+    fetchingRef.current = true;
+    setLoading(true);
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    try {
+      const res = await fetch(`/api/fixtures/${fixtureId}`, { signal: ctrl.signal });
+      if (res.ok) {
+        const json = (await res.json()) as { fixture: ApiFixture };
+        if (mountedRef.current) setDetail(json.fixture);
+      }
+    } catch {
+      // swallow (including AbortError) — panel falls back to embedded fixture data
+    } finally {
+      fetchingRef.current = false;
+      if (mountedRef.current) setLoading(false);
+    }
+  }, [detail, fixtureId]);
+
   useEffect(() => {
     return () => {
       mountedRef.current = false;
@@ -41,33 +67,17 @@ export function HomeMatchRow({ fixture, locale, labels, defaultOpen = false }: P
     };
   }, []);
 
-  const status = getMatchStatus(fixture.fixture.status.short);
-  const { home, away } = fixture.teams;
-  const goals = fixture.goals;
-  const fixtureId = fixture.fixture.id;
-  const panelId = `home-match-${fixtureId}`;
+  // Fetch details whenever the panel is open — covers user-expand and the
+  // defaultOpen (auto-open first live match) case. loadDetail no-ops if already
+  // fetched or in flight.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (open) void loadDetail();
+  }, [open, loadDetail]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  async function toggle() {
-    const next = !open;
-    setOpen(next);
-    if (next && !detail && !fetchingRef.current) {
-      fetchingRef.current = true;
-      setLoading(true);
-      const ctrl = new AbortController();
-      abortRef.current = ctrl;
-      try {
-        const res = await fetch(`/api/fixtures/${fixtureId}`, { signal: ctrl.signal });
-        if (res.ok) {
-          const json = (await res.json()) as { fixture: ApiFixture };
-          if (mountedRef.current) setDetail(json.fixture);
-        }
-      } catch {
-        // swallow (including AbortError) — panel falls back to embedded fixture data
-      } finally {
-        fetchingRef.current = false;
-        if (mountedRef.current) setLoading(false);
-      }
-    }
+  function toggle() {
+    setOpen((v) => !v);
   }
 
   const events = detail?.events ?? fixture.events ?? [];

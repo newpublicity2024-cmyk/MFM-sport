@@ -114,4 +114,32 @@ describe("HomeMatchRow", () => {
       expect(screen.getByText("No events yet")).toBeInTheDocument(),
     );
   });
+
+  it("auto-fetches and renders details on mount when defaultOpen is true", async () => {
+    const detail = makeFixture();
+    detail.events = [
+      {
+        time: { elapsed: 5, extra: null },
+        team: { id: 1, name: "Raja", logo: "https://x/h.png" },
+        player: { id: 7, name: "AutoScorer" },
+        assist: { id: null, name: null },
+        type: "Goal", detail: "Normal Goal", comments: null,
+      },
+    ];
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ fixture: detail }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<HomeMatchRow fixture={makeFixture()} locale="en" labels={LABELS} defaultOpen />);
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/fixtures/101",
+        expect.objectContaining({ signal: expect.anything() }),
+      ),
+    );
+    await waitFor(() => expect(screen.getByText("AutoScorer")).toBeInTheDocument());
+  });
 });
