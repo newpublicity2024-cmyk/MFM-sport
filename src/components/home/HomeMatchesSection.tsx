@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { HomeMatchRow, type HomeMatchLabels } from "./HomeMatchRow";
+import { SectionShell } from "@/components/home/SectionShell";
 import { useLiveFixtures } from "@/hooks/useLiveFixtures";
 import { getMatchStatus, type ApiFixture } from "@/lib/api-football/types";
 
@@ -47,7 +48,7 @@ export function HomeMatchesSection({ title, emptyLabel, locale, fixtures, labels
   );
 
   return (
-    <section className="mt-10">
+    <SectionShell>
       <SectionHeader title={title} />
       {sorted.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
@@ -66,6 +67,6 @@ export function HomeMatchesSection({ title, emptyLabel, locale, fixtures, labels
           ))}
         </div>
       )}
-    </section>
+    </SectionShell>
   );
 }

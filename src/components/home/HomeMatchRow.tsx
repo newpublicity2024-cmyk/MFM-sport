@@ -86,7 +86,7 @@ export function HomeMatchRow({ fixture, locale, labels, defaultOpen = false }: P
   const referee = detail?.fixture.referee ?? fixture.fixture.referee;
 
   return (
-    <div className="rounded-xl bg-card border border-border overflow-hidden">
+    <div className="rounded-xl bg-background border border-border overflow-hidden">
       <button
         type="button"
         onClick={toggle}
