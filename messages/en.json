@@ -43,7 +43,14 @@
       "finished": "Ended",
       "live": "Live",
       "scheduled": "Upcoming"
-    }
+    },
+    "matchesTitle": "Matches",
+    "matchesEmpty": "No matches today",
+    "loadingDetails": "Loading details...",
+    "viewFullMatch": "View full match",
+    "noEvents": "No events yet",
+    "venue": "Venue",
+    "referee": "Referee"
   },
   "ads": {
     "label": "Advertisement"

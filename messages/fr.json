@@ -43,7 +43,14 @@
       "finished": "Terminés",
       "live": "En direct",
       "scheduled": "À venir"
-    }
+    },
+    "matchesTitle": "Matchs",
+    "matchesEmpty": "Aucun match aujourd'hui",
+    "loadingDetails": "Chargement des détails...",
+    "viewFullMatch": "Voir le match",
+    "noEvents": "Aucun événement",
+    "venue": "Stade",
+    "referee": "Arbitre"
   },
   "ads": {
     "label": "Publicité"
