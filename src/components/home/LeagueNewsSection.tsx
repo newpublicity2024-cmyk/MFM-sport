@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { LeaguesPanel } from "./LeaguesPanel";
+import { LeaguePlaylistBanner } from "./LeaguePlaylistBanner";
 import { NewsGrid2x2 } from "./NewsGrid2x2";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { SectionShell } from "@/components/home/SectionShell";
@@ -25,13 +26,14 @@ export function LeagueNewsSection({ title, locale, articlesByLeague }: Props) {
         <div className="lg:col-span-2">
           <NewsGrid2x2 articles={articles} locale={locale} />
         </div>
-        <div>
+        <div className="flex flex-col gap-3">
           <LeaguesPanel
             leagues={LEAGUES}
             selectedId={selectedId}
             locale={locale}
             onSelect={setSelectedId}
           />
+          <LeaguePlaylistBanner locale={locale} />
         </div>
       </div>
     </SectionShell>
