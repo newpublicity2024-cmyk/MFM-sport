@@ -17,10 +17,10 @@ type Props = {
 export function LeaguePlaylistBanner({ locale }: Props) {
   const label = LABELS[locale] ?? LABELS.en;
 
-  // On desktop the banner is a flex child of the leagues column: it grows to fill
-  // the space left under the panel so its bottom aligns with the article grid next
-  // to it (the image is cropped via object-cover to fit). On mobile it falls back to
-  // a square. When swapping in the final artwork, design it for a tall ~3:4 slot.
+  // On desktop the banner is a flex child of the leagues column: the holder grows to
+  // fill the space left under the panel so its bottom aligns with the article grid
+  // next to it. The image is contained (object-contain) so the whole artwork shows
+  // without zooming. On mobile the holder falls back to a square.
   return (
     <a
       href={PLAYLIST_URL}
@@ -34,7 +34,7 @@ export function LeaguePlaylistBanner({ locale }: Props) {
         alt=""
         fill
         sizes="(max-width: 1024px) 100vw, 33vw"
-        className="object-cover transition-transform duration-300 group-hover:scale-105"
+        className="object-contain transition-transform duration-300 group-hover:scale-105"
       />
     </a>
   );

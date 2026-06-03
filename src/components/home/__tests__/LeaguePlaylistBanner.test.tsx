@@ -36,4 +36,11 @@ describe("LeaguePlaylistBanner", () => {
       screen.getByRole("link", { name: /قائمة تشغيل/ }),
     ).toBeInTheDocument();
   });
+
+  it("fits the image without zooming (object-contain, not object-cover)", () => {
+    const { container } = render(<LeaguePlaylistBanner locale="en" />);
+    const img = container.querySelector("img");
+    expect(img?.className).toContain("object-contain");
+    expect(img?.className).not.toContain("object-cover");
+  });
 });

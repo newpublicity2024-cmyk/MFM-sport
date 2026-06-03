@@ -10,6 +10,7 @@ import { LeagueNewsSection } from "@/components/home/LeagueNewsSection";
 import { VideosSection } from "@/components/home/VideosSection";
 import { HomeMatchesSection } from "@/components/home/HomeMatchesSection";
 import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";
+import { AdBanner } from "@/components/ads/AdBanner";
 import { LEAGUES } from "@/lib/home/leagues";
 import { toHeroSlide, buildLeagueArticles } from "@/lib/home/cards";
 
@@ -88,45 +89,88 @@ export default async function HomePage({ params }: Props) {
   }
 
   return (
-    <div className="container py-6 space-y-6">
+    // No top padding: the OCP banner is intentionally flush under the header so the
+    // page drops down by exactly the banner's height.
+    <div className="space-y-6 pb-6">
       <h1 className="sr-only">MFM Sport</h1>
 
-      <HeroSection
-        slides={heroSlides}
-        fixtures={todayFixtures}
-        locale={locale}
-        leaguesLabel={t("leaguesNav")}
-        leagues={carouselLeagues}
-        statusLabels={statusLabels}
+      {/* Top ad — above the hero + leagues carousel; pushes the page down. */}
+      <AdBanner
+        src="/images/ocp-banner.jpeg"
+        alt="OCP — SIAM"
+        width={1600}
+        height={413}
+        priority
       />
 
-      <LeagueNewsSection
-        title={t("byLeague")}
-        locale={locale}
-        articlesByLeague={articlesByLeague}
+      <div className="container space-y-6">
+        <HeroSection
+          slides={heroSlides}
+          fixtures={todayFixtures}
+          locale={locale}
+          leaguesLabel={t("leaguesNav")}
+          leagues={carouselLeagues}
+          statusLabels={statusLabels}
+        />
+      </div>
+
+      {/* Between hero and latest news. */}
+      <AdBanner
+        src="/images/cargo-banner.jpeg"
+        alt="MSC"
+        width={970}
+        height={250}
       />
 
-      <VideosSection
-        title={t("videoThirdHalf")}
-        locale={locale}
-        videos={thirdHalfVideos}
+      <div className="container space-y-6">
+        <LeagueNewsSection
+          title={t("byLeague")}
+          locale={locale}
+          articlesByLeague={articlesByLeague}
+        />
+      </div>
+
+      {/* Between latest news and the first YouTube section. */}
+      <AdBanner
+        src="/images/car1-banner.jpeg"
+        alt="OMODA C5"
+        width={970}
+        height={250}
       />
 
-      <VideosSection
-        title={t("videoFromStadiums")}
-        locale={locale}
-        videos={fromStadiumsVideos}
+      <div className="container space-y-6">
+        <VideosSection
+          title={t("videoThirdHalf")}
+          locale={locale}
+          videos={thirdHalfVideos}
+        />
+
+        <VideosSection
+          title={t("videoFromStadiums")}
+          locale={locale}
+          videos={fromStadiumsVideos}
+        />
+      </div>
+
+      {/* Between the second YouTube section and the matches section. */}
+      <AdBanner
+        src="/images/car2-banner.jpeg"
+        alt="JETOUR"
+        width={970}
+        height={250}
       />
 
-      <HomeMatchesSection
-        title={t("matchesTitle")}
-        emptyLabel={t("matchesEmpty")}
-        locale={locale}
-        fixtures={todayFixtures}
-        labels={matchLabels}
-      />
+      <div className="container space-y-6">
+        <HomeMatchesSection
+          title={t("matchesTitle")}
+          emptyLabel={t("matchesEmpty")}
+          locale={locale}
+          fixtures={todayFixtures}
+          labels={matchLabels}
+        />
 
-      <NewsletterStrip locale={locale} />
+        <NewsletterStrip locale={locale} />
+      </div>
     </div>
   );
 }
