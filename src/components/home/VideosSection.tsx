@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { SectionShell } from "@/components/home/SectionShell";
 import { VideoPlayer } from "./VideoPlayer";
 import { VideoList } from "./VideoList";
 import type { HomeVideo } from "@/lib/videos";
@@ -23,7 +24,7 @@ export function VideosSection({ title, locale, videos }: Props) {
   if (!selected) return null;
 
   return (
-    <section className="mt-10 rounded-2xl bg-navy text-navy-foreground p-4 lg:p-6">
+    <SectionShell variant="navy">
       <SectionHeader title={title} />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-stretch">
         <div className="lg:col-span-2">
@@ -41,6 +42,6 @@ export function VideosSection({ title, locale, videos }: Props) {
           </div>
         </div>
       </div>
-    </section>
+    </SectionShell>
   );
 }

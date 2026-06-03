@@ -4,6 +4,7 @@ import { useState } from "react";
 import { LeaguesPanel } from "./LeaguesPanel";
 import { NewsGrid2x2 } from "./NewsGrid2x2";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { SectionShell } from "@/components/home/SectionShell";
 import { LEAGUES } from "@/lib/home/leagues";
 import type { LeagueCardArticle } from "@/lib/home/cards";
 
@@ -18,7 +19,7 @@ export function LeagueNewsSection({ title, locale, articlesByLeague }: Props) {
   const articles = articlesByLeague[selectedId] ?? [];
 
   return (
-    <section className="mt-10">
+    <SectionShell>
       <SectionHeader title={title} />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
@@ -33,6 +34,6 @@ export function LeagueNewsSection({ title, locale, articlesByLeague }: Props) {
           />
         </div>
       </div>
-    </section>
+    </SectionShell>
   );
 }

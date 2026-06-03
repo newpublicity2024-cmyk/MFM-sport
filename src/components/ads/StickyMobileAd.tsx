@@ -24,7 +24,7 @@ export function StickyMobileAd() {
   return (
     <div
       data-testid="sticky-mobile-ad"
-      className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-background border-t border-neutral-200 dark:border-neutral-800 p-1"
+      className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-card border-t border-border p-1"
     >
       <button
         type="button"
