@@ -27,7 +27,7 @@ export function LeaguePlaylistBanner({ locale }: Props) {
     >
       <Image
         src={BANNER_SRC}
-        alt={label}
+        alt=""
         width={300}
         height={300}
         sizes="(max-width: 1024px) 100vw, 33vw"

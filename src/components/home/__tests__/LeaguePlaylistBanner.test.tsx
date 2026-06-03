@@ -15,10 +15,10 @@ describe("LeaguePlaylistBanner", () => {
   });
 
   it("renders the banner image from /images/box-banner.jpg", () => {
-    render(<LeaguePlaylistBanner locale="en" />);
-    const img = screen.getByRole("img");
+    const { container } = render(<LeaguePlaylistBanner locale="en" />);
+    const img = container.querySelector("img");
     // next/image rewrites src into an optimizer URL; the original path is encoded inside it.
-    expect(decodeURIComponent(img.getAttribute("src") ?? "")).toContain(
+    expect(decodeURIComponent(img?.getAttribute("src") ?? "")).toContain(
       "/images/box-banner.jpg",
     );
   });
