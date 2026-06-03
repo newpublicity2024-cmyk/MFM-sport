@@ -75,7 +75,10 @@ describe("HomeMatchRow", () => {
 
     expect(screen.getByRole("button")).toHaveAttribute("aria-expanded", "true");
     await waitFor(() =>
-      expect(fetchMock).toHaveBeenCalledWith("/api/fixtures/101"),
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/fixtures/101",
+        expect.objectContaining({ signal: expect.anything() }),
+      ),
     );
     await waitFor(() => expect(screen.getByText("Hamid")).toBeInTheDocument());
   });
@@ -94,5 +97,21 @@ describe("HomeMatchRow", () => {
     fireEvent.click(toggle); // close
     fireEvent.click(toggle); // open again -> no refetch
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the no-events label when the fetched match has no events", async () => {
+    const detail = makeFixture(); // makeFixture returns no events array
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ fixture: detail }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<HomeMatchRow fixture={makeFixture()} locale="en" labels={LABELS} />);
+    fireEvent.click(screen.getByRole("button"));
+
+    await waitFor(() =>
+      expect(screen.getByText("No events yet")).toBeInTheDocument(),
+    );
   });
 });

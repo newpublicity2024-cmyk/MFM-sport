@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
@@ -30,6 +30,17 @@ export function HomeMatchRow({ fixture, locale, labels, defaultOpen = false }: P
   const [detail, setDetail] = useState<ApiFixture | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const mountedRef = useRef(true);
+  const abortRef = useRef<AbortController | null>(null);
+  const fetchingRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      abortRef.current?.abort();
+    };
+  }, []);
+
   const status = getMatchStatus(fixture.fixture.status.short);
   const { home, away } = fixture.teams;
   const goals = fixture.goals;
@@ -39,18 +50,22 @@ export function HomeMatchRow({ fixture, locale, labels, defaultOpen = false }: P
   async function toggle() {
     const next = !open;
     setOpen(next);
-    if (next && !detail && !loading) {
+    if (next && !detail && !fetchingRef.current) {
+      fetchingRef.current = true;
       setLoading(true);
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
       try {
-        const res = await fetch(`/api/fixtures/${fixtureId}`);
+        const res = await fetch(`/api/fixtures/${fixtureId}`, { signal: ctrl.signal });
         if (res.ok) {
           const json = (await res.json()) as { fixture: ApiFixture };
-          setDetail(json.fixture);
+          if (mountedRef.current) setDetail(json.fixture);
         }
       } catch {
-        // swallow — panel falls back to the embedded fixture data
+        // swallow (including AbortError) — panel falls back to embedded fixture data
       } finally {
-        setLoading(false);
+        fetchingRef.current = false;
+        if (mountedRef.current) setLoading(false);
       }
     }
   }
