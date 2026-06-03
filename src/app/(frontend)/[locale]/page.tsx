@@ -8,6 +8,7 @@ import { getFixturesByDate } from "@/lib/api-football/fixtures";
 import { HeroSection } from "@/components/home/HeroSection";
 import { LeagueNewsSection } from "@/components/home/LeagueNewsSection";
 import { VideosSection } from "@/components/home/VideosSection";
+import { HomeMatchesSection } from "@/components/home/HomeMatchesSection";
 import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";
 import { LEAGUES } from "@/lib/home/leagues";
 import { toHeroSlide, buildLeagueArticles } from "@/lib/home/cards";
@@ -34,6 +35,16 @@ export default async function HomePage({ params }: Props) {
 
   const t = await getTranslations({ locale, namespace: "home" });
   const tArticle = await getTranslations({ locale, namespace: "article" });
+  const tMatch = await getTranslations({ locale, namespace: "match" });
+  const matchLabels = {
+    liveNow: tMatch("liveNow"),
+    events: tMatch("events"),
+    venue: t("venue"),
+    referee: t("referee"),
+    viewFullMatch: t("viewFullMatch"),
+    loadingDetails: t("loadingDetails"),
+    noEvents: t("noEvents"),
+  };
 
   const today = new Date().toISOString().split("T")[0];
   const todayFixtures = await getFixturesByDate(today);
@@ -57,7 +68,7 @@ export default async function HomePage({ params }: Props) {
 
   if (heroSlides.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
+      <div className="container py-16 text-center">
         <h1 className="text-4xl font-bold text-primary mb-4">MFM Sport</h1>
         <p className="text-muted-foreground">{tArticle("noArticles")}</p>
       </div>
@@ -65,7 +76,7 @@ export default async function HomePage({ params }: Props) {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container py-6">
       <h1 className="sr-only">MFM Sport</h1>
 
       <HeroSection
@@ -91,6 +102,14 @@ export default async function HomePage({ params }: Props) {
         title={t("videoFromStadiums")}
         locale={locale}
         videos={fromStadiumsVideos}
+      />
+
+      <HomeMatchesSection
+        title={t("matchesTitle")}
+        emptyLabel={t("matchesEmpty")}
+        locale={locale}
+        fixtures={todayFixtures}
+        labels={matchLabels}
       />
 
       <div className="mt-10">

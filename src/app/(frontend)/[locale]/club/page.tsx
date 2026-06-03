@@ -24,7 +24,7 @@ export default async function ClubsIndexPage({ params }: Props) {
   const result = await getClubs(locale as Config["locale"]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container py-8">
       <h1 className="text-2xl font-bold mb-8">{t("clubs")}</h1>
 
       {result.docs.length === 0 ? (

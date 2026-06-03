@@ -9,6 +9,16 @@ const config: Config = {
     "./src/components/**/*.{ts,tsx}",
   ],
   theme: {
+    container: {
+      center: true,
+      padding: {
+        DEFAULT: "1rem",
+        sm: "1.5rem",
+        lg: "2rem",
+        xl: "3rem",
+        "2xl": "4rem",
+      },
+    },
     extend: {
       colors: {
         border: "hsl(var(--border))",
@@ -50,6 +60,10 @@ const config: Config = {
         draw: "hsl(var(--draw))",
         live: "hsl(var(--live))",
         scrim: "hsl(var(--scrim))",
+        navy: {
+          DEFAULT: "hsl(var(--navy))",
+          foreground: "hsl(var(--navy-foreground))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

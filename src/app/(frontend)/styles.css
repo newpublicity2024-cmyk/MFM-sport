@@ -46,6 +46,10 @@
     /* Scrim — image overlay; always dark regardless of theme */
     --scrim: 240 6% 3%;
 
+    /* Navy — section surface (brand, unchanged across themes) */
+    --navy: 222 47% 16%;               /* #15233F deep navy */
+    --navy-foreground: 0 0% 98%;       /* near-white text on navy */
+
     /* Sidebar (Payload admin / shadcn default) */
     --sidebar-background: 0 0% 99%;
     --sidebar-foreground: 240 6% 10%;
@@ -88,6 +92,10 @@
     --border: 0 0% 100% / 0.08;
     --input: 0 0% 100% / 0.08;
     --ring: 355 72% 49%;
+
+    /* Navy — unchanged */
+    --navy: 222 47% 16%;
+    --navy-foreground: 0 0% 98%;
 
     /* Sidebar */
     --sidebar-background: 240 6% 6%;

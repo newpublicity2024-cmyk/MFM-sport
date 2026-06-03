@@ -34,7 +34,7 @@ export default async function TagPage({ params, searchParams }: Props) {
   const t = await getTranslations({ locale, namespace: "article" });
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container py-8">
       <div className="flex items-center gap-2 mb-6">
         <span className="text-muted-foreground">#</span>
         <h1 className="text-2xl font-bold">{tag.name}</h1>

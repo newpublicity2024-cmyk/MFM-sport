@@ -27,7 +27,7 @@ export default async function VideosPage({ params, searchParams }: Props) {
   const result = await getVideoArticles(locale as Config["locale"], currentPage);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container py-8">
       <h1 className="text-2xl font-bold mb-6">{t("title")}</h1>
 
       {result.docs.length > 0 ? (

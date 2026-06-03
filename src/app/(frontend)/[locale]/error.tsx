@@ -16,7 +16,7 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="container mx-auto flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 text-center">
+    <div className="container flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">
       <h1 className="text-2xl font-bold">حدث خطأ ما</h1>
       <p className="text-muted-foreground">Something went wrong loading this page.</p>
       <div className="flex gap-3">

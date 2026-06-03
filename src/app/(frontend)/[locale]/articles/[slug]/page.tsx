@@ -64,7 +64,7 @@ export default async function ArticlePage({ params }: Props) {
   const author = typeof article.author === "object" ? article.author : null;
 
   return (
-    <article className="container mx-auto px-4 py-8 max-w-4xl">
+    <article className="container py-8 max-w-4xl">
       {/* Categories */}
       {article.categories && article.categories.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
