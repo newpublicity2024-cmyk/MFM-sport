@@ -104,7 +104,7 @@ export function MatchesPanel({ fixtures, locale, statusLabels }: Props) {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="sticky top-0 z-10 flex gap-1.5 rounded-xl border border-border bg-background/95 p-1.5 backdrop-blur supports-[backdrop-filter]:bg-background/75">
+      <div className="sticky top-0 z-10 flex gap-1.5 rounded-xl border border-border bg-card/95 p-1.5 backdrop-blur supports-[backdrop-filter]:bg-card/75">
         {FILTER_ORDER.map((status) => {
           const isActive = activeFilter === status;
           return (
