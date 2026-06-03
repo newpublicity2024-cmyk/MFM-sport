@@ -4,8 +4,8 @@ import { LeaguesPanel } from "@/components/home/LeaguesPanel";
 import type { League } from "@/lib/home/leagues";
 
 const leagues: League[] = [
-  { id: "a", name: { en: "Alpha", ar: "ألفا", fr: "Alpha" }, logoUrl: "/a.png" },
-  { id: "b", name: { en: "Beta", ar: "بيتا", fr: "Beta" }, logoUrl: "/b.png" },
+  { id: "a", name: { en: "Alpha", ar: "ألفا", fr: "Alpha" }, logoUrl: "/a.png", apiFootballId: 1 },
+  { id: "b", name: { en: "Beta", ar: "بيتا", fr: "Beta" }, logoUrl: "/b.png", apiFootballId: 2 },
 ];
 
 describe("LeaguesPanel", () => {
