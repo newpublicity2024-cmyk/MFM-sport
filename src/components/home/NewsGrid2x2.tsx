@@ -14,7 +14,7 @@ export function NewsGrid2x2({ articles, locale }: Props) {
       {articles.map((article) => (
         <article
           key={article.id}
-          className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-colors hover:border-primary/30"
+          className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-background transition-colors hover:border-primary/30"
         >
           <div className="relative aspect-video overflow-hidden">
             {article.heroUrl ? (

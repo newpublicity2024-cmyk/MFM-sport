@@ -18,7 +18,7 @@ function pickName(league: League, locale: string): string {
 
 export function LeaguesPanel({ leagues, selectedId, locale, onSelect }: Props) {
   return (
-    <div className="flex h-full flex-col gap-1.5 overflow-y-auto rounded-xl border border-border bg-card p-2">
+    <div className="flex h-full flex-col gap-1.5 overflow-y-auto rounded-xl border border-border bg-background p-2">
       {leagues.map((league) => {
         const isActive = league.id === selectedId;
         return (
@@ -30,7 +30,7 @@ export function LeaguesPanel({ leagues, selectedId, locale, onSelect }: Props) {
             className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-start text-sm font-medium transition-colors ${
               isActive
                 ? "bg-primary text-primary-foreground"
-                : "bg-muted/30 text-foreground hover:bg-muted"
+                : "bg-card text-foreground hover:bg-muted"
             }`}
           >
             <Image
