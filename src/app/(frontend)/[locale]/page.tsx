@@ -101,6 +101,7 @@ export default async function HomePage({ params }: Props) {
         width={1600}
         height={413}
         priority
+        className="mx-auto max-w-[970px]"
       />
 
       <div className="container space-y-6">
@@ -120,6 +121,7 @@ export default async function HomePage({ params }: Props) {
         alt="MSC"
         width={970}
         height={250}
+        className="mx-auto max-w-[970px]"
       />
 
       <div className="container space-y-6">
@@ -136,6 +138,7 @@ export default async function HomePage({ params }: Props) {
         alt="OMODA C5"
         width={970}
         height={250}
+        className="mx-auto max-w-[970px]"
       />
 
       <div className="container space-y-6">
@@ -158,6 +161,7 @@ export default async function HomePage({ params }: Props) {
         alt="JETOUR"
         width={970}
         height={250}
+        className="mx-auto max-w-[970px]"
       />
 
       <div className="container space-y-6">
