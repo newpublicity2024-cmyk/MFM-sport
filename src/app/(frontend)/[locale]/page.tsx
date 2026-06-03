@@ -76,7 +76,7 @@ export default async function HomePage({ params }: Props) {
   }
 
   return (
-    <div className="container py-6">
+    <div className="container py-6 space-y-6">
       <h1 className="sr-only">MFM Sport</h1>
 
       <HeroSection

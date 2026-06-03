@@ -136,7 +136,7 @@ export function MatchesPanel({ fixtures, locale, statusLabels }: Props) {
           return (
             <div
               key={group.league.id}
-              className="rounded-xl bg-card border border-border overflow-hidden"
+              className="rounded-xl bg-background border border-border overflow-hidden"
             >
               <button
                 type="button"
