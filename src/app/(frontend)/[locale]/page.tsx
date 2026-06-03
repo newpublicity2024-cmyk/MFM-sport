@@ -89,6 +89,8 @@ export default async function HomePage({ params }: Props) {
   }
 
   return (
+    // No top padding: the OCP banner is intentionally flush under the header so the
+    // page drops down by exactly the banner's height.
     <div className="space-y-6 pb-6">
       <h1 className="sr-only">MFM Sport</h1>
 
