@@ -1,5 +1,5 @@
 import { HeroSlider } from "@/components/home/HeroSlider";
-import { LeagueCarousel } from "@/components/home/LeagueCarousel";
+import { LeagueCarousel, type CarouselLeague } from "@/components/home/LeagueCarousel";
 import { MatchesPanel } from "@/components/home/MatchesPanel";
 import { SectionShell } from "@/components/home/SectionShell";
 import type { HeroSlide } from "@/lib/home/cards";
@@ -10,6 +10,7 @@ type Props = {
   fixtures: ApiFixture[];
   locale: string;
   leaguesLabel: string;
+  leagues: CarouselLeague[];
   statusLabels: {
     finished: string;
     live: string;
@@ -17,10 +18,10 @@ type Props = {
   };
 };
 
-export function HeroSection({ slides, fixtures, locale, leaguesLabel, statusLabels }: Props) {
+export function HeroSection({ slides, fixtures, locale, leaguesLabel, leagues, statusLabels }: Props) {
   return (
     <SectionShell>
-      <LeagueCarousel locale={locale} label={leaguesLabel} />
+      <LeagueCarousel leagues={leagues} locale={locale} label={leaguesLabel} />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:h-[500px]">
         {/* Featured slider — fills grid cell height on desktop */}
         <div className="lg:col-span-2">
