@@ -83,6 +83,7 @@ export default async function HomePage({ params }: Props) {
         slides={heroSlides}
         fixtures={todayFixtures}
         locale={locale}
+        leaguesLabel={t("leaguesNav")}
         statusLabels={statusLabels}
       />
 
