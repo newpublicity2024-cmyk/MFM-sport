@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { HomeMatchesSection } from "@/components/home/HomeMatchesSection";
 import type { HomeMatchLabels } from "@/components/home/HomeMatchRow";
@@ -31,6 +31,9 @@ function fx(id: number, short: string, ts: number, homeName: string): ApiFixture
 }
 
 describe("HomeMatchesSection", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("blocked")));
+  });
   afterEach(() => vi.unstubAllGlobals());
 
   it("shows the empty state when there are no fixtures", () => {

@@ -33,6 +33,7 @@ export function HomeMatchRow({ fixture, locale, labels, defaultOpen = false }: P
   const mountedRef = useRef(true);
   const abortRef = useRef<AbortController | null>(null);
   const fetchingRef = useRef(false);
+  const detailRef = useRef<ApiFixture | null>(null);
 
   const status = getMatchStatus(fixture.fixture.status.short);
   const { home, away } = fixture.teams;
@@ -41,7 +42,7 @@ export function HomeMatchRow({ fixture, locale, labels, defaultOpen = false }: P
   const panelId = `home-match-${fixtureId}`;
 
   const loadDetail = useCallback(async () => {
-    if (detail || fetchingRef.current) return;
+    if (detailRef.current || fetchingRef.current) return;
     fetchingRef.current = true;
     setLoading(true);
     const ctrl = new AbortController();
@@ -50,6 +51,7 @@ export function HomeMatchRow({ fixture, locale, labels, defaultOpen = false }: P
       const res = await fetch(`/api/fixtures/${fixtureId}`, { signal: ctrl.signal });
       if (res.ok) {
         const json = (await res.json()) as { fixture: ApiFixture };
+        detailRef.current = json.fixture;
         if (mountedRef.current) setDetail(json.fixture);
       }
     } catch {
@@ -58,7 +60,7 @@ export function HomeMatchRow({ fixture, locale, labels, defaultOpen = false }: P
       fetchingRef.current = false;
       if (mountedRef.current) setLoading(false);
     }
-  }, [detail, fixtureId]);
+  }, [fixtureId]);
 
   useEffect(() => {
     return () => {
