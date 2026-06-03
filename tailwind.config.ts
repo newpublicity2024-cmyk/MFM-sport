@@ -60,6 +60,10 @@ const config: Config = {
         draw: "hsl(var(--draw))",
         live: "hsl(var(--live))",
         scrim: "hsl(var(--scrim))",
+        navy: {
+          DEFAULT: "hsl(var(--navy))",
+          foreground: "hsl(var(--navy-foreground))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
