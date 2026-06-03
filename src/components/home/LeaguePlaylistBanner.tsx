@@ -17,21 +17,24 @@ type Props = {
 export function LeaguePlaylistBanner({ locale }: Props) {
   const label = LABELS[locale] ?? LABELS.en;
 
+  // On desktop the banner is a flex child of the leagues column: it grows to fill
+  // the space left under the panel so its bottom aligns with the article grid next
+  // to it (the image is cropped via object-cover to fit). On mobile it falls back to
+  // a square. When swapping in the final artwork, design it for a tall ~3:4 slot.
   return (
     <a
       href={PLAYLIST_URL}
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
-      className="group block overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-colors hover:border-primary/30"
+      className="group relative block aspect-square w-full overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-colors hover:border-primary/30 lg:aspect-auto lg:min-h-0 lg:flex-1"
     >
       <Image
         src={BANNER_SRC}
         alt=""
-        width={300}
-        height={300}
+        fill
         sizes="(max-width: 1024px) 100vw, 33vw"
-        className="h-auto w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        className="object-cover transition-transform duration-300 group-hover:scale-105"
       />
     </a>
   );
