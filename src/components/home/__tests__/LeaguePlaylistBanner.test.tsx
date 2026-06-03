@@ -14,12 +14,12 @@ describe("LeaguePlaylistBanner", () => {
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
 
-  it("renders the banner image from /images/box-banner.jpg", () => {
+  it("renders the banner image from /images/actual-banner.jpeg", () => {
     const { container } = render(<LeaguePlaylistBanner locale="en" />);
     const img = container.querySelector("img");
     // next/image rewrites src into an optimizer URL; the original path is encoded inside it.
     expect(decodeURIComponent(img?.getAttribute("src") ?? "")).toContain(
-      "/images/box-banner.jpg",
+      "/images/actual-banner.jpeg",
     );
   });
 

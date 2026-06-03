@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 import type { League } from "@/lib/home/leagues";
 
 type Props = {
@@ -8,6 +9,7 @@ type Props = {
   selectedId: string;
   locale: string;
   onSelect: (leagueId: string) => void;
+  className?: string;
 };
 
 function pickName(league: League, locale: string): string {
@@ -16,9 +18,14 @@ function pickName(league: League, locale: string): string {
   return league.name.en;
 }
 
-export function LeaguesPanel({ leagues, selectedId, locale, onSelect }: Props) {
+export function LeaguesPanel({ leagues, selectedId, locale, onSelect, className }: Props) {
   return (
-    <div className="flex flex-col gap-1.5 overflow-y-auto rounded-xl border border-border bg-background p-2">
+    <div
+      className={cn(
+        "flex flex-col gap-1.5 overflow-y-auto rounded-xl border border-border bg-background p-2",
+        className,
+      )}
+    >
       {leagues.map((league) => {
         const isActive = league.id === selectedId;
         return (

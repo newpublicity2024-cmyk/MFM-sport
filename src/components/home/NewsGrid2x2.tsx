@@ -1,16 +1,17 @@
 import Image from "next/image";
 import Link from "next/link";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import type { LeagueCardArticle } from "@/lib/home/cards";
 
 type Props = {
   articles: LeagueCardArticle[];
   locale: string;
+  className?: string;
 };
 
-export function NewsGrid2x2({ articles, locale }: Props) {
+export function NewsGrid2x2({ articles, locale, className }: Props) {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2", className)}>
       {articles.map((article) => (
         <article
           key={article.id}
