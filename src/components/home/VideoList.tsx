@@ -14,7 +14,7 @@ type Props = {
 
 export function VideoList({ videos, selectedId, locale, onSelect }: Props) {
   return (
-    <div className="flex h-full flex-col gap-2 overflow-y-auto rounded-xl border border-border bg-card p-2">
+    <div className="flex h-full max-h-[28rem] flex-col gap-2 overflow-y-auto rounded-xl border border-white/10 bg-white/5 p-2 lg:max-h-none">
       {videos.map((video) => {
         const isActive = video.youtubeId === selectedId;
         return (
@@ -26,7 +26,7 @@ export function VideoList({ videos, selectedId, locale, onSelect }: Props) {
             className={`flex items-stretch gap-2 rounded-lg p-1.5 text-start transition-colors ${
               isActive
                 ? "bg-primary/10 ring-1 ring-primary"
-                : "hover:bg-muted/40"
+                : "hover:bg-white/10"
             }`}
           >
             <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-md">
@@ -53,7 +53,7 @@ export function VideoList({ videos, selectedId, locale, onSelect }: Props) {
               {video.publishedAt && (
                 <time
                   dateTime={video.publishedAt}
-                  className="text-[10px] text-muted-foreground"
+                  className="text-[10px] text-white/60"
                 >
                   {formatDate(video.publishedAt, locale)}
                 </time>

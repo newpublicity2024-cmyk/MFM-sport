@@ -23,19 +23,21 @@ export function VideosSection({ title, locale, videos }: Props) {
   if (!selected) return null;
 
   return (
-    <section className="mt-10">
+    <section className="mt-10 rounded-2xl bg-navy text-navy-foreground p-4 lg:p-6">
       <SectionHeader title={title} />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-stretch">
         <div className="lg:col-span-2">
           <VideoPlayer videoId={selected.youtubeId} title={selected.title} />
         </div>
-        <div>
-          <VideoList
-            videos={videos}
-            selectedId={selectedId}
-            locale={locale}
-            onSelect={setSelectedId}
-          />
+        <div className="lg:relative">
+          <div className="lg:absolute lg:inset-0">
+            <VideoList
+              videos={videos}
+              selectedId={selectedId}
+              locale={locale}
+              onSelect={setSelectedId}
+            />
+          </div>
         </div>
       </div>
     </section>

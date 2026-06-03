@@ -45,4 +45,13 @@ describe("VideosSection", () => {
     const iframe = screen.getByTitle("Second Video") as HTMLIFrameElement;
     expect(iframe.src).toContain("youtube.com/embed/bbb222");
   });
+
+  it("wraps the section in a navy background", () => {
+    const { container } = render(
+      <VideosSection title="The Third Half" locale="en" videos={VIDEOS} />,
+    );
+    const section = container.querySelector("section");
+    expect(section).toHaveClass("bg-navy");
+    expect(section).toHaveClass("text-navy-foreground");
+  });
 });
