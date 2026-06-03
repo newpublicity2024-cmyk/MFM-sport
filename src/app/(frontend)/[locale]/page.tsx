@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { Config } from "@/payload-types";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
-import { getArticles } from "@/lib/payload/queries";
+import { getArticles, getCompetitions } from "@/lib/payload/queries";
 import { getVideos } from "@/lib/videos";
 import { getFixturesByDate } from "@/lib/api-football/fixtures";
 import { HeroSection } from "@/components/home/HeroSection";
@@ -49,6 +49,18 @@ export default async function HomePage({ params }: Props) {
   const today = new Date().toISOString().split("T")[0];
   const todayFixtures = await getFixturesByDate(today);
 
+  // League carousel mirrors every competition the site has (Botola — id 200 — first).
+  const competitions = await getCompetitions(locale as Config["locale"]);
+  const carouselLeagues = competitions.docs
+    .slice()
+    .sort((a, b) => (a.apiFootballId === 200 ? -1 : b.apiFootballId === 200 ? 1 : 0))
+    .map((c) => ({
+      slug: c.slug,
+      name: c.name,
+      logoUrl:
+        c.logoUrl || `https://media.api-sports.io/football/leagues/${c.apiFootballId}.png`,
+    }));
+
   // One query feeds both sections: first 5 = hero slider, the rest are split
   // into a distinct chunk per league.
   const latest = await getArticles({ locale: locale as Config["locale"], page: 1, limit: 30 });
@@ -84,6 +96,7 @@ export default async function HomePage({ params }: Props) {
         fixtures={todayFixtures}
         locale={locale}
         leaguesLabel={t("leaguesNav")}
+        leagues={carouselLeagues}
         statusLabels={statusLabels}
       />
 
