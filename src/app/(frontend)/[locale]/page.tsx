@@ -8,6 +8,7 @@ import { getFixturesByDate } from "@/lib/api-football/fixtures";
 import { HeroSection } from "@/components/home/HeroSection";
 import { LeagueNewsSection } from "@/components/home/LeagueNewsSection";
 import { VideosSection } from "@/components/home/VideosSection";
+import { HomeMatchesSection } from "@/components/home/HomeMatchesSection";
 import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";
 import { LEAGUES } from "@/lib/home/leagues";
 import { toHeroSlide, buildLeagueArticles } from "@/lib/home/cards";
@@ -34,6 +35,16 @@ export default async function HomePage({ params }: Props) {
 
   const t = await getTranslations({ locale, namespace: "home" });
   const tArticle = await getTranslations({ locale, namespace: "article" });
+  const tMatch = await getTranslations({ locale, namespace: "match" });
+  const matchLabels = {
+    liveNow: tMatch("liveNow"),
+    events: tMatch("events"),
+    venue: t("venue"),
+    referee: t("referee"),
+    viewFullMatch: t("viewFullMatch"),
+    loadingDetails: t("loadingDetails"),
+    noEvents: t("noEvents"),
+  };
 
   const today = new Date().toISOString().split("T")[0];
   const todayFixtures = await getFixturesByDate(today);
@@ -91,6 +102,14 @@ export default async function HomePage({ params }: Props) {
         title={t("videoFromStadiums")}
         locale={locale}
         videos={fromStadiumsVideos}
+      />
+
+      <HomeMatchesSection
+        title={t("matchesTitle")}
+        emptyLabel={t("matchesEmpty")}
+        locale={locale}
+        fixtures={todayFixtures}
+        labels={matchLabels}
       />
 
       <div className="mt-10">
