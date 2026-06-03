@@ -28,7 +28,7 @@ export function AdBanner({ src, alt, width, height, href, priority, className }:
   );
 
   return (
-    <section className={cn("w-full", className)}>
+    <div className={cn("w-full", className)}>
       {href ? (
         <a href={href} target="_blank" rel="noopener noreferrer" className="block">
           {image}
@@ -36,6 +36,6 @@ export function AdBanner({ src, alt, width, height, href, priority, className }:
       ) : (
         image
       )}
-    </section>
+    </div>
   );
 }
