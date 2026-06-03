@@ -57,7 +57,7 @@ export default async function HomePage({ params }: Props) {
 
   if (heroSlides.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
+      <div className="container py-16 text-center">
         <h1 className="text-4xl font-bold text-primary mb-4">MFM Sport</h1>
         <p className="text-muted-foreground">{tArticle("noArticles")}</p>
       </div>
@@ -65,7 +65,7 @@ export default async function HomePage({ params }: Props) {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container py-6">
       <h1 className="sr-only">MFM Sport</h1>
 
       <HeroSection

@@ -34,7 +34,7 @@ export default async function MatchPage({ params }: Props) {
   const { home, away } = fixture.teams;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container py-8 max-w-4xl">
       {/* League info */}
       <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
         <Image src={fixture.league.logo} alt={fixture.league.name} width={20} height={20} />

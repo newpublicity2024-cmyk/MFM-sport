@@ -55,7 +55,7 @@ export async function Footer({ locale }: Props) {
 
   return (
     <footer className="border-t border-border bg-card">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand */}
           <div>

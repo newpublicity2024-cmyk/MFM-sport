@@ -35,7 +35,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const t = await getTranslations({ locale, namespace: "category" });
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container py-8">
       <h1 className="text-2xl font-bold mb-2">{category.name}</h1>
       {category.description && (
         <p className="text-muted-foreground mb-6">{category.description}</p>

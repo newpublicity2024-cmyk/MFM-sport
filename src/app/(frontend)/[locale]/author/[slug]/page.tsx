@@ -36,7 +36,7 @@ export default async function AuthorPage({ params, searchParams }: Props) {
   const t = await getTranslations({ locale, namespace: "author" });
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container py-8">
       <AuthorCard author={author} locale={locale} />
 
       <div className="mt-8">

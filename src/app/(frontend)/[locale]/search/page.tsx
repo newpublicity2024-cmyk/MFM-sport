@@ -34,7 +34,7 @@ export default async function SearchPage({ params, searchParams }: Props) {
     : null;
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container py-8">
       <h1 className="text-2xl font-bold mb-6">{t("title")}</h1>
 
       {/* Search form */}

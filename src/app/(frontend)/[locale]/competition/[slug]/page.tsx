@@ -45,7 +45,7 @@ export default async function CompetitionPage({ params }: Props) {
   ]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container py-8">
       <h1 className="text-2xl font-bold mb-6">{competition.name}</h1>
 
       {standings.length > 0 && (

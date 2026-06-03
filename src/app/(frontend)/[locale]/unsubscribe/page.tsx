@@ -26,7 +26,7 @@ export default async function UnsubscribePage({ params }: Props) {
   const { title, message } = messages[locale] || messages.en;
 
   return (
-    <div className="container mx-auto px-4 py-16 text-center max-w-lg">
+    <div className="container py-16 text-center max-w-lg">
       <h1 className="text-2xl font-bold mb-4">{title}</h1>
       <p className="text-muted-foreground">{message}</p>
     </div>

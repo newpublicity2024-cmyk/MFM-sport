@@ -32,7 +32,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <div dir={direction} lang={locale} className={`${fontClass} min-h-screen flex flex-col`}>
       <NextIntlClientProvider messages={messages}>
-        <div className="container mx-auto px-4 pt-2">
+        <div className="container pt-2">
           <AdSlot slotName="headerLeaderboard" format="leaderboard" loading="eager" />
         </div>
         <Header locale={locale} />

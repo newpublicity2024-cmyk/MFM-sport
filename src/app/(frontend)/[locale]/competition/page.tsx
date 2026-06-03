@@ -28,7 +28,7 @@ export default async function CompetitionsIndexPage({ params }: Props) {
   const cups = result.docs.filter((c: any) => c.type === "cup");
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container py-8">
       <h1 className="text-2xl font-bold mb-8">{t("competitions")}</h1>
 
       {leagues.length > 0 && (

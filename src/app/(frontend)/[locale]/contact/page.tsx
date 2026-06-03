@@ -20,7 +20,7 @@ export default async function ContactPage({ params }: Props) {
   const page = await getPageBySlug("contact", locale as Config["locale"]);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
+    <div className="container py-8 max-w-3xl">
       <h1 className="text-2xl font-bold mb-6">{page?.title || t("contact")}</h1>
       {page?.body ? (
         <ArticleBody content={page.body} />

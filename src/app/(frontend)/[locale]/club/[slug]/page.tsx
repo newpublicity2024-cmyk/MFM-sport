@@ -56,7 +56,7 @@ export default async function ClubPage({ params }: Props) {
   const logoUrl = getEntityLogoUrl(club);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container py-8">
       {/* Club header */}
       <div className="flex items-center gap-4 mb-8">
         {logoUrl && (

@@ -29,7 +29,7 @@ export default async function ArticlesPage({ params, searchParams }: Props) {
   const t = await getTranslations({ locale, namespace: "article" });
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container py-8">
       <h1 className="text-2xl font-bold mb-6">{t("allArticles")}</h1>
 
       {result.docs.length > 0 ? (
