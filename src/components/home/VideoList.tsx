@@ -14,7 +14,7 @@ type Props = {
 
 export function VideoList({ videos, selectedId, locale, onSelect }: Props) {
   return (
-    <div className="flex h-full max-h-[28rem] flex-col gap-2 overflow-y-auto rounded-xl border border-white/10 bg-white/5 p-2 lg:max-h-none">
+    <div className="flex max-h-[28rem] flex-col gap-2 overflow-y-auto rounded-xl border border-white/10 bg-white/5 p-2 lg:h-full lg:max-h-none">
       {videos.map((video) => {
         const isActive = video.youtubeId === selectedId;
         return (

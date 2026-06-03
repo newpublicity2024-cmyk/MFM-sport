@@ -29,6 +29,7 @@ export function VideosSection({ title, locale, videos }: Props) {
         <div className="lg:col-span-2">
           <VideoPlayer videoId={selected.youtubeId} title={selected.title} />
         </div>
+        {/* Absolute-fill so the list matches the player's height at lg (do not flatten these two wrappers) */}
         <div className="lg:relative">
           <div className="lg:absolute lg:inset-0">
             <VideoList
