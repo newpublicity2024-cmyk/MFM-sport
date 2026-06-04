@@ -8,6 +8,7 @@ vi.mock("@/lib/api-football/dictionaries/teams.ar", () => ({
 }));
 
 import { MatchCard } from "@/components/football/MatchCard";
+import { transliterateToArabic } from "@/lib/api-football/transliterate";
 
 function fixture(homeId: number, awayId: number) {
   return {
@@ -49,10 +50,12 @@ describe("MatchCard team localization", () => {
     expect(screen.getByText("ريال مدريد")).toBeInTheDocument();
   });
 
-  it("falls back to Latin team names for an unmapped id (locale=ar)", () => {
+  it("transliterates an unmapped team name to Arabic (locale=ar)", () => {
     render(<MatchCard fixture={fixture(529, -1)} locale="ar" />);
     expect(screen.getByText("برشلونة")).toBeInTheDocument();
-    expect(screen.getByText("Away FC")).toBeInTheDocument();
+    // Unmapped away team is transliterated, not left Latin.
+    expect(screen.queryByText("Away FC")).not.toBeInTheDocument();
+    expect(screen.getByText(transliterateToArabic("Away FC"))).toBeInTheDocument();
   });
 
   it("shows Latin team names for fr", () => {

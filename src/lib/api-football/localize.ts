@@ -1,6 +1,7 @@
 import { LEAGUES_AR } from "./dictionaries/leagues.ar";
 import { TEAMS_AR } from "./dictionaries/teams.ar";
 import { PEOPLE_AR } from "./dictionaries/people.ar";
+import { transliterateToArabic } from "./transliterate";
 
 export type LocaleString = { en: string; ar: string; fr: string };
 
@@ -18,8 +19,9 @@ function lookup(
   locale: string,
 ): string {
   if (locale !== "ar") return latin;
-  if (id == null) return latin;
-  return dict[id] ?? latin;
+  if (id != null && dict[id]) return dict[id];
+  // No curated/sourced Arabic name — transliterate so nothing stays Latin.
+  return transliterateToArabic(latin);
 }
 
 export function localizeLeague(
@@ -56,6 +58,10 @@ const ARABIC_LETTERS: Record<string, string> = {
   F: "و",
   G: "ز",
   H: "ح",
+  I: "ط",
+  J: "ي",
+  K: "ك",
+  L: "ل",
 };
 
 function arabicLetter(c: string): string {

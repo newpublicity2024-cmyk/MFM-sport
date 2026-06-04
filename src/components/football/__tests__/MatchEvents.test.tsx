@@ -8,6 +8,7 @@ vi.mock("@/lib/api-football/dictionaries/people.ar", () => ({
 }));
 
 import { MatchEvents } from "@/components/football/MatchEvents";
+import { transliterateToArabic } from "@/lib/api-football/transliterate";
 
 const events = [
   {
@@ -38,9 +39,10 @@ describe("MatchEvents", () => {
     render(<MatchEvents events={mappedEvents} homeTeamId={1} locale="ar" />);
     expect(screen.getByText("محمد صلاح")).toBeInTheDocument();
   });
-  it("renders Latin player name when no ar mapping (locale=ar)", () => {
+  it("transliterates an unmapped player name to Arabic (locale=ar)", () => {
     render(<MatchEvents events={events} homeTeamId={1} locale="ar" />);
-    expect(screen.getByText("Latin Player")).toBeInTheDocument();
+    expect(screen.queryByText("Latin Player")).not.toBeInTheDocument();
+    expect(screen.getByText(transliterateToArabic("Latin Player"))).toBeInTheDocument();
   });
   it("renders Latin player name for fr", () => {
     render(<MatchEvents events={events} homeTeamId={1} locale="fr" />);

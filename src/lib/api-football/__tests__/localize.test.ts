@@ -21,16 +21,23 @@ describe("pickLocale", () => {
 });
 
 describe("localizeLeague / localizeTeam / localizePerson", () => {
+  const ARABIC = /[؀-ۿ]/;
+  const LATIN = /[a-z]/i;
+
   it("returns Latin verbatim for non-ar locales", () => {
     expect(localizeLeague(200, "Botola Pro", "fr")).toBe("Botola Pro");
     expect(localizeTeam(529, "Barcelona", "en")).toBe("Barcelona");
+    expect(localizePerson(123, "John Doe", "en")).toBe("John Doe");
   });
-  it("falls back to Latin when ar mapping is missing", () => {
-    expect(localizeTeam(-999, "Unknown FC", "ar")).toBe("Unknown FC");
-    expect(localizePerson(-999, "John Doe", "ar")).toBe("John Doe");
-  });
-  it("falls back to Latin for a null/empty id (assist with no id)", () => {
-    expect(localizePerson(null, "John Doe", "ar")).toBe("John Doe");
+  it("transliterates to Arabic when an ar mapping is missing", () => {
+    for (const out of [
+      localizeTeam(-999, "Unknown FC", "ar"),
+      localizePerson(-999, "John Doe", "ar"),
+      localizePerson(null, "John Doe", "ar"), // assist with no id
+    ]) {
+      expect(out).toMatch(ARABIC);
+      expect(out).not.toMatch(LATIN);
+    }
   });
 });
 
