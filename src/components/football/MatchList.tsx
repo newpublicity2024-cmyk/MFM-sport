@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { MatchCard } from "./MatchCard";
 import type { ApiFixture } from "@/lib/api-football/types";
+import { localizeLeague } from "@/lib/api-football/localize";
 
 type Props = {
   fixtures: ApiFixture[];
@@ -39,7 +40,9 @@ export function MatchList({ fixtures, locale, groupByLeague = true }: Props) {
         <div key={group.league.id}>
           <div className="flex items-center gap-2 mb-2 px-1">
             <Image src={group.league.logo} alt={group.league.name} width={20} height={20} />
-            <span className="text-sm font-medium text-muted-foreground">{group.league.name}</span>
+            <span className="text-sm font-medium text-muted-foreground">
+              {localizeLeague(group.league.id, group.league.name, locale)}
+            </span>
           </div>
           <div className="space-y-1">
             {group.fixtures.map((f) => (

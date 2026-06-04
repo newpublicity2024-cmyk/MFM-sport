@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { ApiStandingRow } from "@/lib/api-football/types";
+import { localizeTeam } from "@/lib/api-football/localize";
 
 type Props = {
   standings: ApiStandingRow[];
@@ -76,7 +77,9 @@ export function StandingsTable({ standings, locale, labels }: Props) {
               <TableCell>
                 <div className="flex items-center gap-2">
                   <Image src={row.team.logo} alt={row.team.name} width={20} height={20} className="shrink-0" />
-                  <span className="text-sm font-medium truncate">{row.team.name}</span>
+                  <span className="text-sm font-medium truncate">
+                    {localizeTeam(row.team.id, row.team.name, locale)}
+                  </span>
                 </div>
               </TableCell>
               <TableCell className="text-center text-sm">{row.all.played}</TableCell>
