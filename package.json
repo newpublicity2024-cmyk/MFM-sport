@@ -23,7 +23,8 @@
     "seed": "tsx scripts/seed.ts",
     "seed:preview": "tsx scripts/seed-preview.ts",
     "seed:preview:reset": "tsx scripts/seed-preview.ts --reset",
-    "regen:favicons": "tsx scripts/regen-favicons.ts"
+    "regen:favicons": "tsx scripts/regen-favicons.ts",
+    "build:ar-dicts": "tsx scripts/build-ar-dictionaries.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.84.0",
