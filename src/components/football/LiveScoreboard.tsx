@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import type { ApiFixture } from "@/lib/api-football/types";
 import { getMatchStatus } from "@/lib/api-football/types";
+import { localizeTeam } from "@/lib/api-football/localize";
 import { useFixture } from "@/hooks/useFixture";
 import { cn, formatDate, formatTime } from "@/lib/utils";
 
@@ -32,7 +33,7 @@ export function LiveScoreboard({ initial, locale }: Props) {
         <div className="flex flex-col items-center gap-2 flex-1">
           <Image src={home.logo} alt={home.name} width={56} height={56} />
           <span className={cn("text-sm font-medium text-center", home.winner && "font-bold")}>
-            {home.name}
+            {localizeTeam(home.id, home.name, locale)}
           </span>
         </div>
 
@@ -69,7 +70,7 @@ export function LiveScoreboard({ initial, locale }: Props) {
         <div className="flex flex-col items-center gap-2 flex-1">
           <Image src={away.logo} alt={away.name} width={56} height={56} />
           <span className={cn("text-sm font-medium text-center", away.winner && "font-bold")}>
-            {away.name}
+            {localizeTeam(away.id, away.name, locale)}
           </span>
         </div>
       </div>

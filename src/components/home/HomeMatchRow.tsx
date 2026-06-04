@@ -7,6 +7,7 @@ import { ChevronDown } from "lucide-react";
 import { MatchEvents } from "@/components/football/MatchEvents";
 import { cn, formatTime } from "@/lib/utils";
 import { getMatchStatus, type ApiFixture } from "@/lib/api-football/types";
+import { localizeTeam, localizeLeague, localizeRound } from "@/lib/api-football/localize";
 
 export type HomeMatchLabels = {
   liveNow: string;
@@ -97,7 +98,7 @@ export function HomeMatchRow({ fixture, locale, labels, defaultOpen = false }: P
         {/* Home team */}
         <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
           <span className={cn("text-sm truncate text-end", home.winner && "font-bold")}>
-            {home.name}
+            {localizeTeam(home.id, home.name, locale)}
           </span>
           <Image src={home.logo} alt={home.name} width={24} height={24} className="shrink-0" />
         </div>
@@ -134,7 +135,9 @@ export function HomeMatchRow({ fixture, locale, labels, defaultOpen = false }: P
         {/* Away team */}
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <Image src={away.logo} alt={away.name} width={24} height={24} className="shrink-0" />
-          <span className={cn("text-sm truncate", away.winner && "font-bold")}>{away.name}</span>
+          <span className={cn("text-sm truncate", away.winner && "font-bold")}>
+            {localizeTeam(away.id, away.name, locale)}
+          </span>
         </div>
 
         <ChevronDown
@@ -149,8 +152,8 @@ export function HomeMatchRow({ fixture, locale, labels, defaultOpen = false }: P
         <div id={panelId} className="border-t border-border/50 px-3 py-3 space-y-3">
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
             <span>
-              {fixture.league.name}
-              {fixture.league.round ? ` · ${fixture.league.round}` : ""}
+              {localizeLeague(fixture.league.id, fixture.league.name, locale)}
+              {fixture.league.round ? ` · ${localizeRound(fixture.league.round, locale)}` : ""}
             </span>
             {fixture.fixture.venue?.name && (
               <span>
@@ -169,7 +172,7 @@ export function HomeMatchRow({ fixture, locale, labels, defaultOpen = false }: P
           ) : events.length > 0 ? (
             <div>
               <h4 className="mb-2 text-xs font-semibold text-muted-foreground">{labels.events}</h4>
-              <MatchEvents events={events} homeTeamId={home.id} />
+              <MatchEvents events={events} homeTeamId={home.id} locale={locale} />
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">{labels.noEvents}</p>

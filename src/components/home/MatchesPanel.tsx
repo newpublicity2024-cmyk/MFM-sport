@@ -6,6 +6,7 @@ import { ChevronDown } from "lucide-react";
 import { MatchCard } from "@/components/football/MatchCard";
 import { useLiveFixtures } from "@/hooks/useLiveFixtures";
 import { getMatchStatus, type ApiFixture, type MatchStatus } from "@/lib/api-football/types";
+import { localizeLeague } from "@/lib/api-football/localize";
 
 type FilterStatus = Exclude<MatchStatus, "other">;
 
@@ -155,7 +156,7 @@ export function MatchesPanel({ fixtures, locale, statusLabels }: Props) {
                   />
                 )}
                 <span className="flex-1 text-start text-sm font-semibold truncate">
-                  {group.league.name}
+                  {localizeLeague(group.league.id, group.league.name, locale)}
                 </span>
                 <span className="text-xs text-muted-foreground shrink-0">
                   {group.fixtures.length}

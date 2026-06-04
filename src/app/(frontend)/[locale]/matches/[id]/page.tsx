@@ -9,17 +9,20 @@ import { MatchEvents } from "@/components/football/MatchEvents";
 import { MatchLineup } from "@/components/football/MatchLineup";
 import { MatchStats } from "@/components/football/MatchStats";
 import { SectionHeader } from "@/components/shared/SectionHeader";
+import { localizeLeague, localizeRound, localizeTeam } from "@/lib/api-football/localize";
 
 type Props = {
   params: Promise<{ locale: string; id: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params;
+  const { locale, id } = await params;
   const fixture = await getFixtureById(Number(id));
   if (!fixture) return { title: "Not Found" };
+  const home = localizeTeam(fixture.teams.home.id, fixture.teams.home.name, locale);
+  const away = localizeTeam(fixture.teams.away.id, fixture.teams.away.name, locale);
   return {
-    title: `${fixture.teams.home.name} vs ${fixture.teams.away.name} | MFM Sport`,
+    title: `${home} vs ${away} | MFM Sport`,
   };
 }
 
@@ -38,9 +41,9 @@ export default async function MatchPage({ params }: Props) {
       {/* League info */}
       <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
         <Image src={fixture.league.logo} alt={fixture.league.name} width={20} height={20} />
-        <span>{fixture.league.name}</span>
+        <span>{localizeLeague(fixture.league.id, fixture.league.name, locale)}</span>
         <span>·</span>
-        <span>{fixture.league.round}</span>
+        <span>{localizeRound(fixture.league.round, locale)}</span>
       </div>
 
       {/* Score header */}
@@ -51,7 +54,7 @@ export default async function MatchPage({ params }: Props) {
         <section className="mb-8">
           <SectionHeader title={t("events")} />
           <div className="bg-card rounded-lg border border-border p-4">
-            <MatchEvents events={fixture.events} homeTeamId={home.id} />
+            <MatchEvents events={fixture.events} homeTeamId={home.id} locale={locale} />
           </div>
         </section>
       )}
@@ -64,10 +67,10 @@ export default async function MatchPage({ params }: Props) {
             <div className="flex justify-between text-sm font-medium mb-4">
               <div className="flex items-center gap-2">
                 <Image src={home.logo} alt={home.name} width={16} height={16} />
-                <span>{home.name}</span>
+                <span>{localizeTeam(home.id, home.name, locale)}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span>{away.name}</span>
+                <span>{localizeTeam(away.id, away.name, locale)}</span>
                 <Image src={away.logo} alt={away.name} width={16} height={16} />
               </div>
             </div>
@@ -85,6 +88,7 @@ export default async function MatchPage({ params }: Props) {
               <div key={lineup.team.id} className="bg-card rounded-lg border border-border p-4">
                 <MatchLineup
                   lineup={lineup}
+                  locale={locale}
                   labels={{
                     startingXI: t("startingXI"),
                     substitutes: t("substitutes"),

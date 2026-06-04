@@ -1,3 +1,5 @@
+import { pickLocale } from "@/lib/api-football/localize";
+
 export type LocaleString = { en: string; ar: string; fr: string };
 
 export type League = {
@@ -55,7 +57,5 @@ export const LEAGUES: League[] = [
 ];
 
 export function leagueName(league: League, locale: string): string {
-  if (locale === "ar") return league.name.ar;
-  if (locale === "fr") return league.name.fr;
-  return league.name.en;
+  return pickLocale(league.name, locale);
 }

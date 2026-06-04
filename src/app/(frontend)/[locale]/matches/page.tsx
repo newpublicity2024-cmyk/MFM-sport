@@ -73,6 +73,7 @@ export default async function MatchesPage({ params, searchParams }: Props) {
         date={selectedDate}
         basePath={basePath}
         allLabel={tComp("allCompetitions")}
+        locale={locale}
       />
 
       {fixtures.length > 0 ? (

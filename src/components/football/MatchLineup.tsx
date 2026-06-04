@@ -1,12 +1,14 @@
 import Image from "next/image";
 import type { ApiLineup } from "@/lib/api-football/types";
+import { localizeTeam, localizePerson } from "@/lib/api-football/localize";
 
 type Props = {
   lineup: ApiLineup;
+  locale: string;
   labels: { startingXI: string; substitutes: string; coach: string; formation: string };
 };
 
-export function MatchLineup({ lineup, labels }: Props) {
+export function MatchLineup({ lineup, locale, labels }: Props) {
   const startXI = lineup.startXI ?? [];
   const substitutes = lineup.substitutes ?? [];
 
@@ -15,7 +17,9 @@ export function MatchLineup({ lineup, labels }: Props) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Image src={lineup.team.logo} alt={lineup.team.name} width={24} height={24} />
-          <span className="font-bold text-sm">{lineup.team.name}</span>
+          <span className="font-bold text-sm">
+            {localizeTeam(lineup.team.id, lineup.team.name, locale)}
+          </span>
         </div>
         {lineup.formation && (
           <span className="text-sm text-muted-foreground">
@@ -31,7 +35,7 @@ export function MatchLineup({ lineup, labels }: Props) {
             {startXI.map((p) => (
               <div key={p.player.id} className="flex items-center gap-2 text-sm py-0.5">
                 <span className="w-6 text-center text-xs text-muted-foreground font-mono">{p.player.number}</span>
-                <span>{p.player.name}</span>
+                <span>{localizePerson(p.player.id, p.player.name, locale)}</span>
                 <span className="text-[10px] text-muted-foreground">{p.player.pos}</span>
               </div>
             ))}
@@ -46,7 +50,7 @@ export function MatchLineup({ lineup, labels }: Props) {
             {substitutes.map((p) => (
               <div key={p.player.id} className="flex items-center gap-2 text-sm py-0.5 text-muted-foreground">
                 <span className="w-6 text-center text-xs font-mono">{p.player.number}</span>
-                <span>{p.player.name}</span>
+                <span>{localizePerson(p.player.id, p.player.name, locale)}</span>
               </div>
             ))}
           </div>
@@ -55,7 +59,10 @@ export function MatchLineup({ lineup, labels }: Props) {
 
       {lineup.coach?.name && (
         <div className="text-sm text-muted-foreground">
-          {labels.coach}: <span className="text-foreground">{lineup.coach.name}</span>
+          {labels.coach}:{" "}
+          <span className="text-foreground">
+            {localizePerson(lineup.coach.id, lineup.coach.name, locale)}
+          </span>
         </div>
       )}
     </div>
