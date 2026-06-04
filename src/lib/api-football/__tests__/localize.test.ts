@@ -4,6 +4,8 @@ import {
   localizeLeague,
   localizeTeam,
   localizePerson,
+  localizeRound,
+  localizeGroup,
 } from "@/lib/api-football/localize";
 
 describe("pickLocale", () => {
@@ -28,4 +30,26 @@ describe("localizeLeague / localizeTeam / localizePerson", () => {
   it("falls back to Latin for a null/empty id (assist with no id)", () => {
     expect(localizePerson(null, "John Doe", "ar")).toBe("John Doe");
   });
+});
+
+describe("localizeRound", () => {
+  it("passes through for non-ar", () =>
+    expect(localizeRound("Round of 16", "en")).toBe("Round of 16"));
+  it.each([
+    ["Regular Season - 12", "الأسبوع 12"],
+    ["Round of 16", "دور الـ16"],
+    ["Quarter-finals", "ربع النهائي"],
+    ["Semi-finals", "نصف النهائي"],
+    ["Final", "النهائي"],
+    ["Matchday 5", "الجولة 5"],
+    ["Group Stage", "دور المجموعات"],
+  ])("translates %s", (input, expected) =>
+    expect(localizeRound(input, "ar")).toBe(expected));
+  it("falls through to Latin on no match", () =>
+    expect(localizeRound("Some Weird Round", "ar")).toBe("Some Weird Round"));
+});
+
+describe("localizeGroup", () => {
+  it("translates Group A", () => expect(localizeGroup("Group A", "ar")).toBe("المجموعة أ"));
+  it("passes through unknown", () => expect(localizeGroup("Group Z9", "ar")).toBe("Group Z9"));
 });
