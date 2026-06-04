@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cn, formatDate, formatTime } from "@/lib/utils";
 import type { ApiFixture } from "@/lib/api-football/types";
 import { getMatchStatus } from "@/lib/api-football/types";
+import { localizeTeam } from "@/lib/api-football/localize";
 
 type Props = {
   fixture: ApiFixture;
@@ -23,7 +24,9 @@ export function MatchCard({ fixture, locale }: Props) {
         {/* Home team */}
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <Image src={home.logo} alt={home.name} width={24} height={24} className="shrink-0" />
-          <span className={cn("text-sm truncate", home.winner && "font-bold")}>{home.name}</span>
+          <span className={cn("text-sm truncate", home.winner && "font-bold")}>
+            {localizeTeam(home.id, home.name, locale)}
+          </span>
         </div>
 
         {/* Score / Time */}
@@ -59,7 +62,9 @@ export function MatchCard({ fixture, locale }: Props) {
 
         {/* Away team */}
         <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-          <span className={cn("text-sm truncate", away.winner && "font-bold")}>{away.name}</span>
+          <span className={cn("text-sm truncate", away.winner && "font-bold")}>
+            {localizeTeam(away.id, away.name, locale)}
+          </span>
           <Image src={away.logo} alt={away.name} width={24} height={24} className="shrink-0" />
         </div>
       </div>
