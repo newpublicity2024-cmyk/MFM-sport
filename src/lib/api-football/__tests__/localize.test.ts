@@ -7,6 +7,8 @@ import {
   localizeRound,
   localizeGroup,
 } from "@/lib/api-football/localize";
+import { LEAGUES } from "@/lib/home/leagues";
+import { LEAGUES_AR } from "@/lib/api-football/dictionaries/leagues.ar";
 
 describe("pickLocale", () => {
   const name = { en: "Alpha", ar: "ألفا", fr: "Bravo" };
@@ -52,4 +54,12 @@ describe("localizeRound", () => {
 describe("localizeGroup", () => {
   it("translates Group A", () => expect(localizeGroup("Group A", "ar")).toBe("المجموعة أ"));
   it("passes through unknown", () => expect(localizeGroup("Group Z9", "ar")).toBe("Group Z9"));
+});
+
+describe("league dictionary coverage", () => {
+  it("covers every homepage league id", () => {
+    for (const l of LEAGUES) {
+      expect(LEAGUES_AR[l.apiFootballId], `missing ar for league ${l.apiFootballId}`).toBeTruthy();
+    }
+  });
 });
