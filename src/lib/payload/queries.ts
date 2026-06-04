@@ -1,6 +1,7 @@
 import { getPayload } from "payload";
 import configPromise from "@payload-config";
 import type { Config } from "@/payload-types";
+import { decodeSlug } from "./slug";
 
 type Locale = Config["locale"];
 
@@ -33,7 +34,7 @@ export async function getArticleBySlug(slug: string, locale: Locale) {
   const result = await payload.find({
     collection: "articles",
     where: {
-      slug: { equals: slug },
+      slug: { equals: decodeSlug(slug) },
       status: { equals: "published" },
     },
     locale,
@@ -131,7 +132,7 @@ export async function getCategoryBySlug(slug: string, locale: Locale) {
   const payload = await getPayloadClient();
   const result = await payload.find({
     collection: "categories",
-    where: { slug: { equals: slug } },
+    where: { slug: { equals: decodeSlug(slug) } },
     locale,
     limit: 1,
   });
@@ -142,7 +143,7 @@ export async function getTagBySlug(slug: string, locale: Locale) {
   const payload = await getPayloadClient();
   const result = await payload.find({
     collection: "tags",
-    where: { slug: { equals: slug } },
+    where: { slug: { equals: decodeSlug(slug) } },
     locale,
     limit: 1,
   });
@@ -153,7 +154,7 @@ export async function getAuthorBySlug(slug: string, locale: Locale) {
   const payload = await getPayloadClient();
   const result = await payload.find({
     collection: "authors",
-    where: { slug: { equals: slug } },
+    where: { slug: { equals: decodeSlug(slug) } },
     locale,
     limit: 1,
     depth: 1,
@@ -211,7 +212,7 @@ export async function getCompetitionBySlug(slug: string, locale: Locale) {
   const payload = await getPayloadClient();
   const result = await payload.find({
     collection: "competitions",
-    where: { slug: { equals: slug } },
+    where: { slug: { equals: decodeSlug(slug) } },
     locale,
     limit: 1,
     depth: 1,
@@ -223,7 +224,7 @@ export async function getClubBySlug(slug: string, locale: Locale) {
   const payload = await getPayloadClient();
   const result = await payload.find({
     collection: "clubs",
-    where: { slug: { equals: slug } },
+    where: { slug: { equals: decodeSlug(slug) } },
     locale,
     limit: 1,
     depth: 1,
@@ -274,7 +275,7 @@ export async function getPageBySlug(slug: string, locale: Locale) {
   const payload = await getPayloadClient();
   const result = await payload.find({
     collection: "pages",
-    where: { slug: { equals: slug } },
+    where: { slug: { equals: decodeSlug(slug) } },
     locale,
     limit: 1,
   });
