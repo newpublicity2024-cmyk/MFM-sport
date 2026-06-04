@@ -16,6 +16,7 @@ describe("CompetitionFilter", () => {
         date="2026-05-04"
         basePath="/en/matches"
         allLabel="All"
+        locale="en"
       />,
     );
     const links = screen.getAllByRole("link");
@@ -32,6 +33,7 @@ describe("CompetitionFilter", () => {
         date="2026-05-04"
         basePath="/en/matches"
         allLabel="All"
+        locale="en"
       />,
     );
     const current = screen.getByRole("link", { current: "page" });
@@ -46,6 +48,7 @@ describe("CompetitionFilter", () => {
         date="2026-05-04"
         basePath="/en/matches"
         allLabel="All"
+        locale="en"
       />,
     );
     const current = screen.getByRole("link", { current: "page" });
@@ -60,6 +63,7 @@ describe("CompetitionFilter", () => {
         date="2026-05-04"
         basePath="/en/matches"
         allLabel="All"
+        locale="en"
       />,
     );
     const links = screen.getAllByRole("link");

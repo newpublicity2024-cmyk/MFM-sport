@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { localizeLeague } from "@/lib/api-football/localize";
 
 type Competition = {
   id: string | number;
@@ -13,6 +14,7 @@ type Props = {
   date: string;
   basePath: string;
   allLabel: string;
+  locale: string;
 };
 
 function buildHref(basePath: string, date: string, league?: string): string {
@@ -27,6 +29,7 @@ export function CompetitionFilter({
   date,
   basePath,
   allLabel,
+  locale,
 }: Props) {
   return (
     <div className="flex gap-2 flex-wrap mb-6">
@@ -57,7 +60,7 @@ export function CompetitionFilter({
                 : "bg-secondary text-muted-foreground hover:text-foreground",
             )}
           >
-            {c.name}
+            {localizeLeague(c.apiFootballId, c.name, locale)}
           </Link>
         );
       })}
