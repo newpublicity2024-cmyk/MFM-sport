@@ -1,9 +1,11 @@
 import { cn } from "@/lib/utils";
 import type { ApiEvent } from "@/lib/api-football/types";
+import { localizePerson } from "@/lib/api-football/localize";
 
 type Props = {
   events: ApiEvent[];
   homeTeamId: number;
+  locale: string;
 };
 
 function EventIcon({ type, detail }: { type: string; detail: string }) {
@@ -15,7 +17,7 @@ function EventIcon({ type, detail }: { type: string; detail: string }) {
   return <span>•</span>;
 }
 
-export function MatchEvents({ events, homeTeamId }: Props) {
+export function MatchEvents({ events, homeTeamId, locale }: Props) {
   if (events.length === 0) return null;
 
   return (
@@ -36,18 +38,26 @@ export function MatchEvents({ events, homeTeamId }: Props) {
                   {event.time.elapsed}&apos;{event.time.extra ? `+${event.time.extra}` : ""}
                 </span>
                 <EventIcon type={event.type} detail={event.detail} />
-                <span className="font-medium">{event.player.name}</span>
+                <span className="font-medium">
+                  {localizePerson(event.player.id, event.player.name, locale)}
+                </span>
                 {event.assist.name && (
-                  <span className="text-muted-foreground text-xs">({event.assist.name})</span>
+                  <span className="text-muted-foreground text-xs">
+                    ({localizePerson(event.assist.id, event.assist.name, locale)})
+                  </span>
                 )}
               </>
             )}
             {!isHome && (
               <>
                 {event.assist.name && (
-                  <span className="text-muted-foreground text-xs">({event.assist.name})</span>
+                  <span className="text-muted-foreground text-xs">
+                    ({localizePerson(event.assist.id, event.assist.name, locale)})
+                  </span>
                 )}
-                <span className="font-medium">{event.player.name}</span>
+                <span className="font-medium">
+                  {localizePerson(event.player.id, event.player.name, locale)}
+                </span>
                 <EventIcon type={event.type} detail={event.detail} />
                 <span className="text-xs text-muted-foreground w-8 shrink-0 text-end">
                   {event.time.elapsed}&apos;{event.time.extra ? `+${event.time.extra}` : ""}

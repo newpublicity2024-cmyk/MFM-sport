@@ -25,7 +25,7 @@ describe("MatchLineup", () => {
       coach: { id: 99, name: "Coach", photo: null },
     };
 
-    render(<MatchLineup lineup={lineup} labels={labels} />);
+    render(<MatchLineup lineup={lineup} locale="en" labels={labels} />);
 
     expect(screen.getByText("Team A")).toBeInTheDocument();
     expect(screen.getByText("Formation: 4-3-3")).toBeInTheDocument();
@@ -43,7 +43,7 @@ describe("MatchLineup", () => {
       coach: { id: null, name: null, photo: null },
     } as unknown as ApiLineup;
 
-    render(<MatchLineup lineup={lineup} labels={labels} />);
+    render(<MatchLineup lineup={lineup} locale="en" labels={labels} />);
 
     expect(screen.getByText("Team A")).toBeInTheDocument();
     expect(screen.queryByText(labels.startingXI)).not.toBeInTheDocument();
@@ -59,7 +59,7 @@ describe("MatchLineup", () => {
       coach: { id: null, name: null, photo: null },
     } as unknown as ApiLineup;
 
-    render(<MatchLineup lineup={lineup} labels={labels} />);
+    render(<MatchLineup lineup={lineup} locale="en" labels={labels} />);
 
     expect(screen.getByText("Alpha")).toBeInTheDocument();
     expect(screen.queryByText(labels.substitutes)).not.toBeInTheDocument();
@@ -74,7 +74,7 @@ describe("MatchLineup", () => {
       coach: { id: null, name: null, photo: null },
     } as unknown as ApiLineup;
 
-    render(<MatchLineup lineup={lineup} labels={labels} />);
+    render(<MatchLineup lineup={lineup} locale="en" labels={labels} />);
 
     expect(screen.getByText("Team A")).toBeInTheDocument();
     expect(screen.queryByText(labels.startingXI)).not.toBeInTheDocument();

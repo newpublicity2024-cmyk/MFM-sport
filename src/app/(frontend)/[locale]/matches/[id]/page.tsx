@@ -51,7 +51,7 @@ export default async function MatchPage({ params }: Props) {
         <section className="mb-8">
           <SectionHeader title={t("events")} />
           <div className="bg-card rounded-lg border border-border p-4">
-            <MatchEvents events={fixture.events} homeTeamId={home.id} />
+            <MatchEvents events={fixture.events} homeTeamId={home.id} locale={locale} />
           </div>
         </section>
       )}
@@ -85,6 +85,7 @@ export default async function MatchPage({ params }: Props) {
               <div key={lineup.team.id} className="bg-card rounded-lg border border-border p-4">
                 <MatchLineup
                   lineup={lineup}
+                  locale={locale}
                   labels={{
                     startingXI: t("startingXI"),
                     substitutes: t("substitutes"),
