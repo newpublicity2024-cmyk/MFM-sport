@@ -1,5 +1,6 @@
 import { LEAGUES_AR } from "./dictionaries/leagues.ar";
 import { TEAMS_AR } from "./dictionaries/teams.ar";
+import { NATIONAL_TEAMS_AR } from "./dictionaries/national-teams.ar";
 import { PEOPLE_AR } from "./dictionaries/people.ar";
 import { transliterateToArabic } from "./transliterate";
 
@@ -37,6 +38,9 @@ export function localizeTeam(
   latin: string,
   locale: string,
 ): string {
+  // National teams use the proper Arabic country name (translation), not a
+  // transliteration of the English. Checked first; clubs are unaffected.
+  if (locale === "ar" && id != null && NATIONAL_TEAMS_AR[id]) return NATIONAL_TEAMS_AR[id];
   return lookup(TEAMS_AR, id, latin, locale);
 }
 

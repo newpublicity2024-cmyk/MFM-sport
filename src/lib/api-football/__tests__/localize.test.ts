@@ -9,6 +9,7 @@ import {
 } from "@/lib/api-football/localize";
 import { LEAGUES } from "@/lib/home/leagues";
 import { LEAGUES_AR } from "@/lib/api-football/dictionaries/leagues.ar";
+import { NATIONAL_TEAMS_AR } from "@/lib/api-football/dictionaries/national-teams.ar";
 
 describe("pickLocale", () => {
   const name = { en: "Alpha", ar: "ألفا", fr: "Bravo" };
@@ -61,6 +62,26 @@ describe("localizeRound", () => {
 describe("localizeGroup", () => {
   it("translates Group A", () => expect(localizeGroup("Group A", "ar")).toBe("المجموعة أ"));
   it("passes through unknown", () => expect(localizeGroup("Group Z9", "ar")).toBe("Group Z9"));
+});
+
+describe("national-team localization", () => {
+  const ARABIC = /[؀-ۿ]/;
+  const LATIN = /[a-z]/i;
+
+  it("has broad national-team coverage", () => {
+    expect(Object.keys(NATIONAL_TEAMS_AR).length).toBeGreaterThan(100);
+  });
+  it("uses the proper Arabic country name over club dict / transliteration (ar)", () => {
+    const [idStr, ar] = Object.entries(NATIONAL_TEAMS_AR)[0];
+    const out = localizeTeam(Number(idStr), "Some Latin Name", "ar");
+    expect(out).toBe(ar);
+    expect(out).toMatch(ARABIC);
+    expect(out).not.toMatch(LATIN);
+  });
+  it("returns Latin for non-ar even for a national-team id", () => {
+    const [idStr] = Object.entries(NATIONAL_TEAMS_AR)[0];
+    expect(localizeTeam(Number(idStr), "South Africa", "en")).toBe("South Africa");
+  });
 });
 
 describe("league dictionary coverage", () => {

@@ -45,21 +45,6 @@ export const TEAMS_AR_OVERRIDES: Record<number, string> = {
   5370: "يانغ أفريكانز", // Young Africans
   6432: "سيمبا", // Simba
   6435: "مازيمبي", // TP Mazembe
-
-  // --- National teams (uniform "منتخب X" style; overrides verbose generated names) ---
-  2: "منتخب فرنسا", // France
-  7: "منتخب الأوروغواي", // Uruguay
-  9: "منتخب إسبانيا", // Spain
-  10: "منتخب إنجلترا", // England
-  13: "منتخب السنغال", // Senegal
-  14: "منتخب صربيا", // Serbia
-  15: "منتخب سويسرا", // Switzerland
-  24: "منتخب بولندا", // Poland
-  27: "منتخب البرتغال", // Portugal
-  28: "منتخب تونس", // Tunisia
-  31: "منتخب المغرب", // Morocco
-  767: "منتخب ويلز", // Wales
-  1504: "منتخب غانا", // Ghana
-  1530: "منتخب الكاميرون", // Cameroon
-  1569: "منتخب قطر", // Qatar
+  // National teams are handled separately in national-teams.ar.ts (proper Arabic
+  // country names), so they are intentionally NOT listed here.
 };

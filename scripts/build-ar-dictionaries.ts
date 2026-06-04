@@ -30,6 +30,7 @@ import type { ApiStandingsResponse, ApiFixture } from "../src/lib/api-football/t
 
 const DRY_RUN = process.argv.includes("--dry-run");
 const PLAYERS = process.argv.includes("--players");
+const NATIONAL = process.argv.includes("--national");
 
 // The curated competition set (id + season), mirroring scripts/seed.ts.
 const COMPETITIONS: { id: number; season: number; label: string }[] = [
@@ -57,6 +58,10 @@ const BATCH_SIZE = 60;
 const TEAM_TYPE_CLAUSE = `?item wdt:P31/wdt:P279* ?cls . VALUES ?cls { wd:Q476028 wd:Q6979593 }`;
 // Players: occupation = association football player.
 const PLAYER_TYPE_CLAUSE = `?item wdt:P106 wd:Q937857 .`;
+// Countries (for national teams): country / sovereign state, excluding dissolved
+// historical entities (e.g. "Khedivate of Egypt") so we get the modern name.
+const COUNTRY_TYPE_CLAUSE = `?item wdt:P31/wdt:P279* ?cls . VALUES ?cls { wd:Q6256 wd:Q3624078 }
+      FILTER NOT EXISTS { ?item wdt:P576 ?dissolved }`;
 
 // Teams whose current squads we pull to seed verified player names. Authoritative
 // api-football ids (harvested live). Botola clubs + Morocco NT first (home
@@ -212,6 +217,36 @@ async function harvestPlayers(): Promise<Map<number, string>> {
   return players;
 }
 
+type CountryResponse = { name: string };
+type TeamResponse = { team: { id: number; name: string; national: boolean } };
+
+/**
+ * Collect a deduped id -> country name map for ALL national teams, by iterating
+ * every country and keeping teams flagged `national`. Comprehensive coverage so
+ * any national team that ever appears resolves to a proper Arabic country name.
+ */
+async function harvestNationalTeams(): Promise<Map<number, string>> {
+  const nationals = new Map<number, string>();
+  const countries = await fetchApi<CountryResponse>("/teams/countries", {}, 0);
+  console.error(`[national] ${countries.length} countries to scan…`);
+
+  let scanned = 0;
+  for (const c of countries) {
+    if (!c.name || c.name === "World") continue;
+    const teams = await fetchApi<TeamResponse>("/teams", { country: c.name }, 0);
+    for (const t of teams) {
+      if (t.team?.national && t.team.id != null && !nationals.has(t.team.id)) {
+        nationals.set(t.team.id, t.team.name);
+      }
+    }
+    scanned++;
+    if (scanned % 25 === 0) {
+      console.error(`[national] scanned ${scanned}/${countries.length}, ${nationals.size} so far`);
+    }
+  }
+  return nationals;
+}
+
 function renderGeneratedFile(
   entries: [number, string][],
   exportName: string,
@@ -275,10 +310,149 @@ async function resolveAndWrite(
   }
 }
 
+// api-football base country names Wikidata won't match exactly (or matches wrong).
+const MANUAL_COUNTRY_AR: Record<string, string> = {
+  "Korea Republic": "كوريا الجنوبية",
+  "South Korea": "كوريا الجنوبية",
+  "Korea DPR": "كوريا الشمالية",
+  "North Korea": "كوريا الشمالية",
+  "Congo DR": "جمهورية الكونغو الديمقراطية",
+  Congo: "الكونغو",
+  USA: "الولايات المتحدة",
+  UAE: "الإمارات العربية المتحدة",
+  "Cape Verde Islands": "الرأس الأخضر",
+  "IR Iran": "إيران",
+  Czechia: "التشيك",
+  Türkiye: "تركيا",
+  Turkey: "تركيا",
+  Denmark: "الدنمارك",
+  "Côte d'Ivoire": "ساحل العاج",
+  Curacao: "كوراساو",
+  "Trinidad And Tobago": "ترينيداد وتوباغو",
+  Eswatini: "إسواتيني",
+  "St. Kitts and Nevis": "سانت كيتس ونيفيس",
+  "St. Lucia": "سانت لوسيا",
+  "St. Vincent and the Grenadines": "سانت فينسنت والغرينادين",
+  "St. Vincent / Grenadines": "سانت فينسنت والغرينادين",
+  "St. Vincent / Gren.": "سانت فينسنت والغرينادين",
+  "Republic of Ireland": "جمهورية أيرلندا",
+  "Rep. Of Ireland": "جمهورية أيرلندا",
+  "Hong Kong": "هونغ كونغ",
+  Macao: "ماكاو",
+  Mação: "ماكاو",
+  Tahiti: "تاهيتي",
+  "Puerto Rico": "بورتوريكو",
+  "New Caledonia": "كاليدونيا الجديدة",
+  Guam: "غوام",
+  "American Samoa": "ساموا الأمريكية",
+  Bermuda: "برمودا",
+  "Cayman Islands": "جزر كايمان",
+  "British Virgin Islands": "جزر العذراء البريطانية",
+  "US Virgin Islands": "جزر العذراء الأمريكية",
+  Martinique: "مارتينيك",
+  "French Guyana": "غويانا الفرنسية",
+  Anguilla: "أنغويلا",
+  Bonaire: "بونير",
+  "Turks and Caicos Islands": "جزر توركس وكايكوس",
+  "Northern Mariana Islands": "جزر ماريانا الشمالية",
+  Zanzibar: "زنجبار",
+  Catalonia: "كتالونيا",
+  "Guinea A'": "غينيا",
+};
+
+/**
+ * Strip api-football national-team variant suffixes (women / youth) and return
+ * the base country name plus an Arabic qualifier for the variant.
+ *  "South Korea W"     -> { base: "South Korea", arSuffix: " للسيدات" }
+ *  "Korea Republic U23"-> { base: "Korea Republic", arSuffix: " تحت 23" }
+ */
+function parseNational(name: string): { base: string; arSuffix: string } {
+  const youth = name.match(/\bU(\d{2})\b/);
+  const women = /\bW\b/.test(name);
+  const base = name
+    .replace(/\bU\d{2}\b/g, " ")
+    .replace(/\bW\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  let arSuffix = "";
+  if (youth) arSuffix += ` تحت ${youth[1]}`;
+  if (women) arSuffix += " للسيدات";
+  return { base, arSuffix };
+}
+
+async function runNational(): Promise<void> {
+  console.error("Harvesting national teams from API-Football…");
+  const nationals = await harvestNationalTeams();
+  console.error(`\nHarvested ${nationals.size} national-team entries.\n`);
+
+  if (DRY_RUN) {
+    for (const [id, name] of [...nationals.entries()].sort((a, b) => a[0] - b[0])) {
+      console.log(`${id}\t${name}`);
+    }
+    console.error("\n--dry-run: no Wikidata lookups, no file written.");
+    return;
+  }
+
+  // Parse each into base country + Arabic variant suffix; resolve unique bases.
+  const parsed = new Map<number, { base: string; arSuffix: string }>();
+  const bases = new Set<string>();
+  for (const [id, name] of nationals) {
+    const p = parseNational(name);
+    parsed.set(id, p);
+    if (!MANUAL_COUNTRY_AR[p.base]) bases.add(p.base);
+  }
+
+  const baseAr = new Map<string, string>(Object.entries(MANUAL_COUNTRY_AR));
+  const baseList = [...bases];
+  for (let i = 0; i < baseList.length; i += BATCH_SIZE) {
+    const chunk = baseList.slice(i, i + BATCH_SIZE);
+    const labels = await arabicLabelsForBatch(chunk, COUNTRY_TYPE_CLAUSE);
+    for (const [name, ar] of labels) if (!baseAr.has(name)) baseAr.set(name, ar);
+    console.error(
+      `[wikidata] base batch ${i / BATCH_SIZE + 1}: ${labels.size}/${chunk.length} resolved`,
+    );
+    await sleep(800);
+  }
+
+  const resolved: [number, string][] = [];
+  const unresolvedBases = new Set<string>();
+  for (const [id, p] of parsed) {
+    const ar = baseAr.get(p.base);
+    if (ar) resolved.push([id, ar + p.arSuffix]);
+    else unresolvedBases.add(p.base);
+  }
+
+  const outPath = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../src/lib/api-football/dictionaries/national-teams.generated.ar.ts",
+  );
+  writeFileSync(
+    outPath,
+    renderGeneratedFile(
+      resolved,
+      "NATIONAL_TEAMS_AR_GENERATED",
+      "Proper Arabic country names for national teams, keyed by api-football team id.\n" +
+        "// Translation (not transliteration), sourced from Wikidata + manual map.\n" +
+        "// Hand-corrections belong in `national-teams.overrides.ar.ts`.",
+    ),
+    "utf8",
+  );
+  console.error(`\nWrote ${resolved.length} national-team entries to ${outPath}`);
+  console.error(
+    `\nUnresolved base countries (${unresolvedBases.size}) — add to MANUAL_COUNTRY_AR or overrides:`,
+  );
+  for (const b of [...unresolvedBases].sort()) console.error(`  "${b}"`);
+}
+
 async function main() {
   if (!process.env.API_FOOTBALL_KEY) {
     console.error("ERROR: API_FOOTBALL_KEY is not set (.env). Aborting.");
     process.exit(1);
+  }
+
+  if (NATIONAL) {
+    await runNational();
+    return;
   }
 
   if (PLAYERS) {
