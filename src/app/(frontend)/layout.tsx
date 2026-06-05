@@ -22,6 +22,9 @@ const plexArabic = IBM_Plex_Sans_Arabic({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://mfmsport.ma",
+  ),
   title: "MFM Sport",
   description: "Moroccan Football News Portal",
 };
