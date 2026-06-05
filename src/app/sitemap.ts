@@ -24,20 +24,32 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     );
   }
 
-  // Articles
+  // Articles — one all-locale query returns slug as a {ar,fr,en} map WITHOUT
+  // fallback. Emit a locale's URL only if that locale has its OWN slug, so an
+  // untranslated article is not listed under /fr|/en with the Arabic fallback
+  // slug (which would be indexed as duplicate content). fr/en appear here
+  // automatically as each gets translated.
   const articles = await payload.find({
     collection: "articles",
     where: { status: { equals: "published" } },
+    locale: "all",
     limit: 50000,
+    depth: 0,
     select: { slug: true, updatedAt: true },
     sort: "-publishedAt",
   });
 
   for (const article of articles.docs) {
+    const raw = (article as { slug?: Partial<Record<string, string>> | string }).slug;
+    const slugMap: Partial<Record<string, string>> =
+      raw && typeof raw === "object" ? raw : { ar: typeof raw === "string" ? raw : undefined };
+    const updatedAt = (article as { updatedAt?: string }).updatedAt;
     for (const locale of LOCALES) {
+      const slug = slugMap[locale];
+      if (!slug) continue;
       entries.push({
-        url: `${SITE_URL}/${locale}/articles/${article.slug}`,
-        lastModified: new Date(article.updatedAt),
+        url: `${SITE_URL}/${locale}/articles/${encodeURIComponent(slug)}`,
+        lastModified: updatedAt ? new Date(updatedAt) : new Date(),
         changeFrequency: "weekly",
         priority: 0.8,
       });
