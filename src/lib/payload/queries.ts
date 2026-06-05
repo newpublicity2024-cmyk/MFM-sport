@@ -351,10 +351,17 @@ export async function getArticleLocalizedSlugs(
   locale: Locale,
 ): Promise<{ id: number | string; slugs: LocalizedSlugs } | null> {
   const payload = await getPayloadClient();
+  const decoded = decodeSlug(slug);
+  // Match the slug in ANY locale (locale:'all' returns slug as {ar,fr,en}), so an
+  // inbound cross-locale slug — e.g. a legacy Arabic slug requested under /fr —
+  // still resolves to the right article and yields correct per-locale canonical
+  // and hreflang URLs, not a self-referential fallback. (`locale` is unused now
+  // but kept for call-site symmetry with resolveArticleBySlug.)
+  void locale;
   const matched = await payload.find({
     collection: "articles",
-    where: { slug: { equals: decodeSlug(slug) }, status: { equals: "published" } },
-    locale,
+    where: { slug: { equals: decoded }, status: { equals: "published" } },
+    locale: "all",
     limit: 1,
     depth: 0,
     select: { slug: true },
@@ -362,18 +369,10 @@ export async function getArticleLocalizedSlugs(
   const doc = matched.docs[0];
   if (!doc) return null;
 
-  const allLocales = await payload.find({
-    collection: "articles",
-    where: { id: { equals: doc.id } },
-    locale: "all",
-    limit: 1,
-    depth: 0,
-    select: { slug: true },
-  });
-  const raw = (allLocales.docs[0] as { slug?: Partial<Record<Locale, string>> | string } | undefined)?.slug;
+  const raw = (doc as { slug?: Partial<Record<Locale, string>> | string }).slug;
   const map: Partial<Record<Locale, string>> =
     raw && typeof raw === "object" ? raw : { ar: typeof raw === "string" ? raw : undefined };
-  const arSlug = map.ar || (typeof raw === "string" ? raw : "") || decodeSlug(slug);
+  const arSlug = map.ar || (typeof raw === "string" ? raw : "") || decoded;
 
   return {
     id: doc.id,
