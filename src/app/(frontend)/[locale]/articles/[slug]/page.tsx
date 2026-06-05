@@ -2,10 +2,16 @@ import type { Metadata } from "next";
 import type { Config } from "@/payload-types";
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
-import { getArticleBySlug, getRelatedArticles } from "@/lib/payload/queries";
+import {
+  getArticleBySlug,
+  getArticleLocalizedSlugs,
+  resolveArticleBySlug,
+  getRelatedArticles,
+} from "@/lib/payload/queries";
+import { decodeSlug } from "@/lib/payload/slug";
 import {
   formatDate,
   formatTime,
@@ -23,28 +29,53 @@ type Props = {
   params: Promise<{ locale: string; slug: string }>;
 };
 
+const HREFLANG: Record<Config["locale"], string> = { ar: "ar-MA", fr: "fr", en: "en" };
+const OG_LOCALE: Record<Config["locale"], string> = { ar: "ar_MA", fr: "fr_FR", en: "en_US" };
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
-  const article = await getArticleBySlug(slug, locale as Config["locale"]);
+  const loc = locale as Config["locale"];
+
+  const [article, localized] = await Promise.all([
+    getArticleBySlug(slug, loc),
+    getArticleLocalizedSlugs(slug, loc),
+  ]);
   if (!article) return { title: "Not Found" };
 
   const heroImageUrl = getArticleHeroUrl(article, "hero");
   const category = article.categories?.[0];
-  const categoryName =
-    category && typeof category === "object" ? category.name : "";
-
+  const categoryName = category && typeof category === "object" ? category.name : "";
   const ogImage =
     heroImageUrl ||
-    `${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/og?title=${encodeURIComponent(article.title)}&category=${encodeURIComponent(categoryName)}`;
+    `/api/og?title=${encodeURIComponent(article.title)}&category=${encodeURIComponent(categoryName)}`;
+
+  const decoded = decodeSlug(slug);
+  const slugs = localized?.slugs ?? { ar: decoded, fr: decoded, en: decoded };
+  const pathFor = (l: Config["locale"]) => `/${l}/articles/${encodeURIComponent(slugs[l])}`;
+  const canonical = pathFor(loc);
+
+  const languages: Record<string, string> = {};
+  for (const l of ["ar", "fr", "en"] as const) {
+    const isTranslated = l === "ar" || slugs[l] !== slugs.ar;
+    if (l === loc || isTranslated) languages[HREFLANG[l]] = pathFor(l);
+  }
+  languages["x-default"] = pathFor("ar");
+
+  const alternateLocale = (["ar", "fr", "en"] as const)
+    .filter((l) => l !== loc && (l === "ar" || slugs[l] !== slugs.ar))
+    .map((l) => OG_LOCALE[l]);
 
   return {
     title: `${article.title} | MFM Sport`,
     description: article.excerpt || undefined,
+    alternates: { canonical, languages },
     openGraph: {
-      title: article.title,
-      description: article.excerpt || undefined,
+      type: "article", url: canonical, siteName: "MFM Sport",
+      locale: OG_LOCALE[loc], alternateLocale,
+      title: article.title, description: article.excerpt || undefined,
       images: [{ url: ogImage, width: 1200, height: 630 }],
     },
+    twitter: { card: "summary_large_image", title: article.title, description: article.excerpt || undefined, images: [ogImage] },
   };
 }
 
@@ -52,7 +83,13 @@ export default async function ArticlePage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const article = await getArticleBySlug(slug, locale as Config["locale"]);
+  const { article, redirectToSlug } = await resolveArticleBySlug(
+    slug,
+    locale as Config["locale"],
+  );
+  if (redirectToSlug) {
+    redirect(`/${locale}/articles/${encodeURIComponent(redirectToSlug)}`);
+  }
   if (!article) notFound();
 
   const t = await getTranslations({ locale, namespace: "article" });
