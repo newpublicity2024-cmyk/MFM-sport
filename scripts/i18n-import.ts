@@ -137,7 +137,10 @@ async function main() {
 
         await payload.update({
           collection: "articles", id, locale: lang,
-          data: { title: t.title, excerpt: t.excerpt, slug, body },
+          // body is a validated LexicalRoot; its `format: string` is wider than
+          // Payload's generated union but identical at runtime (consistent with
+          // the `(arDoc as any).body` reads above).
+          data: { title: t.title, excerpt: t.excerpt, slug, body: body as any },
           overrideAccess: true,
         });
         log(`  [updated ${lang}] id=${id} slug=${slug}`);
