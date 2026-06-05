@@ -53,6 +53,11 @@ export default buildConfig({
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
   db: postgresAdapter({
+    // Migration-only schema management. push:true (the default) would let dev runs
+    // and any getPayload() script destructively auto-sync the schema and bypass
+    // migrations (e.g. silently drop the localized article slug). All schema
+    // changes now go through reviewed migrations applied via `pnpm payload migrate`.
+    push: false,
     pool: {
       connectionString: process.env.DATABASE_URL,
     },
