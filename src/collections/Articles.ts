@@ -18,8 +18,11 @@ export const Articles: CollectionConfig = {
       type: "text",
       required: true,
       unique: true,
+      localized: true,
+      index: true,
       admin: {
-        description: "URL-friendly identifier (ASCII, lowercase, hyphens)",
+        description:
+          "URL-friendly identifier for THIS locale. Arabic keeps the original keyword slug; fr/en get an ASCII keyword slug. Unique per language.",
       },
     },
     {

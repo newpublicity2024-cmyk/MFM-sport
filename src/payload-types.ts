@@ -270,7 +270,7 @@ export interface Article {
   id: number;
   title: string;
   /**
-   * URL-friendly identifier (ASCII, lowercase, hyphens)
+   * URL-friendly identifier for THIS locale. Arabic keeps the original keyword slug; fr/en get an ASCII keyword slug. Unique per language.
    */
   slug: string;
   /**
