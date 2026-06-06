@@ -57,3 +57,6 @@ qa-*.png
 # Local agent / tooling state
 .playwright-mcp/
 .claude/
+
+# i18n translation work files (large, transient)
+/translations/
