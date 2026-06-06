@@ -1531,13 +1531,20 @@ Expected: every pilot id has fr+en rows with non-null title and a distinct local
 
 - [ ] **Step 7: Commit the milestone marker** (work files are gitignored — commit only code/docs already done; tag the pilot as verified in the plan checkboxes).
 
-### Task E2: Translate the taxonomy
+### Task E2: Translate the taxonomy  ← REQUIRED (user-flagged 2026-06-05: author names + tags still render Arabic on fr/en pages because taxonomy was not translated in the pilot)
+
+The article page renders `author.name` and tag/category `name` in the current locale; with `fallback:true` an untranslated fr/en name falls back to Arabic. So fr/en pages show Arabic author/tag/category chips until this task runs. No code change needed — purely the taxonomy translation.
+
+Data: **23 categories, 228 tags, 3 authors**. Author Latin-name decisions (from the user / conventional transliteration):
+- `a-dahouimfmsport-ma` (عبد الإله الدهوي) → **"Abdelilah Dahoui"** (fr = en)
+- `demo-editorial-team` (فريق التحرير) → fr **"Équipe éditoriale"**, en **"Editorial Team"**
+- `m-abousahlmfmsport-ma` (محمد أبو السهل) → **"Mohamed Abou Sahl"** (fr = en)
 
 - [ ] **Step 1: Export** — `pnpm i18n:taxonomy:export` → `translations/taxonomy.json`
-- [ ] **Step 2: Translate** every `fr`/`en` name (+ author `bioFr`/`bioEn`) in the Claude Code session; keep `slug` unchanged.
+- [ ] **Step 2: Translate** every `fr`/`en` name (+ author `bioFr`/`bioEn` if a bio exists) in the Claude Code session; keep `slug` unchanged. Categories use conventional sports terms (كأس العالم→Coupe du Monde/World Cup; كأس أمم أفريقيا→Coupe d'Afrique des Nations/Africa Cup of Nations). Tags: keep player/club/competition proper nouns in conventional Latin form; translate topical words. French with correct accents.
 - [ ] **Step 3: Dry-run** — `pnpm i18n:taxonomy:dry` → zero `[missing]`.
 - [ ] **Step 4: Import** — `pnpm i18n:taxonomy`.
-- [ ] **Step 5: Verify** a pilot fr article shows French category/tag chips and a French author name (Verification 3a).
+- [ ] **Step 5: Verify** a fr article shows French category/tag chips and a French author name (Verification 3a).
 
 ### Task E3: BULK — translate and import the remaining ~190
 
