@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { AdSlot } from "@/components/ads/AdSlot";
 import { StickyMobileAd } from "@/components/ads/StickyMobileAd";
+import { SocialFloater } from "@/components/social/SocialFloater";
 
 type Props = {
   children: React.ReactNode;
@@ -39,6 +40,7 @@ export default async function LocaleLayout({ children, params }: Props) {
         <main className="flex-1">{children}</main>
         <Footer locale={locale} />
         <StickyMobileAd />
+        <SocialFloater />
       </NextIntlClientProvider>
     </div>
   );
