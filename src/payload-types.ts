@@ -79,6 +79,7 @@ export interface Config {
     pages: Page;
     redirects: Redirect;
     videos: Video;
+    ads: Ad;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -98,6 +99,7 @@ export interface Config {
     pages: PagesSelect<false> | PagesSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     videos: VideosSelect<false> | VideosSelect<true>;
+    ads: AdsSelect<false> | AdsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -452,6 +454,38 @@ export interface Video {
   createdAt: string;
 }
 /**
+ * Each row is one ad creative. Multiple ads sharing a placement rotate as a slider in that slot.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ads".
+ */
+export interface Ad {
+  id: number;
+  /**
+   * Internal label (e.g. 'OCP SIAM — June').
+   */
+  name: string;
+  /**
+   * Banners: design ~1600×376 (wide). News cards: design 16:9 (e.g. 600×400).
+   */
+  image: number | Media;
+  /**
+   * Optional. Clicking the ad opens this in a new tab.
+   */
+  linkUrl?: string | null;
+  placement: 'top-banner' | 'hero-news' | 'news-videos' | 'videos-matches' | 'news-card';
+  /**
+   * Uncheck to hide without deleting.
+   */
+  active?: boolean | null;
+  /**
+   * Lower shows first in the slider rotation.
+   */
+  order?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -522,6 +556,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'videos';
         value: number | Video;
+      } | null)
+    | ({
+        relationTo: 'ads';
+        value: number | Ad;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -785,6 +823,20 @@ export interface VideosSelect<T extends boolean = true> {
   duration?: T;
   publishedAt?: T;
   sortOrder?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ads_select".
+ */
+export interface AdsSelect<T extends boolean = true> {
+  name?: T;
+  image?: T;
+  linkUrl?: T;
+  placement?: T;
+  active?: T;
+  order?: T;
   updatedAt?: T;
   createdAt?: T;
 }

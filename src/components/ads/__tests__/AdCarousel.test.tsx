@@ -1,0 +1,72 @@
+// src/components/ads/__tests__/AdCarousel.test.tsx
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { render, fireEvent, act } from "@testing-library/react";
+import { AdCarousel } from "@/components/ads/AdCarousel";
+import type { AdItem } from "@/lib/payload/ads";
+
+const ads: AdItem[] = [
+  { id: 1, imageUrl: "https://blob/a.jpg", alt: "Ad A", linkUrl: "https://a.com" },
+  { id: 2, imageUrl: "https://blob/b.jpg", alt: "Ad B" },
+];
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
+
+describe("AdCarousel", () => {
+  it("renders nothing when there are no ads", () => {
+    const { container } = render(<AdCarousel ads={[]} format="banner" />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("banner format applies the fixed 6.4:1 aspect-ratio slot", () => {
+    const { container } = render(<AdCarousel ads={[ads[0]]} format="banner" />);
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.className).toContain("aspect-[32/5]");
+    const img = container.querySelector("img");
+    expect(img?.className).toContain("object-cover");
+    expect(img?.getAttribute("alt")).toBe("Ad A");
+  });
+
+  it("card format fills its grid cell (h-full) and matches blog-card chrome", () => {
+    const { container } = render(<AdCarousel ads={[ads[0]]} format="card" />);
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.className).toContain("h-full");
+    expect(root.className).toContain("rounded-xl");
+  });
+
+  it("wraps a slide in a new-tab link when linkUrl is set, plain when not", () => {
+    const withLink = render(<AdCarousel ads={[ads[0]]} format="banner" />);
+    const a = withLink.container.querySelector("a");
+    expect(a).toHaveAttribute("href", "https://a.com");
+    expect(a).toHaveAttribute("target", "_blank");
+    expect(a).toHaveAttribute("rel", "noopener noreferrer");
+
+    const noLink = render(<AdCarousel ads={[ads[1]]} format="banner" />);
+    expect(noLink.container.querySelector("a")).toBeNull();
+  });
+
+  it("shows dots only when there is more than one ad, and a dot click switches slides", () => {
+    const single = render(<AdCarousel ads={[ads[0]]} format="banner" />);
+    expect(single.container.querySelectorAll("[data-ad-dot]")).toHaveLength(0);
+
+    const { container } = render(<AdCarousel ads={ads} format="banner" />);
+    const dots = container.querySelectorAll("[data-ad-dot]");
+    expect(dots).toHaveLength(2);
+    // First ad visible initially.
+    expect(container.querySelector("img")?.getAttribute("alt")).toBe("Ad A");
+    fireEvent.click(dots[1]);
+    expect(container.querySelector("img")?.getAttribute("alt")).toBe("Ad B");
+  });
+
+  it("auto-advances on its interval", () => {
+    vi.useFakeTimers();
+    const { container } = render(<AdCarousel ads={ads} format="banner" intervalMs={3000} />);
+    expect(container.querySelector("img")?.getAttribute("alt")).toBe("Ad A");
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(container.querySelector("img")?.getAttribute("alt")).toBe("Ad B");
+  });
+});

@@ -8,14 +8,16 @@ import { SectionHeader } from "@/components/shared/SectionHeader";
 import { SectionShell } from "@/components/home/SectionShell";
 import { LEAGUES } from "@/lib/home/leagues";
 import type { LeagueCardArticle } from "@/lib/home/cards";
+import type { AdItem } from "@/lib/payload/ads";
 
 type Props = {
   title: string;
   locale: string;
   articlesByLeague: Record<string, LeagueCardArticle[]>;
+  ads?: AdItem[];
 };
 
-export function LeagueNewsSection({ title, locale, articlesByLeague }: Props) {
+export function LeagueNewsSection({ title, locale, articlesByLeague, ads = [] }: Props) {
   const [selectedId, setSelectedId] = useState<string>(LEAGUES[0]?.id ?? "");
   const articles = articlesByLeague[selectedId] ?? [];
 
@@ -31,6 +33,7 @@ export function LeagueNewsSection({ title, locale, articlesByLeague }: Props) {
           className="lg:col-span-2 lg:row-span-2 lg:grid-rows-subgrid"
           articles={articles}
           locale={locale}
+          ads={ads}
         />
         <LeaguesPanel
           className="lg:col-start-3 lg:row-start-1"

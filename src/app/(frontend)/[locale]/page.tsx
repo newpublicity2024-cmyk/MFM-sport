@@ -10,7 +10,8 @@ import { LeagueNewsSection } from "@/components/home/LeagueNewsSection";
 import { VideosSection } from "@/components/home/VideosSection";
 import { HomeMatchesSection } from "@/components/home/HomeMatchesSection";
 import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";
-import { AdBanner } from "@/components/ads/AdBanner";
+import { AdCarousel } from "@/components/ads/AdCarousel";
+import { getAds } from "@/lib/payload/ads";
 import { LEAGUES } from "@/lib/home/leagues";
 import { toHeroSlide, buildLeagueArticles } from "@/lib/home/cards";
 
@@ -68,6 +69,8 @@ export default async function HomePage({ params }: Props) {
   const heroSlides = latest.docs.slice(0, 5).map(toHeroSlide);
   const articlesByLeague = buildLeagueArticles(latest.docs.slice(5), LEAGUES);
 
+  const ads = await getAds(locale as Config["locale"]);
+
   const [thirdHalfVideos, fromStadiumsVideos] = await Promise.all([
     getVideos("the-third-half"),
     getVideos("from-the-stadiums"),
@@ -94,15 +97,10 @@ export default async function HomePage({ params }: Props) {
     <div className="space-y-6 pb-6">
       <h1 className="sr-only">MFM Sport</h1>
 
-      {/* Top ad — above the hero + leagues carousel; pushes the page down. */}
-      <AdBanner
-        src="/images/ocp-banner.jpeg"
-        alt="OCP — SIAM"
-        width={1600}
-        height={413}
-        priority
-        className="mx-auto max-w-[970px]"
-      />
+      {/* Top ad — full section width, above the hero + leagues carousel. */}
+      <div className="container">
+        <AdCarousel ads={ads["top-banner"]} format="banner" />
+      </div>
 
       <div className="container space-y-6">
         <HeroSection
@@ -116,30 +114,23 @@ export default async function HomePage({ params }: Props) {
       </div>
 
       {/* Between hero and latest news. */}
-      <AdBanner
-        src="/images/cargo-banner.jpeg"
-        alt="MSC"
-        width={970}
-        height={250}
-        className="mx-auto max-w-[970px]"
-      />
+      <div className="container">
+        <AdCarousel ads={ads["hero-news"]} format="banner" />
+      </div>
 
       <div className="container space-y-6">
         <LeagueNewsSection
           title={t("byLeague")}
           locale={locale}
           articlesByLeague={articlesByLeague}
+          ads={ads["news-card"]}
         />
       </div>
 
       {/* Between latest news and the first YouTube section. */}
-      <AdBanner
-        src="/images/car1-banner.jpeg"
-        alt="OMODA C5"
-        width={970}
-        height={250}
-        className="mx-auto max-w-[970px]"
-      />
+      <div className="container">
+        <AdCarousel ads={ads["news-videos"]} format="banner" />
+      </div>
 
       <div className="container space-y-6">
         <VideosSection
@@ -156,13 +147,9 @@ export default async function HomePage({ params }: Props) {
       </div>
 
       {/* Between the second YouTube section and the matches section. */}
-      <AdBanner
-        src="/images/car2-banner.jpeg"
-        alt="JETOUR"
-        width={970}
-        height={250}
-        className="mx-auto max-w-[970px]"
-      />
+      <div className="container">
+        <AdCarousel ads={ads["videos-matches"]} format="banner" />
+      </div>
 
       <div className="container space-y-6">
         <HomeMatchesSection
