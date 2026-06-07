@@ -20,11 +20,10 @@ describe("AdCarousel", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("banner format applies the fixed-height slot", () => {
+  it("banner format applies the fixed 6.4:1 aspect-ratio slot", () => {
     const { container } = render(<AdCarousel ads={[ads[0]]} format="banner" />);
     const root = container.firstElementChild as HTMLElement;
-    expect(root.className).toContain("h-[150px]");
-    expect(root.className).toContain("sm:h-[188px]");
+    expect(root.className).toContain("aspect-[32/5]");
     const img = container.querySelector("img");
     expect(img?.className).toContain("object-cover");
     expect(img?.getAttribute("alt")).toBe("Ad A");

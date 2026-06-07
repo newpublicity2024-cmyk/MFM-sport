@@ -33,7 +33,9 @@ export function AdCarousel({ ads, format, className, intervalMs = 5000 }: Props)
 
   const rootClass =
     format === "banner"
-      ? "relative w-full h-[150px] sm:h-[188px] overflow-hidden rounded-xl"
+      ? // Fixed 6.4:1 (32/5) ratio so a single creative (e.g. 2560x400) fits every
+        // screen with no crop. ~180-210px tall on desktop, scales down on mobile.
+        "relative w-full aspect-[32/5] overflow-hidden rounded-xl"
       : "relative h-full w-full overflow-hidden rounded-xl border border-border bg-background";
 
   const slide = (
