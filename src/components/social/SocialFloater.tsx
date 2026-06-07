@@ -13,13 +13,17 @@ export function SocialFloater() {
   // Close when clicking/tapping anywhere outside the floater.
   useEffect(() => {
     if (!open) return;
-    function onPointerDown(e: MouseEvent) {
+    function onOutside(e: Event) {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
+    document.addEventListener("mousedown", onOutside);
+    document.addEventListener("touchstart", onOutside);
+    return () => {
+      document.removeEventListener("mousedown", onOutside);
+      document.removeEventListener("touchstart", onOutside);
+    };
   }, [open]);
 
   function handleMainClick() {
