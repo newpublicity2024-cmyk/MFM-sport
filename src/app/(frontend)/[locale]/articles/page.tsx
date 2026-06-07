@@ -3,6 +3,7 @@ import type { Config } from "@/payload-types";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
 import { getArticles } from "@/lib/payload/queries";
+import { getAds } from "@/lib/payload/ads";
 import { ArticleGrid } from "@/components/articles/ArticleGrid";
 import { Pagination } from "@/components/shared/Pagination";
 
@@ -26,6 +27,7 @@ export default async function ArticlesPage({ params, searchParams }: Props) {
 
   const currentPage = Math.max(1, parseInt(page || "1", 10));
   const result = await getArticles({ locale: locale as Config["locale"], page: currentPage, limit: 12 });
+  const ads = await getAds(locale as Config["locale"]);
   const t = await getTranslations({ locale, namespace: "article" });
 
   return (
@@ -34,7 +36,7 @@ export default async function ArticlesPage({ params, searchParams }: Props) {
 
       {result.docs.length > 0 ? (
         <>
-          <ArticleGrid articles={result.docs} locale={locale} columns={3} withAds />
+          <ArticleGrid articles={result.docs} locale={locale} columns={3} withAds adCards={ads["news-card"]} />
           <Pagination
             currentPage={result.page!}
             totalPages={result.totalPages}
