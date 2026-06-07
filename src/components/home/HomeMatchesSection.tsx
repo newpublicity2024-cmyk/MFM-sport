@@ -55,15 +55,19 @@ export function HomeMatchesSection({ title, emptyLabel, locale, fixtures, labels
           {emptyLabel}
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div
+          data-matches-slider
+          className="flex max-h-[32rem] snap-y snap-mandatory flex-col gap-2 overflow-y-auto no-scrollbar lg:max-h-none lg:overflow-visible"
+        >
           {sorted.map((f) => (
-            <HomeMatchRow
-              key={f.fixture.id}
-              fixture={f}
-              locale={locale}
-              labels={labels}
-              defaultOpen={f.fixture.id === firstLiveId}
-            />
+            <div key={f.fixture.id} data-match-row className="snap-start">
+              <HomeMatchRow
+                fixture={f}
+                locale={locale}
+                labels={labels}
+                defaultOpen={f.fixture.id === firstLiveId}
+              />
+            </div>
           ))}
         </div>
       )}

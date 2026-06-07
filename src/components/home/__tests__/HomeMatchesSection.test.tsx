@@ -69,4 +69,29 @@ describe("HomeMatchesSection", () => {
     expect(names[0]).toBe("Live FC");
     expect(names[1]).toBe("Scheduled FC");
   });
+
+  it("wraps the match list in a mobile vertical snap slider (8 rows), unbounded on desktop", () => {
+    const fixtures = [fx(1, "NS", 1780000200, "Alpha FC"), fx(2, "NS", 1780000300, "Beta FC"), fx(3, "NS", 1780000400, "Gamma FC")];
+    const { container } = render(
+      <HomeMatchesSection title="Matches" emptyLabel="none" locale="en" fixtures={fixtures} labels={LABELS} />,
+    );
+    const slider = container.querySelector("[data-matches-slider]") as HTMLElement;
+    expect(slider).toBeTruthy();
+    expect(slider.className).toContain("max-h-[32rem]");
+    expect(slider.className).toContain("snap-y");
+    expect(slider.className).toContain("no-scrollbar");
+    expect(slider.className).toContain("lg:max-h-none");
+    expect(slider.className).toContain("lg:overflow-visible");
+  });
+
+  it("makes each match row a snap target", () => {
+    const fixtures = [fx(1, "NS", 1780000200, "Alpha FC"), fx(2, "NS", 1780000300, "Beta FC"), fx(3, "NS", 1780000400, "Gamma FC")];
+    const { container } = render(
+      <HomeMatchesSection title="Matches" emptyLabel="none" locale="en" fixtures={fixtures} labels={LABELS} />,
+    );
+    const slider = container.querySelector("[data-matches-slider]") as HTMLElement;
+    const rows = slider.querySelectorAll(":scope > [data-match-row]");
+    expect(rows.length).toBe(3);
+    rows.forEach((r) => expect((r as HTMLElement).className).toContain("snap-start"));
+  });
 });
