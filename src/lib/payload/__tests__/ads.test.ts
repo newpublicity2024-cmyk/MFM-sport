@@ -1,16 +1,19 @@
 // src/lib/payload/__tests__/ads.test.ts
 import { describe, it, expect } from "vitest";
+import type { Ad } from "@/payload-types";
 import { groupAds } from "@/lib/payload/ads";
 
-// Minimal fake Payload docs (image populated to depth 1).
-const doc = (over: Record<string, unknown>) => ({
-  id: 1,
-  name: "Ad",
-  placement: "top-banner",
-  linkUrl: null,
-  image: { url: "https://blob/x.jpg", alt: "alt text", sizes: {} },
-  ...over,
-});
+// Minimal fake Payload docs (image populated to depth 1). Cast to Ad — these
+// stubs intentionally omit timestamp fields groupAds never reads.
+const doc = (over: Record<string, unknown>) =>
+  ({
+    id: 1,
+    name: "Ad",
+    placement: "top-banner",
+    linkUrl: null,
+    image: { url: "https://blob/x.jpg", alt: "alt text", sizes: {} },
+    ...over,
+  }) as unknown as Ad;
 
 describe("groupAds", () => {
   it("returns an entry for every placement, empty when no docs", () => {
