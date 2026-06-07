@@ -121,3 +121,15 @@
 .ad-container:has(ins.adsbygoogle[data-ad-status="unfilled"]) {
   display: none;
 }
+
+@layer utilities {
+  /* Hide the scrollbar while keeping scroll + scroll-snap. Used by the mobile
+     homepage sliders (replaces the repeated inline scrollbar-hiding classes). */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
