@@ -123,6 +123,7 @@ export default async function HomePage({ params }: Props) {
           title={t("byLeague")}
           locale={locale}
           articlesByLeague={articlesByLeague}
+          ads={ads["news-card"]}
         />
       </div>
 

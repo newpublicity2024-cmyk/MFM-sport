@@ -1,18 +1,23 @@
 import Image from "next/image";
 import Link from "next/link";
 import { cn, formatDate } from "@/lib/utils";
+import { AdCarousel } from "@/components/ads/AdCarousel";
+import type { AdItem } from "@/lib/payload/ads";
 import type { LeagueCardArticle } from "@/lib/home/cards";
 
 type Props = {
   articles: LeagueCardArticle[];
   locale: string;
   className?: string;
+  ads?: AdItem[];
 };
 
-export function NewsGrid2x2({ articles, locale, className }: Props) {
+export function NewsGrid2x2({ articles, locale, className, ads = [] }: Props) {
+  const hasAd = ads.length > 0;
+  const shownArticles = hasAd ? articles.slice(0, 3) : articles.slice(0, 4);
   return (
     <div className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2", className)}>
-      {articles.map((article) => (
+      {shownArticles.map((article) => (
         <article
           key={article.id}
           className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-background transition-colors hover:border-primary/30"
@@ -57,6 +62,7 @@ export function NewsGrid2x2({ articles, locale, className }: Props) {
           </div>
         </article>
       ))}
+      {hasAd && <AdCarousel ads={ads} format="card" />}
     </div>
   );
 }
