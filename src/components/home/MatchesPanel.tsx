@@ -84,9 +84,8 @@ export function MatchesPanel({ fixtures, locale, statusLabels }: Props) {
 
   const groups = useMemo(() => groupAndSort(filtered), [filtered]);
 
-  const [openIds, setOpenIds] = useState<Set<number>>(
-    () => new Set(groupAndSort(fixtures).filter((g) => g.priority <= 1).map((g) => g.league.id)),
-  );
+  // All league groups start collapsed.
+  const [openIds, setOpenIds] = useState<Set<number>>(() => new Set());
 
   function toggleLeague(id: number) {
     setOpenIds((prev) => {
@@ -126,6 +125,10 @@ export function MatchesPanel({ fixtures, locale, statusLabels }: Props) {
         })}
       </div>
 
+      <div
+        data-leagues-slider
+        className="flex flex-col gap-2 overflow-y-auto no-scrollbar snap-y snap-mandatory max-h-[19rem] lg:max-h-none lg:overflow-visible"
+      >
       {groups.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
           {activeFilter ? statusLabels[activeFilter] : ""}
@@ -137,7 +140,7 @@ export function MatchesPanel({ fixtures, locale, statusLabels }: Props) {
           return (
             <div
               key={group.league.id}
-              className="rounded-xl bg-background border border-border overflow-hidden"
+              className="snap-start rounded-xl bg-background border border-border overflow-hidden"
             >
               <button
                 type="button"
@@ -179,6 +182,7 @@ export function MatchesPanel({ fixtures, locale, statusLabels }: Props) {
           );
         })
       )}
+      </div>
     </div>
   );
 }

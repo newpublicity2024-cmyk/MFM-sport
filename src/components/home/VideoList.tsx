@@ -14,7 +14,7 @@ type Props = {
 
 export function VideoList({ videos, selectedId, locale, onSelect }: Props) {
   return (
-    <div className="flex max-h-[28rem] flex-col gap-2 overflow-y-auto rounded-xl border border-white/10 bg-white/5 p-2 lg:h-full lg:max-h-none">
+    <div className="flex max-h-[23rem] snap-y snap-mandatory flex-col gap-2 overflow-y-auto no-scrollbar rounded-xl border border-white/10 bg-white/5 p-2 lg:h-full lg:max-h-none">
       {videos.map((video) => {
         const isActive = video.youtubeId === selectedId;
         return (
@@ -23,7 +23,7 @@ export function VideoList({ videos, selectedId, locale, onSelect }: Props) {
             type="button"
             onClick={() => onSelect(video.youtubeId)}
             aria-pressed={isActive}
-            className={`flex items-stretch gap-2 rounded-lg p-1.5 text-start transition-colors ${
+            className={`flex snap-start items-stretch gap-2 rounded-lg p-1.5 text-start transition-colors ${
               isActive
                 ? "bg-primary/10 ring-1 ring-primary"
                 : "hover:bg-white/10"
