@@ -52,7 +52,7 @@ export function SocialFloater() {
             : "pointer-events-none translate-y-2 opacity-0",
         )}
       >
-        {FLOATER_DROPDOWN.map(({ name, href, Icon }) => (
+        {FLOATER_DROPDOWN.map(({ name, href, Icon, bgClass }) => (
           <a
             key={name}
             href={href}
@@ -60,7 +60,10 @@ export function SocialFloater() {
             rel="noopener noreferrer"
             aria-label={name}
             tabIndex={open ? 0 : -1}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-card text-foreground shadow-lg ring-1 ring-border transition-colors hover:text-primary"
+            className={cn(
+              "flex h-11 w-11 items-center justify-center rounded-full text-white shadow-lg transition-transform hover:scale-110",
+              bgClass,
+            )}
           >
             <Icon className="h-5 w-5" />
           </a>
@@ -73,9 +76,12 @@ export function SocialFloater() {
         onClick={handleMainClick}
         aria-expanded={open}
         aria-label={open ? "Open Instagram" : "Open social menu"}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl transition-transform hover:scale-105"
+        className={cn(
+          "flex h-12 w-12 items-center justify-center rounded-full text-white shadow-xl transition-transform hover:scale-105",
+          FLOATER_MAIN.bgClass,
+        )}
       >
-        <MainIcon className="h-7 w-7" />
+        <MainIcon className="h-6 w-6" />
       </button>
     </div>
   );
