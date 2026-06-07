@@ -47,4 +47,25 @@ describe("VideoList", () => {
     fireEvent.click(screen.getByRole("button", { name: /Second/ }));
     expect(onSelect).toHaveBeenCalledWith("vid2");
   });
+
+  it("constrains the mobile list to ~5 rows as a snap slider", () => {
+    const { container } = render(
+      <VideoList videos={videos} selectedId="vid1" locale="en" onSelect={() => {}} />,
+    );
+    const list = container.firstElementChild as HTMLElement;
+    expect(list.className).toContain("max-h-[23rem]");
+    expect(list.className).not.toContain("max-h-[28rem]");
+    expect(list.className).toContain("snap-y");
+    expect(list.className).toContain("no-scrollbar");
+    expect(list.className).toContain("lg:max-h-none");
+  });
+
+  it("makes each video button a snap target", () => {
+    const { container } = render(
+      <VideoList videos={videos} selectedId="vid1" locale="en" onSelect={() => {}} />,
+    );
+    const buttons = container.querySelectorAll("button");
+    expect(buttons.length).toBe(2);
+    buttons.forEach((b) => expect(b.className).toContain("snap-start"));
+  });
 });
