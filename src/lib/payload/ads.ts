@@ -1,6 +1,6 @@
 // src/lib/payload/ads.ts
 import type { Ad, Config } from "@/payload-types";
-import { getImageAlt, getImageUrl } from "@/lib/utils";
+import { getImageAlt } from "@/lib/utils";
 
 type Locale = Config["locale"];
 
@@ -38,13 +38,23 @@ function emptyGroups(): AdsByPlacement {
   };
 }
 
+// Ad creatives are pre-designed art, so use the ORIGINAL uploaded image, not a
+// Payload size crop — the slot's object-cover does the only crop. Using a crop
+// (e.g. hero 1200x630) would double-crop wide banners down to a center patch.
+function adImageUrl(image: Ad["image"]): string | null {
+  if (image && typeof image === "object" && typeof image.url === "string") {
+    return image.url;
+  }
+  return null;
+}
+
 // Pure: turn populated Payload ad docs into AdItems grouped by placement.
 export function groupAds(docs: Ad[]): AdsByPlacement {
   const groups = emptyGroups();
   for (const ad of docs) {
     const placement = ad.placement as AdPlacement;
     if (!groups[placement]) continue;
-    const imageUrl = getImageUrl(ad.image, "hero") ?? getImageUrl(ad.image, "card");
+    const imageUrl = adImageUrl(ad.image);
     if (!imageUrl) continue;
     groups[placement].push({
       id: ad.id,
