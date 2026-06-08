@@ -57,11 +57,7 @@ export function LeagueNewsSection({ title, locale, articlesByLeague, ads = [] }:
           onSelect={setSelectedId}
         />
         <ArticleSlider articles={articles} locale={locale} />
-        {ads.length > 0 && (
-          <div className="aspect-video">
-            <AdCarousel ads={ads} format="card" />
-          </div>
-        )}
+        {ads.length > 0 && <AdCarousel ads={ads} format="card" />}
         <LeaguePlaylistBanner locale={locale} />
       </div>
     </SectionShell>

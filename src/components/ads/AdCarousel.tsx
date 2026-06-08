@@ -33,10 +33,11 @@ export function AdCarousel({ ads, format, className, intervalMs = 5000 }: Props)
 
   const rootClass =
     format === "banner"
-      ? // Fixed 6.4:1 (32/5) ratio so a single creative (e.g. 2560x400) fits every
-        // screen with no crop. ~180-210px tall on desktop, scales down on mobile.
-        "relative w-full aspect-[32/5] overflow-hidden rounded-xl"
-      : "relative h-full w-full overflow-hidden rounded-xl border border-border bg-background";
+      ? // Standard 970x250 billboard: fixed ratio, capped at 970px wide, centered.
+        // Design creatives at 970x250.
+        "relative mx-auto w-full max-w-[970px] aspect-[970/250] overflow-hidden rounded-xl"
+      : // Standard 300x250 medium rectangle (6:5). Design creatives at 300x250.
+        "relative w-full aspect-[300/250] overflow-hidden rounded-xl border border-border bg-background";
 
   const slide = (
     <Image

@@ -20,19 +20,20 @@ describe("AdCarousel", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("banner format applies the fixed 6.4:1 aspect-ratio slot", () => {
+  it("banner format applies the fixed 970x250 slot (capped, centered)", () => {
     const { container } = render(<AdCarousel ads={[ads[0]]} format="banner" />);
     const root = container.firstElementChild as HTMLElement;
-    expect(root.className).toContain("aspect-[32/5]");
+    expect(root.className).toContain("aspect-[970/250]");
+    expect(root.className).toContain("max-w-[970px]");
     const img = container.querySelector("img");
     expect(img?.className).toContain("object-cover");
     expect(img?.getAttribute("alt")).toBe("Ad A");
   });
 
-  it("card format fills its grid cell (h-full) and matches blog-card chrome", () => {
+  it("card format uses the fixed 300x250 medium-rectangle ratio", () => {
     const { container } = render(<AdCarousel ads={[ads[0]]} format="card" />);
     const root = container.firstElementChild as HTMLElement;
-    expect(root.className).toContain("h-full");
+    expect(root.className).toContain("aspect-[300/250]");
     expect(root.className).toContain("rounded-xl");
   });
 
