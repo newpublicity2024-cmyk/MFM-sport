@@ -39,7 +39,7 @@ export function SocialFloater() {
   return (
     <div
       ref={rootRef}
-      className="fixed bottom-6 right-6 z-40 flex flex-col items-center gap-3"
+      className="fixed bottom-6 left-6 z-40 flex flex-col items-center gap-3"
     >
       {/* Dropdown — stacks ABOVE the main button and animates upward. */}
       <div
