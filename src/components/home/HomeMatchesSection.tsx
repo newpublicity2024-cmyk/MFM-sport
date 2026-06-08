@@ -60,7 +60,7 @@ export function HomeMatchesSection({ title, emptyLabel, locale, fixtures, labels
           className="flex max-h-[32rem] snap-y snap-mandatory flex-col gap-2 overflow-y-auto no-scrollbar lg:max-h-none lg:overflow-visible"
         >
           {sorted.map((f) => (
-            <div key={f.fixture.id} data-match-row className="snap-start">
+            <div key={f.fixture.id} data-match-row className="shrink-0 snap-start">
               <HomeMatchRow
                 fixture={f}
                 locale={locale}

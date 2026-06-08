@@ -66,6 +66,10 @@ describe("VideoList", () => {
     );
     const buttons = container.querySelectorAll("button");
     expect(buttons.length).toBe(2);
-    buttons.forEach((b) => expect(b.className).toContain("snap-start"));
+    buttons.forEach((b) => {
+      expect(b.className).toContain("snap-start");
+      // shrink-0 stops flex from squishing rows when the playlist is long.
+      expect(b.className).toContain("shrink-0");
+    });
   });
 });

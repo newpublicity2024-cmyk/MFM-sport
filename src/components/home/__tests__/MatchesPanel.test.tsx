@@ -60,5 +60,10 @@ describe("MatchesPanel", () => {
     expect(slider.className).toContain("snap-y");
     expect(slider.className).toContain("no-scrollbar");
     expect(slider.className).toContain("lg:max-h-none");
+    // Each league row must keep its full height (shrink-0): otherwise flexbox
+    // squishes the many rows to ~0px and nothing is visible.
+    const rows = slider.querySelectorAll(":scope > div");
+    expect(rows.length).toBeGreaterThan(0);
+    rows.forEach((r) => expect((r as HTMLElement).className).toContain("shrink-0"));
   });
 });
