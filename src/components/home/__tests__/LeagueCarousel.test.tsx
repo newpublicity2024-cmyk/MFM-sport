@@ -9,19 +9,40 @@ const leagues: CarouselLeague[] = [
 ];
 
 describe("LeagueCarousel", () => {
-  it("renders one link per provided league, pointing at its competition page", () => {
+  it("renders one logo-only link per league, pointing at its competition page", () => {
     render(<LeagueCarousel leagues={leagues} locale="en" label="Leagues" />);
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(3);
     expect(links[0]).toHaveAttribute("href", "/en/competition/botola-pro-1");
-    expect(links[0]).toHaveTextContent("Botola Pro 1");
-    expect(screen.getByText("Bundesliga")).toBeInTheDocument();
+    expect(links[0]).toHaveAccessibleName("Botola Pro 1");
+    expect(links[0]).toHaveAttribute("title", "Botola Pro 1");
+    expect(screen.queryByText("Botola Pro 1")).toBeNull();
+    expect(screen.queryByText("Bundesliga")).toBeNull();
+  });
+
+  it("renders each league as a ~48px contained logo image", () => {
+    const { container } = render(<LeagueCarousel leagues={leagues} locale="en" label="Leagues" />);
+    const imgs = container.querySelectorAll("img");
+    expect(imgs).toHaveLength(3);
+    imgs.forEach((img) => {
+      expect(img.className).toContain("object-contain");
+      expect(img.className).toContain("h-12");
+      expect(img.className).toContain("w-12");
+    });
+  });
+
+  it("is a no-scrollbar horizontal strip with 20px gaps", () => {
+    const { container } = render(<LeagueCarousel leagues={leagues} locale="en" label="Leagues" />);
+    const nav = container.querySelector("nav") as HTMLElement;
+    expect(nav.className).toContain("overflow-x-auto");
+    expect(nav.className).toContain("no-scrollbar");
+    expect(nav.className).toContain("gap-5");
   });
 
   it("labels the nav and builds locale-aware hrefs", () => {
     render(<LeagueCarousel leagues={leagues} locale="ar" label="البطولات" />);
     expect(screen.getByRole("navigation", { name: "البطولات" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Bundesliga/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Bundesliga" })).toHaveAttribute(
       "href",
       "/ar/competition/bundesliga",
     );
