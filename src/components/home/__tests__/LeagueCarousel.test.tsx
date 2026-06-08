@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { LeagueCarousel, type CarouselLeague } from "@/components/home/LeagueCarousel";
 
 const leagues: CarouselLeague[] = [
@@ -9,34 +9,47 @@ const leagues: CarouselLeague[] = [
 ];
 
 describe("LeagueCarousel", () => {
-  it("renders one logo-only link per league, pointing at its competition page", () => {
+  it("renders one link per league with logo, name, and competition href", () => {
     render(<LeagueCarousel leagues={leagues} locale="en" label="Leagues" />);
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(3);
     expect(links[0]).toHaveAttribute("href", "/en/competition/botola-pro-1");
     expect(links[0]).toHaveAccessibleName("Botola Pro 1");
-    expect(links[0]).toHaveAttribute("title", "Botola Pro 1");
-    expect(screen.queryByText("Botola Pro 1")).toBeNull();
-    expect(screen.queryByText("Bundesliga")).toBeNull();
   });
 
-  it("renders each league as a ~48px contained logo image", () => {
+  it("renders the name in a desktop-only span (hidden on mobile)", () => {
+    render(<LeagueCarousel leagues={leagues} locale="en" label="Leagues" />);
+    const nameEl = screen.getByText("Bundesliga");
+    expect(nameEl.className).toContain("hidden");
+    expect(nameEl.className).toContain("lg:inline");
+  });
+
+  it("renders responsive logos (48px mobile, 20px desktop, contained)", () => {
     const { container } = render(<LeagueCarousel leagues={leagues} locale="en" label="Leagues" />);
     const imgs = container.querySelectorAll("img");
     expect(imgs).toHaveLength(3);
     imgs.forEach((img) => {
       expect(img.className).toContain("object-contain");
       expect(img.className).toContain("h-12");
-      expect(img.className).toContain("w-12");
+      expect(img.className).toContain("lg:h-5");
     });
   });
 
-  it("is a no-scrollbar horizontal strip with 20px gaps", () => {
-    const { container } = render(<LeagueCarousel leagues={leagues} locale="en" label="Leagues" />);
-    const nav = container.querySelector("nav") as HTMLElement;
-    expect(nav.className).toContain("overflow-x-auto");
-    expect(nav.className).toContain("no-scrollbar");
-    expect(nav.className).toContain("gap-5");
+  it("has desktop-only prev/next arrows that scroll the strip", () => {
+    const scrollBy = vi.fn();
+    // jsdom doesn't implement scrollBy; stub it on the element prototype.
+    (HTMLElement.prototype as unknown as { scrollBy: unknown }).scrollBy = scrollBy;
+    render(<LeagueCarousel leagues={leagues} locale="en" label="Leagues" />);
+    const left = screen.getByRole("button", { name: /left/i });
+    const right = screen.getByRole("button", { name: /right/i });
+    expect(left.parentElement?.className).toContain("lg:flex");
+    expect(right.parentElement?.className).toContain("lg:flex");
+    fireEvent.click(right);
+    fireEvent.click(left);
+    expect(scrollBy).toHaveBeenCalledTimes(2);
+    for (const call of scrollBy.mock.calls) {
+      expect(typeof call[0].left).toBe("number");
+    }
   });
 
   it("labels the nav and builds locale-aware hrefs", () => {
