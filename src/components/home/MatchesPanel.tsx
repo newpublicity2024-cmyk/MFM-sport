@@ -140,7 +140,7 @@ export function MatchesPanel({ fixtures, locale, statusLabels }: Props) {
           return (
             <div
               key={group.league.id}
-              className="snap-start rounded-xl bg-background border border-border overflow-hidden"
+              className="shrink-0 snap-start rounded-xl bg-background border border-border overflow-hidden"
             >
               <button
                 type="button"

@@ -23,7 +23,7 @@ export function VideoList({ videos, selectedId, locale, onSelect }: Props) {
             type="button"
             onClick={() => onSelect(video.youtubeId)}
             aria-pressed={isActive}
-            className={`flex snap-start items-stretch gap-2 rounded-lg p-1.5 text-start transition-colors ${
+            className={`flex shrink-0 snap-start items-stretch gap-2 rounded-lg p-1.5 text-start transition-colors ${
               isActive
                 ? "bg-primary/10 ring-1 ring-primary"
                 : "hover:bg-white/10"

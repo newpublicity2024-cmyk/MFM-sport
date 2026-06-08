@@ -92,6 +92,11 @@ describe("HomeMatchesSection", () => {
     const slider = container.querySelector("[data-matches-slider]") as HTMLElement;
     const rows = slider.querySelectorAll(":scope > [data-match-row]");
     expect(rows.length).toBe(3);
-    rows.forEach((r) => expect((r as HTMLElement).className).toContain("snap-start"));
+    rows.forEach((r) => {
+      expect((r as HTMLElement).className).toContain("snap-start");
+      // shrink-0 keeps each row at full height in the flex-col scroll slider
+      // (without it many rows get squished to ~0px).
+      expect((r as HTMLElement).className).toContain("shrink-0");
+    });
   });
 });
