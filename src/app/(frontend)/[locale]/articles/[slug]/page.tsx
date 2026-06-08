@@ -10,6 +10,7 @@ import {
   getArticleLocalizedSlugs,
   resolveArticleBySlug,
   getRelatedArticles,
+  getArticles,
 } from "@/lib/payload/queries";
 import { decodeSlug } from "@/lib/payload/slug";
 import {
@@ -24,6 +25,12 @@ import { InArticleAdInjector } from "@/components/articles/InArticleAdInjector";
 import { AdSlot } from "@/components/ads/AdSlot";
 import { RelatedArticles } from "@/components/articles/RelatedArticles";
 import { Badge } from "@/components/ui/badge";
+import { getWorldCupFixtures } from "@/lib/api-football/worldcup";
+import { getAds } from "@/lib/payload/ads";
+import { WorldCupCalendar } from "@/components/articles/WorldCupCalendar";
+import { SidebarNewsList } from "@/components/articles/SidebarNewsList";
+import { AdCarousel } from "@/components/ads/AdCarousel";
+import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
@@ -114,9 +121,43 @@ export default async function ArticlePage({ params }: Props) {
 
   const author = typeof article.author === "object" ? article.author : null;
 
+  const loc = locale as Config["locale"];
+  const dir = locale === "ar" ? "rtl" : "ltr";
+
+  const [worldCupFixtures, latestNews, ads] = await Promise.all([
+    getWorldCupFixtures(),
+    getArticles({ locale: loc, limit: 13 }),
+    getAds(loc),
+  ]);
+  // Exclude the article being read; show up to a dozen so the 5-row slider scrolls.
+  // Map publishedAt: null → undefined so it satisfies SidebarNewsList's type.
+  const sidebarNews = latestNews.docs
+    .filter((a) => a.id !== article.id)
+    .slice(0, 12)
+    .map((a) => ({ ...a, publishedAt: a.publishedAt ?? undefined }));
+
+  const tWorldCup = locale === "ar" ? "مونديال 2026" : locale === "fr" ? "Coupe du monde 2026" : "World Cup 2026";
+  const tLatest = locale === "ar" ? "آخر الأخبار" : locale === "fr" ? "Dernières actualités" : "Latest news";
+
   return (
-    <article className="container py-8 max-w-4xl">
-      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6 lg:p-8">
+    <div
+      dir="ltr"
+      className="mx-auto max-w-[1500px] px-4 py-8 sm:px-6 lg:flex lg:items-start lg:gap-6 lg:px-8"
+    >
+      {/* LEFT rail — 300×600 ad + newsletter. Sticky; lg+ only. */}
+      <aside
+        dir={dir}
+        className="hidden shrink-0 space-y-4 lg:sticky lg:top-24 lg:block lg:w-[260px] xl:w-[300px]"
+      >
+        {ads["article-sidebar"].length > 0 && (
+          <AdCarousel ads={ads["article-sidebar"]} format="tower" />
+        )}
+        <NewsletterStrip locale={locale} />
+      </aside>
+
+      {/* CENTER — the article. */}
+      <article dir={dir} className="mx-auto w-full min-w-0 max-w-4xl">
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6 lg:p-8">
         {/* Categories */}
         {article.categories && article.categories.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
@@ -233,7 +274,17 @@ export default async function ArticlePage({ params }: Props) {
             title={t("relatedNews")}
           />
         )}
-      </div>
-    </article>
+        </div>
+      </article>
+
+      {/* RIGHT rail — World Cup 2026 calendar + latest news. Sticky; lg+ only. */}
+      <aside
+        dir={dir}
+        className="hidden shrink-0 space-y-4 lg:sticky lg:top-24 lg:block lg:w-[260px] xl:w-[300px]"
+      >
+        <WorldCupCalendar fixtures={worldCupFixtures} locale={locale} title={tWorldCup} />
+        <SidebarNewsList articles={sidebarNews} locale={locale} title={tLatest} />
+      </aside>
+    </div>
   );
 }
