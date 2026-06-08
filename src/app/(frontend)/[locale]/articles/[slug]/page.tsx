@@ -126,7 +126,7 @@ export default async function ArticlePage({ params }: Props) {
 
   const [worldCupFixtures, latestNews, ads] = await Promise.all([
     getWorldCupFixtures(),
-    getArticles({ locale: loc, limit: 12 }),
+    getArticles({ locale: loc, limit: 13 }),
     getAds(loc),
   ]);
   // Exclude the article being read; show up to a dozen so the 5-row slider scrolls.
