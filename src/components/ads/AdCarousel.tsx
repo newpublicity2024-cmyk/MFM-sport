@@ -8,7 +8,7 @@ import type { AdItem } from "@/lib/payload/ads";
 
 type Props = {
   ads: AdItem[];
-  format: "banner" | "card";
+  format: "banner" | "card" | "tower";
   className?: string;
   intervalMs?: number;
 };
@@ -34,10 +34,12 @@ export function AdCarousel({ ads, format, className, intervalMs = 5000 }: Props)
   const rootClass =
     format === "banner"
       ? // Standard 970x250 billboard: fixed ratio, capped at 970px wide, centered.
-        // Design creatives at 970x250.
         "relative mx-auto w-full max-w-[970px] aspect-[970/250] overflow-hidden rounded-xl"
-      : // Standard 300x250 medium rectangle (6:5). Design creatives at 300x250.
-        "relative w-full aspect-[300/250] overflow-hidden rounded-xl border border-border bg-background";
+      : format === "tower"
+        ? // Standard 300x600 half-page / tower. Design creatives at 300x600.
+          "relative w-full aspect-[300/600] overflow-hidden rounded-xl border border-border bg-background"
+        : // Standard 300x250 medium rectangle (6:5). Design creatives at 300x250.
+          "relative w-full aspect-[300/250] overflow-hidden rounded-xl border border-border bg-background";
 
   const slide = (
     <Image
@@ -45,7 +47,7 @@ export function AdCarousel({ ads, format, className, intervalMs = 5000 }: Props)
       src={active.imageUrl}
       alt={active.alt}
       fill
-      sizes={format === "banner" ? "100vw" : "(max-width: 1024px) 100vw, 33vw"}
+      sizes={format === "banner" ? "100vw" : "300px"}
       className="object-cover"
     />
   );

@@ -37,6 +37,13 @@ describe("AdCarousel", () => {
     expect(root.className).toContain("rounded-xl");
   });
 
+  it("tower format uses the fixed 300x600 vertical ratio", () => {
+    const { container } = render(<AdCarousel ads={[ads[0]]} format="tower" />);
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.className).toContain("aspect-[300/600]");
+    expect(root.className).toContain("rounded-xl");
+  });
+
   it("wraps a slide in a new-tab link when linkUrl is set, plain when not", () => {
     const withLink = render(<AdCarousel ads={[ads[0]]} format="banner" />);
     const a = withLink.container.querySelector("a");
