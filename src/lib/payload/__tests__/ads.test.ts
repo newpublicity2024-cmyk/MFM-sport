@@ -19,7 +19,14 @@ describe("groupAds", () => {
   it("returns an entry for every placement, empty when no docs", () => {
     const g = groupAds([]);
     expect(Object.keys(g).sort()).toEqual(
-      ["hero-news", "news-card", "news-videos", "top-banner", "videos-matches"].sort(),
+      [
+        "article-sidebar",
+        "hero-news",
+        "news-card",
+        "news-videos",
+        "top-banner",
+        "videos-matches",
+      ].sort(),
     );
     expect(g["top-banner"]).toEqual([]);
   });

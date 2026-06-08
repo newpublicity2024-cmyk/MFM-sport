@@ -9,7 +9,8 @@ export type AdPlacement =
   | "hero-news"
   | "news-videos"
   | "videos-matches"
-  | "news-card";
+  | "news-card"
+  | "article-sidebar";
 
 export const AD_PLACEMENTS: AdPlacement[] = [
   "top-banner",
@@ -17,6 +18,7 @@ export const AD_PLACEMENTS: AdPlacement[] = [
   "news-videos",
   "videos-matches",
   "news-card",
+  "article-sidebar",
 ];
 
 export type AdItem = {
@@ -35,6 +37,7 @@ function emptyGroups(): AdsByPlacement {
     "news-videos": [],
     "videos-matches": [],
     "news-card": [],
+    "article-sidebar": [],
   };
 }
 

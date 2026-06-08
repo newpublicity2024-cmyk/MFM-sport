@@ -8,6 +8,7 @@ export const AD_PLACEMENTS = [
   { label: "Home — Between news & videos", value: "news-videos" },
   { label: "Home — Between videos & matches", value: "videos-matches" },
   { label: "News card (blog-sized, in the news grid)", value: "news-card" },
+  { label: "Article page — Side rail (vertical 300×600)", value: "article-sidebar" },
 ] as const;
 
 export const Ads: CollectionConfig = {
@@ -35,7 +36,7 @@ export const Ads: CollectionConfig = {
       required: true,
       admin: {
         description:
-          "Banners: design ~1600×376 (wide). News cards: design 16:9 (e.g. 600×400).",
+          "Banners: design ~1600×376 (wide). News cards: design 16:9 (e.g. 600×400). Article side rail: design 300×600 (vertical).",
       },
     },
     {
