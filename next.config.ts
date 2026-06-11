@@ -65,6 +65,24 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+  async redirects() {
+    return [
+      {
+        source: "/:locale/articles",
+        // Only redirect page>=2; ?page=1 (and ?page=0) just render the base listing.
+        has: [{ type: "query", key: "page", value: "(?<n>[2-9]|[1-9]\\d+)" }],
+        destination: "/:locale/articles/page/:n",
+        permanent: true,
+      },
+      {
+        source: "/:locale/category/:slug",
+        // Only redirect page>=2; ?page=1 (and ?page=0) just render the base listing.
+        has: [{ type: "query", key: "page", value: "(?<n>[2-9]|[1-9]\\d+)" }],
+        destination: "/:locale/category/:slug/page/:n",
+        permanent: true,
+      },
+    ];
+  },
 }
 
 export default withPayload(withNextIntl(nextConfig), { devBundleServerPackages: false })

@@ -1,7 +1,12 @@
 import type { CollectionConfig } from "payload";
+import { revalidateCategoryChange, revalidateCategoryDelete } from "@/lib/payload/revalidate";
 
 export const Categories: CollectionConfig = {
   slug: "categories",
+  hooks: {
+    afterChange: [revalidateCategoryChange],
+    afterDelete: [revalidateCategoryDelete],
+  },
   admin: {
     useAsTitle: "name",
   },

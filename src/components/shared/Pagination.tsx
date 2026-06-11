@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { pageHref } from "@/lib/pagination";
 
 type Props = {
   currentPage: number;
@@ -9,10 +10,6 @@ type Props = {
 
 export function Pagination({ currentPage, totalPages, basePath }: Props) {
   if (totalPages <= 1) return null;
-
-  function pageUrl(page: number) {
-    return page === 1 ? basePath : `${basePath}?page=${page}`;
-  }
 
   // Build visible page numbers with ellipsis
   const pages: (number | "ellipsis")[] = [];
@@ -34,7 +31,7 @@ export function Pagination({ currentPage, totalPages, basePath }: Props) {
     <nav className="flex items-center justify-center gap-1 py-8" aria-label="Pagination">
       {/* Previous */}
       {currentPage > 1 ? (
-        <Link href={pageUrl(currentPage - 1)}>
+        <Link href={pageHref(basePath, currentPage - 1)}>
           <Button variant="ghost" size="sm">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="15,18 9,12 15,6" />
@@ -56,7 +53,7 @@ export function Pagination({ currentPage, totalPages, basePath }: Props) {
             ...
           </span>
         ) : (
-          <Link key={page} href={pageUrl(page)}>
+          <Link key={page} href={pageHref(basePath, page)}>
             <Button
               variant={page === currentPage ? "default" : "ghost"}
               size="sm"
@@ -70,7 +67,7 @@ export function Pagination({ currentPage, totalPages, basePath }: Props) {
 
       {/* Next */}
       {currentPage < totalPages ? (
-        <Link href={pageUrl(currentPage + 1)}>
+        <Link href={pageHref(basePath, currentPage + 1)}>
           <Button variant="ghost" size="sm">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="9,6 15,12 9,18" />
