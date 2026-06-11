@@ -11,6 +11,7 @@ import {
   resolveArticleBySlug,
   getRelatedArticles,
   getArticles,
+  getAllArticleSlugs,
 } from "@/lib/payload/queries";
 import { decodeSlug } from "@/lib/payload/slug";
 import {
@@ -35,6 +36,19 @@ import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
 };
+
+export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  try {
+    const slugs = await getAllArticleSlugs();
+    return slugs.map(({ locale, slug }) => ({ locale, slug }));
+  } catch (err) {
+    // DB unreachable at build time → fall back to on-demand rendering.
+    console.error("[articles/[slug]] generateStaticParams failed:", err);
+    return [];
+  }
+}
 
 const HREFLANG: Record<Config["locale"], string> = { ar: "ar-MA", fr: "fr", en: "en" };
 const OG_LOCALE: Record<Config["locale"], string> = { ar: "ar_MA", fr: "fr_FR", en: "en_US" };
