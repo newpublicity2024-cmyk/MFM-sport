@@ -29,6 +29,30 @@ export async function getArticles(options: {
   });
 }
 
+/** All published article slugs across every locale — for generateStaticParams. */
+export async function getAllArticleSlugs(): Promise<
+  Array<{ locale: Locale; slug: string }>
+> {
+  const payload = await getPayloadClient();
+  const res = await payload.find({
+    collection: "articles",
+    where: { status: { equals: "published" } },
+    locale: "all",
+    depth: 0,
+    pagination: false,
+    limit: 0,
+  });
+  const out: Array<{ locale: Locale; slug: string }> = [];
+  for (const doc of res.docs) {
+    const slugByLocale = doc.slug as unknown as Partial<Record<Locale, string>>;
+    for (const locale of ["ar", "fr", "en"] as const) {
+      const slug = slugByLocale[locale];
+      if (slug) out.push({ locale, slug });
+    }
+  }
+  return out;
+}
+
 type ArticleResolution = {
   article: Article | null;
   /** When set, the inbound slug didn't match the current locale; 301 here. */
