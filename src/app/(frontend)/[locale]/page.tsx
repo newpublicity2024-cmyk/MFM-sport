@@ -12,8 +12,7 @@ import { HomeMatchesSection } from "@/components/home/HomeMatchesSection";
 import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";
 import { AdCarousel } from "@/components/ads/AdCarousel";
 import { getAds } from "@/lib/payload/ads";
-import { LEAGUES } from "@/lib/home/leagues";
-import { toHeroSlide, buildLeagueArticles } from "@/lib/home/cards";
+import { toHeroSlide, buildLeagueArticles, competitionsToLeagues } from "@/lib/home/cards";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -64,11 +63,17 @@ export default async function HomePage({ params }: Props) {
         c.logoUrl || `https://media.api-sports.io/football/leagues/${c.apiFootballId}.png`,
     }));
 
+  // News-by-league tabs are driven by the Competitions section (domestic leagues
+  // only), so adding/removing a competition updates them — no hardcoded list.
+  const newsLeagues = competitionsToLeagues(
+    competitions.docs.filter((c) => c.type === "league"),
+  );
+
   // One query feeds both sections: first 5 = hero slider, the rest are split
   // into a distinct chunk per league.
   const latest = await getArticles({ locale: locale as Config["locale"], page: 1, limit: 30 });
   const heroSlides = latest.docs.slice(0, 5).map(toHeroSlide);
-  const articlesByLeague = buildLeagueArticles(latest.docs.slice(5), LEAGUES);
+  const articlesByLeague = buildLeagueArticles(latest.docs.slice(5), newsLeagues);
 
   const ads = await getAds(locale as Config["locale"]);
 
@@ -123,6 +128,7 @@ export default async function HomePage({ params }: Props) {
         <LeagueNewsSection
           title={t("byLeague")}
           locale={locale}
+          leagues={newsLeagues}
           articlesByLeague={articlesByLeague}
           ads={ads["news-card"]}
         />
