@@ -1,6 +1,6 @@
 import type { CollectionConfig } from "payload";
 
-// The five placeholder slots. Keep these values in sync with
+// The ad placement slots. Keep these values in sync with
 // AdPlacement in src/lib/payload/ads.ts.
 export const AD_PLACEMENTS = [
   { label: "Home — Top banner (above hero)", value: "top-banner" },
