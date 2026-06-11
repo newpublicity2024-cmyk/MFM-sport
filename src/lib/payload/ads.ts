@@ -23,9 +23,11 @@ export const AD_PLACEMENTS: AdPlacement[] = [
 
 export type AdItem = {
   id: number | string;
-  imageUrl: string;
-  alt: string;
+  type: "image" | "tag";
+  imageUrl?: string;
+  alt?: string;
   linkUrl?: string;
+  embedCode?: string;
 };
 
 export type AdsByPlacement = Record<AdPlacement, AdItem[]>;
@@ -57,10 +59,21 @@ export function groupAds(docs: Ad[]): AdsByPlacement {
   for (const ad of docs) {
     const placement = ad.placement as AdPlacement;
     if (!groups[placement]) continue;
+
+    // A tag ad owns its slot: no image, the network fills it via the snippet.
+    if (ad.type === "tag") {
+      const embedCode = ad.embedCode?.trim();
+      if (!embedCode) continue;
+      groups[placement].push({ id: ad.id, type: "tag", embedCode });
+      continue;
+    }
+
+    // Image ad (the default; legacy rows have no `type`).
     const imageUrl = adImageUrl(ad.image);
     if (!imageUrl) continue;
     groups[placement].push({
       id: ad.id,
+      type: "image",
       imageUrl,
       alt: getImageAlt(ad.image) || ad.name,
       linkUrl: ad.linkUrl ?? undefined,

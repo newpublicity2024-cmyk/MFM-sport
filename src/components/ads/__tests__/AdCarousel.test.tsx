@@ -5,8 +5,8 @@ import { AdCarousel } from "@/components/ads/AdCarousel";
 import type { AdItem } from "@/lib/payload/ads";
 
 const ads: AdItem[] = [
-  { id: 1, imageUrl: "https://blob/a.jpg", alt: "Ad A", linkUrl: "https://a.com" },
-  { id: 2, imageUrl: "https://blob/b.jpg", alt: "Ad B" },
+  { id: 1, type: "image", imageUrl: "https://blob/a.jpg", alt: "Ad A", linkUrl: "https://a.com" },
+  { id: 2, type: "image", imageUrl: "https://blob/b.jpg", alt: "Ad B" },
 ];
 
 afterEach(() => {
@@ -76,5 +76,22 @@ describe("AdCarousel", () => {
       vi.advanceTimersByTime(3000);
     });
     expect(container.querySelector("img")?.getAttribute("alt")).toBe("Ad B");
+  });
+
+  it("renders a tag ad as an embed slot, not an image carousel", () => {
+    const tag: AdItem = { id: 9, type: "tag", embedCode: '<ins id="net"></ins>' };
+    const { container } = render(<AdCarousel ads={[tag]} format="banner" />);
+    expect(container.querySelector("[data-ad-embed]")).not.toBeNull();
+    expect(container.querySelector("img")).toBeNull();
+  });
+
+  it("a tag ad in the slot overrides image ads (the network owns the slot)", () => {
+    const mixed: AdItem[] = [
+      { id: 1, type: "image", imageUrl: "https://blob/a.jpg", alt: "A" },
+      { id: 2, type: "tag", embedCode: "<ins></ins>" },
+    ];
+    const { container } = render(<AdCarousel ads={mixed} format="banner" />);
+    expect(container.querySelector("[data-ad-embed]")).not.toBeNull();
+    expect(container.querySelector("img")).toBeNull();
   });
 });

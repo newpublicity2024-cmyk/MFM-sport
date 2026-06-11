@@ -9,6 +9,7 @@ const doc = (over: Record<string, unknown>) =>
   ({
     id: 1,
     name: "Ad",
+    type: "image",
     placement: "top-banner",
     linkUrl: null,
     image: { url: "https://blob/x.jpg", alt: "alt text", sizes: {} },
@@ -31,10 +32,16 @@ describe("groupAds", () => {
     expect(g["top-banner"]).toEqual([]);
   });
 
-  it("maps a doc into an AdItem under its placement", () => {
+  it("maps an image doc into an image AdItem under its placement", () => {
     const g = groupAds([doc({ id: 7, placement: "hero-news", linkUrl: "https://ex.com" })]);
     expect(g["hero-news"]).toEqual([
-      { id: 7, imageUrl: "https://blob/x.jpg", alt: "alt text", linkUrl: "https://ex.com" },
+      {
+        id: 7,
+        type: "image",
+        imageUrl: "https://blob/x.jpg",
+        alt: "alt text",
+        linkUrl: "https://ex.com",
+      },
     ]);
     expect(g["top-banner"]).toEqual([]);
   });
@@ -46,8 +53,25 @@ describe("groupAds", () => {
     expect(g["top-banner"][0].alt).toBe("Fallback");
   });
 
-  it("skips docs whose image has no usable URL", () => {
+  it("skips image docs whose image has no usable URL", () => {
     const g = groupAds([doc({ id: 3, image: null })]);
+    expect(g["top-banner"]).toEqual([]);
+  });
+
+  it("treats a doc with no type as an image ad (legacy rows)", () => {
+    const g = groupAds([doc({ id: 11, type: undefined })]);
+    expect(g["top-banner"][0].type).toBe("image");
+  });
+
+  it("maps a tag ad into a tag AdItem (no image needed)", () => {
+    const g = groupAds([
+      doc({ id: 9, type: "tag", embedCode: "<ins>x</ins>", image: null, placement: "news-card" }),
+    ]);
+    expect(g["news-card"]).toEqual([{ id: 9, type: "tag", embedCode: "<ins>x</ins>" }]);
+  });
+
+  it("skips a tag ad whose embed code is blank", () => {
+    const g = groupAds([doc({ id: 10, type: "tag", embedCode: "   ", image: null })]);
     expect(g["top-banner"]).toEqual([]);
   });
 });

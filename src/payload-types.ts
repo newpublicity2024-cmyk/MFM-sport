@@ -466,14 +466,22 @@ export interface Ad {
    */
   name: string;
   /**
-   * Banners: design ~1600×376 (wide). News cards: design 16:9 (e.g. 600×400).
+   * Image = upload a creative. Ad-manager tag = paste an embed snippet from your network (Google Ad Manager, AdSense, etc.) and it fills the slot automatically.
    */
-  image: number | Media;
+  type: 'image' | 'tag';
+  /**
+   * Banners: design ~1600×376 (wide). News cards: design 16:9 (e.g. 600×400). Article side rail: design 300×600 (vertical). Only used for Image-type ads.
+   */
+  image?: (number | null) | Media;
+  /**
+   * Paste the full ad snippet from your network (the <ins>/<script> code). It runs as-is and the network fills the slot. Leave Image empty for tag ads.
+   */
+  embedCode?: string | null;
   /**
    * Optional. Clicking the ad opens this in a new tab.
    */
   linkUrl?: string | null;
-  placement: 'top-banner' | 'hero-news' | 'news-videos' | 'videos-matches' | 'news-card';
+  placement: 'top-banner' | 'hero-news' | 'news-videos' | 'videos-matches' | 'news-card' | 'article-sidebar';
   /**
    * Uncheck to hide without deleting.
    */
@@ -832,7 +840,9 @@ export interface VideosSelect<T extends boolean = true> {
  */
 export interface AdsSelect<T extends boolean = true> {
   name?: T;
+  type?: T;
   image?: T;
+  embedCode?: T;
   linkUrl?: T;
   placement?: T;
   active?: T;

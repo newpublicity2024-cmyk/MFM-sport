@@ -60,6 +60,7 @@ async function main() {
       collection: "ads",
       data: {
         name: item.name,
+        type: "image",
         image: media.id,
         placement: item.placement,
         active: true,
