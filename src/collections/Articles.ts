@@ -1,7 +1,12 @@
 import type { CollectionConfig } from "payload";
+import { revalidateArticleChange, revalidateArticleDelete } from "@/lib/payload/revalidate";
 
 export const Articles: CollectionConfig = {
   slug: "articles",
+  hooks: {
+    afterChange: [revalidateArticleChange],
+    afterDelete: [revalidateArticleDelete],
+  },
   admin: {
     useAsTitle: "title",
     defaultColumns: ["title", "status", "author", "publishedAt"],
