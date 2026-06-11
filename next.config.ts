@@ -65,6 +65,22 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+  async redirects() {
+    return [
+      {
+        source: "/:locale/articles",
+        has: [{ type: "query", key: "page", value: "(?<n>\\d+)" }],
+        destination: "/:locale/articles/page/:n",
+        permanent: true,
+      },
+      {
+        source: "/:locale/category/:slug",
+        has: [{ type: "query", key: "page", value: "(?<n>\\d+)" }],
+        destination: "/:locale/category/:slug/page/:n",
+        permanent: true,
+      },
+    ];
+  },
 }
 
 export default withPayload(withNextIntl(nextConfig), { devBundleServerPackages: false })
