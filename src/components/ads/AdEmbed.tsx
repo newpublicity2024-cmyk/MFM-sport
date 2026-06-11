@@ -26,6 +26,9 @@ export function AdEmbed({ html, format, className }: Props) {
     const host = ref.current;
     if (!host) return;
 
+    // Note: in React 19 dev StrictMode this effect runs twice (mount → cleanup →
+    // mount), so the snippet executes twice in dev only. Harmless for standard ad
+    // networks (their push calls are idempotent); production builds run it once.
     host.innerHTML = html;
 
     // <script> nodes inserted via innerHTML are inert. Replace each with a
