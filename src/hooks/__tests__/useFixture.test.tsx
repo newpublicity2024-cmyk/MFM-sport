@@ -109,6 +109,20 @@ describe("useFixture", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("does not poll a postponed/cancelled match", async () => {
+    renderHook(() =>
+      useFixture(7, {
+        initial: { fixture: { id: 7, status: { short: "PST" } } } as never,
+        intervalMs: 30000,
+        enabled: true,
+      }),
+    );
+    await act(async () => {
+      vi.advanceTimersByTime(120000);
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("does not poll a scheduled match far before kickoff", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse({ fixture: { fixture: { id: 7, status: { short: "NS" } } } }),

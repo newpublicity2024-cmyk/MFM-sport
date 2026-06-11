@@ -22,10 +22,9 @@ export type UseFixtureResult = {
 // Start polling this long before a scheduled kickoff.
 const KICKOFF_LEAD_MS = 5 * 60_000;
 
-function statusOf(fixture: ApiFixture | null): ReturnType<typeof getMatchStatus> {
-  const short = fixture?.fixture?.status?.short;
-  return short ? getMatchStatus(short) : "other";
-}
+// Short statuses that won't change via polling — stop once any is reached.
+// (Finished outcomes plus postponed/cancelled/abandoned/walkover/awarded.)
+const DONE_STATUSES = new Set(["FT", "AET", "PEN", "PST", "CANC", "ABD", "AWD", "WO"]);
 
 export function useFixture(id: number, options: UseFixtureOptions): UseFixtureResult {
   const { initial, intervalMs, enabled, kickoffTs } = options;
@@ -64,11 +63,12 @@ export function useFixture(id: number, options: UseFixtureOptions): UseFixtureRe
 
     let timer: ReturnType<typeof setTimeout> | null = null;
 
-    // null => stop polling (match finished).
+    // null => stop polling. An unknown/missing status keeps polling (the match
+    // may just not be loaded yet); only an explicit terminal status stops it.
     const nextDelay = (): number | null => {
-      const s = statusOf(fixtureRef.current);
-      if (s === "finished") return null;
-      if (s === "scheduled" && typeof kickoffTs === "number") {
+      const short = fixtureRef.current?.fixture?.status?.short;
+      if (short && DONE_STATUSES.has(short)) return null;
+      if (short && getMatchStatus(short) === "scheduled" && typeof kickoffTs === "number") {
         const until = kickoffTs - KICKOFF_LEAD_MS - Date.now();
         if (until > intervalMs) return until; // sleep until near kickoff
       }
