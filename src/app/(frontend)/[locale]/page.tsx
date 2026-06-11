@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { getArticles, getCompetitions } from "@/lib/payload/queries";
 import { getVideos } from "@/lib/videos";
 import { getFixturesByDate } from "@/lib/api-football/fixtures";
+import { getAllWorldCupFixtures } from "@/lib/api-football/worldcup";
 import { HeroSection } from "@/components/home/HeroSection";
 import { LeagueNewsSection } from "@/components/home/LeagueNewsSection";
 import { VideosSection } from "@/components/home/VideosSection";
@@ -49,7 +50,12 @@ export default async function HomePage({ params }: Props) {
   };
 
   const today = new Date().toISOString().split("T")[0];
-  const todayFixtures = await getFixturesByDate(today);
+  // Lower matches section: today's fixtures across all the site's leagues.
+  // Hero matches panel: World Cup 2026 only (all statuses).
+  const [todayFixtures, worldCupFixtures] = await Promise.all([
+    getFixturesByDate(today),
+    getAllWorldCupFixtures(),
+  ]);
 
   // League carousel mirrors every competition the site has (Botola — id 200 — first).
   const competitions = await getCompetitions(locale as Config["locale"]);
@@ -105,7 +111,7 @@ export default async function HomePage({ params }: Props) {
       <div className="container space-y-6">
         <HeroSection
           slides={heroSlides}
-          fixtures={todayFixtures}
+          fixtures={worldCupFixtures}
           locale={locale}
           leaguesLabel={t("leaguesNav")}
           leagues={carouselLeagues}
