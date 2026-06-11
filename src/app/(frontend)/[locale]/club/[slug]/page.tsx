@@ -16,6 +16,9 @@ type Props = {
   params: Promise<{ locale: string; slug: string }>;
 };
 
+// ISR: a club's recent/upcoming fixtures change slowly; cache the rendered HTML.
+export const revalidate = 900;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   const club = await getClubBySlug(slug, locale as Config["locale"]);

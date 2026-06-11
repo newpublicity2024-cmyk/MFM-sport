@@ -15,6 +15,10 @@ type Props = {
   params: Promise<{ locale: string; slug: string }>;
 };
 
+// ISR: standings/fixtures rarely change minute-to-minute. The shared cache keeps
+// the underlying API calls low; this caches the rendered HTML too.
+export const revalidate = 900;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   const competition = await getCompetitionBySlug(slug, locale as Config["locale"]);
