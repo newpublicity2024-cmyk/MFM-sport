@@ -5,7 +5,11 @@ import { getTranslations } from "next-intl/server";
 import { getArticles, getCompetitions } from "@/lib/payload/queries";
 import { getVideos } from "@/lib/videos";
 import { getFixturesByDate } from "@/lib/api-football/fixtures";
-import { getAllWorldCupFixtures } from "@/lib/api-football/worldcup";
+import {
+  getAllWorldCupFixtures,
+  WORLD_CUP_LEAGUE_ID,
+  WORLD_CUP_LOGO,
+} from "@/lib/api-football/worldcup";
 import { HeroSection } from "@/components/home/HeroSection";
 import { LeagueNewsSection } from "@/components/home/LeagueNewsSection";
 import { VideosSection } from "@/components/home/VideosSection";
@@ -57,16 +61,21 @@ export default async function HomePage({ params }: Props) {
     getAllWorldCupFixtures(),
   ]);
 
-  // League carousel mirrors every competition the site has (Botola — id 200 — first).
+  // League carousel mirrors every competition the site has, ordered:
+  // Botola (id 200) first, World Cup (id 1) second, everything else after.
   const competitions = await getCompetitions(locale as Config["locale"]);
+  const carouselRank = (apiFootballId?: number | null) =>
+    apiFootballId === 200 ? 0 : apiFootballId === WORLD_CUP_LEAGUE_ID ? 1 : 2;
   const carouselLeagues = competitions.docs
     .slice()
-    .sort((a, b) => (a.apiFootballId === 200 ? -1 : b.apiFootballId === 200 ? 1 : 0))
+    .sort((a, b) => carouselRank(a.apiFootballId) - carouselRank(b.apiFootballId))
     .map((c) => ({
       slug: c.slug,
       name: c.name,
       logoUrl:
-        c.logoUrl || `https://media.api-sports.io/football/leagues/${c.apiFootballId}.png`,
+        c.apiFootballId === WORLD_CUP_LEAGUE_ID
+          ? WORLD_CUP_LOGO
+          : c.logoUrl || `https://media.api-sports.io/football/leagues/${c.apiFootballId}.png`,
     }));
 
   // One query feeds both sections: first 5 = hero slider, the rest are split

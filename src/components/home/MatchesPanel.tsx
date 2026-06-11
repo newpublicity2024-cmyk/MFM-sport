@@ -7,6 +7,7 @@ import { MatchCard } from "@/components/football/MatchCard";
 import { useLiveFixtures } from "@/hooks/useLiveFixtures";
 import { getMatchStatus, type ApiFixture, type MatchStatus } from "@/lib/api-football/types";
 import { localizeLeague } from "@/lib/api-football/localize";
+import { WORLD_CUP_LEAGUE_ID, WORLD_CUP_LOGO } from "@/lib/api-football/worldcup";
 
 type FilterStatus = Exclude<MatchStatus, "other">;
 
@@ -84,8 +85,10 @@ export function MatchesPanel({ fixtures, locale, statusLabels }: Props) {
 
   const groups = useMemo(() => groupAndSort(filtered), [filtered]);
 
-  // All league groups start collapsed.
-  const [openIds, setOpenIds] = useState<Set<number>>(() => new Set());
+  // The World Cup group starts open; any other groups start collapsed.
+  const [openIds, setOpenIds] = useState<Set<number>>(
+    () => new Set([WORLD_CUP_LEAGUE_ID]),
+  );
 
   function toggleLeague(id: number) {
     setOpenIds((prev) => {
@@ -137,6 +140,10 @@ export function MatchesPanel({ fixtures, locale, statusLabels }: Props) {
         groups.map((group) => {
           const isOpen = openIds.has(group.league.id);
           const panelId = `matches-panel-${group.league.id}`;
+          const leagueLogo =
+            group.league.id === WORLD_CUP_LEAGUE_ID
+              ? WORLD_CUP_LOGO
+              : group.league.logo;
           return (
             <div
               key={group.league.id}
@@ -149,9 +156,9 @@ export function MatchesPanel({ fixtures, locale, statusLabels }: Props) {
                 aria-expanded={isOpen}
                 aria-controls={panelId}
               >
-                {group.league.logo && (
+                {leagueLogo && (
                   <Image
-                    src={group.league.logo}
+                    src={leagueLogo}
                     alt={group.league.name}
                     width={18}
                     height={18}
