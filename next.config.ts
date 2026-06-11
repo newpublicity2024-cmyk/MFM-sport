@@ -69,13 +69,15 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/:locale/articles",
-        has: [{ type: "query", key: "page", value: "(?<n>\\d+)" }],
+        // Only redirect page>=2; ?page=1 (and ?page=0) just render the base listing.
+        has: [{ type: "query", key: "page", value: "(?<n>[2-9]|[1-9]\\d+)" }],
         destination: "/:locale/articles/page/:n",
         permanent: true,
       },
       {
         source: "/:locale/category/:slug",
-        has: [{ type: "query", key: "page", value: "(?<n>\\d+)" }],
+        // Only redirect page>=2; ?page=1 (and ?page=0) just render the base listing.
+        has: [{ type: "query", key: "page", value: "(?<n>[2-9]|[1-9]\\d+)" }],
         destination: "/:locale/category/:slug/page/:n",
         permanent: true,
       },
