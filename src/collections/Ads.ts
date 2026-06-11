@@ -1,5 +1,10 @@
 import type { CollectionConfig } from "payload";
 
+// Field-level `validate` callbacks get no contextual parameter types in this
+// config shape (unlike `admin.condition`), so annotate them explicitly to stay
+// strict-mode clean. We only ever read siblingData.type to branch.
+type AdFieldValidateOptions = { siblingData?: { type?: string | null } | null };
+
 // The ad placement slots. Keep these values in sync with
 // AdPlacement in src/lib/payload/ads.ts.
 export const AD_PLACEMENTS = [
@@ -52,8 +57,8 @@ export const Ads: CollectionConfig = {
         description:
           "Banners: design ~1600×376 (wide). News cards: design 16:9 (e.g. 600×400). Article side rail: design 300×600 (vertical). Only used for Image-type ads.",
       },
-      validate: (value, { siblingData }) => {
-        const t = (siblingData as { type?: string })?.type;
+      validate: (value: unknown, { siblingData }: AdFieldValidateOptions) => {
+        const t = siblingData?.type;
         if (t !== "tag" && !value) return "An image is required for image-type ads.";
         return true;
       },
@@ -66,8 +71,8 @@ export const Ads: CollectionConfig = {
         description:
           "Paste the full ad snippet from your network (the <ins>/<script> code). It runs as-is and the network fills the slot. Leave Image empty for tag ads.",
       },
-      validate: (value, { siblingData }) => {
-        const t = (siblingData as { type?: string })?.type;
+      validate: (value: unknown, { siblingData }: AdFieldValidateOptions) => {
+        const t = siblingData?.type;
         if (t === "tag" && (typeof value !== "string" || !value.trim())) {
           return "Paste the ad-manager embed code for tag-type ads.";
         }
