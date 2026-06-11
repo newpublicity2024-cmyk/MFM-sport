@@ -8,6 +8,8 @@
 
 > ⚠️ Per the team's setup, the local `DATABASE_URL` points at the **production** Neon database. Apply this when you intend to update production.
 
+> 🚨 **This migration is a BUILD-TIME prerequisite, not just runtime.** The homepage (`/[locale]`) is statically prerendered during `next build` and queries the `ads` table. Because the collection config now selects the new `type` and `embed_code` columns, **`pnpm build` (and therefore the Vercel production deploy) will fail with `column "type" does not exist` until this migration is applied to the database the build connects to.** Apply the migration **before** deploying this branch. All code, type-check, lint, and test gates already pass — this is the only remaining step.
+
 ---
 
 ## What gets applied (the SQL)
