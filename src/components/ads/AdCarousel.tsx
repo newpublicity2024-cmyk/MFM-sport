@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { AdItem } from "@/lib/payload/ads";
+import { AdEmbed } from "./AdEmbed";
 
 type Props = {
   ads: AdItem[];
@@ -17,7 +18,12 @@ export function AdCarousel({ ads, format, className, intervalMs = 5000 }: Props)
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
-  const count = ads.length;
+  // A tag ad owns the slot: the network handles its own rotation/refresh, so if
+  // any tag creative is present we render it standalone and ignore images.
+  const tagAd = ads.find((a) => a.type === "tag" && a.embedCode);
+
+  const imageAds = ads.filter((a) => a.type !== "tag" && a.imageUrl);
+  const count = imageAds.length;
 
   useEffect(() => {
     if (count <= 1 || paused) return;
@@ -27,9 +33,13 @@ export function AdCarousel({ ads, format, className, intervalMs = 5000 }: Props)
     return () => clearInterval(id);
   }, [count, paused, intervalMs]);
 
+  if (tagAd) {
+    return <AdEmbed html={tagAd.embedCode!} format={format} className={className} />;
+  }
+
   if (count === 0) return null;
 
-  const active = ads[Math.min(index, count - 1)];
+  const active = imageAds[Math.min(index, count - 1)];
 
   const rootClass =
     format === "banner"
@@ -44,8 +54,8 @@ export function AdCarousel({ ads, format, className, intervalMs = 5000 }: Props)
   const slide = (
     <Image
       key={active.id}
-      src={active.imageUrl}
-      alt={active.alt}
+      src={active.imageUrl!}
+      alt={active.alt ?? ""}
       fill
       sizes={format === "banner" ? "100vw" : "300px"}
       className="object-cover"
@@ -73,7 +83,7 @@ export function AdCarousel({ ads, format, className, intervalMs = 5000 }: Props)
 
       {count > 1 && (
         <div className="absolute inset-x-0 bottom-2 z-10 flex justify-center gap-1.5">
-          {ads.map((ad, i) => (
+          {imageAds.map((ad, i) => (
             <button
               key={ad.id}
               type="button"
