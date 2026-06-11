@@ -15,7 +15,7 @@ export const Ads: CollectionConfig = {
   slug: "ads",
   admin: {
     useAsTitle: "name",
-    defaultColumns: ["name", "placement", "active", "order"],
+    defaultColumns: ["name", "type", "placement", "active", "order"],
     description:
       "Each row is one ad creative. Multiple ads sharing a placement rotate as a slider in that slot.",
   },
@@ -30,13 +30,48 @@ export const Ads: CollectionConfig = {
       admin: { description: "Internal label (e.g. 'OCP SIAM — June')." },
     },
     {
+      name: "type",
+      type: "select",
+      required: true,
+      defaultValue: "image",
+      options: [
+        { label: "Image upload (static creative we host)", value: "image" },
+        { label: "Ad-manager tag (embed code — network fills the slot)", value: "tag" },
+      ],
+      admin: {
+        description:
+          "Image = upload a creative. Ad-manager tag = paste an embed snippet from your network (Google Ad Manager, AdSense, etc.) and it fills the slot automatically.",
+      },
+    },
+    {
       name: "image",
       type: "upload",
       relationTo: "media",
-      required: true,
       admin: {
+        condition: (_, siblingData) => siblingData?.type !== "tag",
         description:
-          "Banners: design ~1600×376 (wide). News cards: design 16:9 (e.g. 600×400). Article side rail: design 300×600 (vertical).",
+          "Banners: design ~1600×376 (wide). News cards: design 16:9 (e.g. 600×400). Article side rail: design 300×600 (vertical). Only used for Image-type ads.",
+      },
+      validate: (value, { siblingData }) => {
+        const t = (siblingData as { type?: string })?.type;
+        if (t !== "tag" && !value) return "An image is required for image-type ads.";
+        return true;
+      },
+    },
+    {
+      name: "embedCode",
+      type: "textarea",
+      admin: {
+        condition: (_, siblingData) => siblingData?.type === "tag",
+        description:
+          "Paste the full ad snippet from your network (the <ins>/<script> code). It runs as-is and the network fills the slot. Leave Image empty for tag ads.",
+      },
+      validate: (value, { siblingData }) => {
+        const t = (siblingData as { type?: string })?.type;
+        if (t === "tag" && (typeof value !== "string" || !value.trim())) {
+          return "Paste the ad-manager embed code for tag-type ads.";
+        }
+        return true;
       },
     },
     {
