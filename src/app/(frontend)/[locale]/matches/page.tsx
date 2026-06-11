@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import type { Config } from "@/payload-types";
 import { setRequestLocale, getTranslations } from "next-intl/server";
-import { getFixturesByDate } from "@/lib/api-football/fixtures";
-import { getCompetitions } from "@/lib/payload/queries";
+import { getFixturesByDateForLeagues } from "@/lib/api-football/fixtures";
+import { getCompetitions, getOurLeagueIds } from "@/lib/payload/queries";
 import { MatchList } from "@/components/football/MatchList";
 import { DateStrip } from "@/components/football/DateStrip";
 import { CompetitionFilter } from "@/components/football/CompetitionFilter";
@@ -41,14 +41,15 @@ export default async function MatchesPage({ params, searchParams }: Props) {
   const selectedDate = isValidDate(rawDate) ? rawDate : todayISO();
   const selectedLeague = isValidLeague(rawLeague) ? rawLeague : null;
 
-  const [allFixtures, competitionsResult] = await Promise.all([
-    getFixturesByDate(selectedDate),
+  const [competitionsResult, ourLeagueIds] = await Promise.all([
     getCompetitions(locale as Config["locale"]),
+    getOurLeagueIds(),
   ]);
+  const ourFixtures = await getFixturesByDateForLeagues(selectedDate, ourLeagueIds);
 
   const fixtures = selectedLeague
-    ? allFixtures.filter((f) => String(f.league.id) === selectedLeague)
-    : allFixtures;
+    ? ourFixtures.filter((f) => String(f.league.id) === selectedLeague)
+    : ourFixtures;
 
   const basePath = `/${locale}/matches`;
 
