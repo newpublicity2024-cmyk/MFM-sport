@@ -25,33 +25,39 @@ export function LeagueCarousel({ leagues, locale, label }: Props) {
 
   if (leagues.length === 0) return null;
 
-  function scroll(direction: 1 | -1) {
+  function scroll(toward: "start" | "end") {
     const el = scrollerRef.current;
     if (!el) return;
-    el.scrollBy({ left: direction * el.clientWidth * 0.8, behavior: "smooth" });
+    // In RTL (Arabic) the inline axis is mirrored, so the physical scrollLeft
+    // sign flips: scrolling toward the start means a positive delta, not negative.
+    const rtl = locale === "ar";
+    const amount = el.clientWidth * 0.8;
+    const sign = (toward === "start" ? -1 : 1) * (rtl ? -1 : 1);
+    el.scrollBy({ left: sign * amount, behavior: "smooth" });
   }
 
   return (
     <div className="relative mb-4 border-b border-border pb-4">
-      {/* Desktop-only scroll arrows. */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 hidden items-center pb-4 lg:flex">
+      {/* Desktop-only scroll arrows. Logical start/end positioning + rtl:rotate-180
+          on the chevrons so both the side AND the glyph mirror correctly in Arabic. */}
+      <div className="pointer-events-none absolute inset-y-0 start-0 z-10 hidden items-center pb-4 lg:flex">
         <button
           type="button"
-          aria-label="Scroll leagues left"
-          onClick={() => scroll(-1)}
+          aria-label="Scroll leagues to start"
+          onClick={() => scroll("start")}
           className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition-colors hover:bg-muted"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
         </button>
       </div>
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 hidden items-center pb-4 lg:flex">
+      <div className="pointer-events-none absolute inset-y-0 end-0 z-10 hidden items-center pb-4 lg:flex">
         <button
           type="button"
-          aria-label="Scroll leagues right"
-          onClick={() => scroll(1)}
+          aria-label="Scroll leagues to end"
+          onClick={() => scroll("end")}
           className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition-colors hover:bg-muted"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4 rtl:rotate-180" />
         </button>
       </div>
 

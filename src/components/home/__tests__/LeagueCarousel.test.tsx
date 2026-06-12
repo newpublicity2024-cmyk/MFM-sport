@@ -40,12 +40,12 @@ describe("LeagueCarousel", () => {
     // jsdom doesn't implement scrollBy; stub it on the element prototype.
     (HTMLElement.prototype as unknown as { scrollBy: unknown }).scrollBy = scrollBy;
     render(<LeagueCarousel leagues={leagues} locale="en" label="Leagues" />);
-    const left = screen.getByRole("button", { name: /left/i });
-    const right = screen.getByRole("button", { name: /right/i });
-    expect(left.parentElement?.className).toContain("lg:flex");
-    expect(right.parentElement?.className).toContain("lg:flex");
-    fireEvent.click(right);
-    fireEvent.click(left);
+    const startBtn = screen.getByRole("button", { name: /to start/i });
+    const endBtn = screen.getByRole("button", { name: /to end/i });
+    expect(startBtn.parentElement?.className).toContain("lg:flex");
+    expect(endBtn.parentElement?.className).toContain("lg:flex");
+    fireEvent.click(endBtn);
+    fireEvent.click(startBtn);
     expect(scrollBy).toHaveBeenCalledTimes(2);
     for (const call of scrollBy.mock.calls) {
       expect(typeof call[0].left).toBe("number");
