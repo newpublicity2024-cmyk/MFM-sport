@@ -11,7 +11,6 @@ import {
   resolveArticleBySlug,
   getRelatedArticles,
   getArticles,
-  getAllArticleSlugs,
 } from "@/lib/payload/queries";
 import { decodeSlug } from "@/lib/payload/slug";
 import {
@@ -37,19 +36,14 @@ type Props = {
   params: Promise<{ locale: string; slug: string }>;
 };
 
-export const revalidate = 3600;
-
-export async function generateStaticParams() {
-  try {
-    const slugs = await getAllArticleSlugs();
-    return slugs.map(({ locale, slug }) => ({ locale, slug }));
-  } catch (err) {
-    // DB unreachable at build time → fall back to on-demand rendering.
-    console.error("[articles/[slug]] generateStaticParams failed:", err);
-    return [];
-  }
-}
-
+// IMPORTANT: this route is intentionally DYNAMIC (no `revalidate` / no
+// `generateStaticParams`). Article slugs are non-ASCII (Arabic), and on Vercel
+// serving such a path through the ISR/SSG layer throws
+// `TypeError: Invalid character in header content` on a cache miss — which made
+// every newly published Arabic article 500 until the next full redeploy.
+// Keeping the page dynamic (the pre-ISR behavior) renders each request live and
+// avoids that path. API-Football fetches stay cached via their own
+// `next: { revalidate }`, so quota impact is unchanged. See commit 99a3c35.
 const HREFLANG: Record<Config["locale"], string> = { ar: "ar-MA", fr: "fr", en: "en" };
 const OG_LOCALE: Record<Config["locale"], string> = { ar: "ar_MA", fr: "fr_FR", en: "en_US" };
 
