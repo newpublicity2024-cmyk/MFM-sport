@@ -1,4 +1,5 @@
 import type { CollectionConfig } from "payload";
+import { revalidateAdChange, revalidateAdDelete } from "@/lib/payload/revalidate";
 
 // Field-level `validate` callbacks get no contextual parameter types in this
 // config shape (unlike `admin.condition`), so annotate them explicitly to stay
@@ -18,6 +19,10 @@ export const AD_PLACEMENTS = [
 
 export const Ads: CollectionConfig = {
   slug: "ads",
+  hooks: {
+    afterChange: [revalidateAdChange],
+    afterDelete: [revalidateAdDelete],
+  },
   admin: {
     useAsTitle: "name",
     defaultColumns: ["name", "type", "placement", "active", "order"],

@@ -1,8 +1,9 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import type {
   CollectionAfterChangeHook,
   CollectionAfterDeleteHook,
 } from "payload";
+import { ARTICLES_TAG, ADS_TAG } from "./cache-tags";
 
 const LOCALES = ["ar", "fr", "en"] as const;
 
@@ -59,6 +60,9 @@ async function articleRevalidateTargets(
 
 export const revalidateArticleChange: CollectionAfterChangeHook = async ({ doc, req }) => {
   try {
+    // Invalidate the dynamic article route's data cache (see cached-queries.ts)
+    // so an edit/publish is visible immediately, not after the 5-min TTL.
+    revalidateTag(ARTICLES_TAG, "max");
     const paths = await articleRevalidateTargets(req, doc.id);
     paths.forEach((p) => revalidatePath(p));
   } catch (err) {
@@ -69,6 +73,7 @@ export const revalidateArticleChange: CollectionAfterChangeHook = async ({ doc, 
 
 export const revalidateArticleDelete: CollectionAfterDeleteHook = async ({ doc, req }) => {
   try {
+    revalidateTag(ARTICLES_TAG, "max");
     // The doc is the just-deleted record in req's locale; revalidate listings,
     // homepage, and (best-effort) this locale's article path.
     const slug = typeof doc?.slug === "string" ? doc.slug : undefined;
@@ -82,6 +87,8 @@ export const revalidateArticleDelete: CollectionAfterDeleteHook = async ({ doc, 
 
 export const revalidateCategoryChange: CollectionAfterChangeHook = async ({ doc, req }) => {
   try {
+    // A renamed category shows on article category badges, so bust article data too.
+    revalidateTag(ARTICLES_TAG, "max");
     const slug = typeof doc?.slug === "string" ? doc.slug : "";
     categoryPaths(slug).forEach((p) => revalidatePath(p));
   } catch (err) {
@@ -92,10 +99,30 @@ export const revalidateCategoryChange: CollectionAfterChangeHook = async ({ doc,
 
 export const revalidateCategoryDelete: CollectionAfterDeleteHook = async ({ doc, req }) => {
   try {
+    revalidateTag(ARTICLES_TAG, "max");
     const slug = typeof doc?.slug === "string" ? doc.slug : "";
     categoryPaths(slug).forEach((p) => revalidatePath(p));
   } catch (err) {
     req.payload.logger.error({ err }, "[revalidate] category afterDelete failed");
+  }
+  return doc;
+};
+
+/** Ads are cached per-locale in the article route's data cache; bust on any change. */
+export const revalidateAdChange: CollectionAfterChangeHook = async ({ doc, req }) => {
+  try {
+    revalidateTag(ADS_TAG, "max");
+  } catch (err) {
+    req.payload.logger.error({ err }, "[revalidate] ad afterChange failed");
+  }
+  return doc;
+};
+
+export const revalidateAdDelete: CollectionAfterDeleteHook = async ({ doc, req }) => {
+  try {
+    revalidateTag(ADS_TAG, "max");
+  } catch (err) {
+    req.payload.logger.error({ err }, "[revalidate] ad afterDelete failed");
   }
   return doc;
 };
