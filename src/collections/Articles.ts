@@ -1,5 +1,6 @@
 import type { CollectionConfig } from "payload";
 import { revalidateArticleChange, revalidateArticleDelete } from "@/lib/payload/revalidate";
+import { slugFromTitle } from "@/lib/payload/slugFromTitle";
 
 export const Articles: CollectionConfig = {
   slug: "articles",
@@ -25,9 +26,15 @@ export const Articles: CollectionConfig = {
       unique: true,
       localized: true,
       index: true,
+      hooks: {
+        // Auto-generate from this locale's title (spaces → dashes) when left
+        // empty. Keeps any explicitly-set slug, so existing URLs aren't rewritten.
+        beforeValidate: [slugFromTitle],
+      },
       admin: {
+        readOnly: true,
         description:
-          "URL-friendly identifier for THIS locale. Arabic keeps the original keyword slug; fr/en get an ASCII keyword slug. Unique per language.",
+          "Auto-generated from the title (spaces become dashes), per language. Leave it blank — it fills in automatically when you save.",
       },
     },
     {
