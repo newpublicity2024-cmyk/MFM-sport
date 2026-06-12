@@ -6,12 +6,13 @@ import { notFound, redirect } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
 import {
-  getArticleBySlug,
-  getArticleLocalizedSlugs,
-  resolveArticleBySlug,
-  getRelatedArticles,
-  getArticles,
-} from "@/lib/payload/queries";
+  cachedGetArticleBySlug,
+  cachedGetArticleLocalizedSlugs,
+  cachedResolveArticleBySlug,
+  cachedGetRelatedArticles,
+  cachedGetArticles,
+  cachedGetAds,
+} from "@/lib/payload/cached-queries";
 import { decodeSlug } from "@/lib/payload/slug";
 import {
   formatDate,
@@ -26,7 +27,6 @@ import { AdSlot } from "@/components/ads/AdSlot";
 import { RelatedArticles } from "@/components/articles/RelatedArticles";
 import { Badge } from "@/components/ui/badge";
 import { getWorldCupFixtures } from "@/lib/api-football/worldcup";
-import { getAds } from "@/lib/payload/ads";
 import { WorldCupCalendar } from "@/components/articles/WorldCupCalendar";
 import { SidebarNewsList } from "@/components/articles/SidebarNewsList";
 import { AdCarousel } from "@/components/ads/AdCarousel";
@@ -52,8 +52,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const loc = locale as Config["locale"];
 
   const [article, localized] = await Promise.all([
-    getArticleBySlug(slug, loc),
-    getArticleLocalizedSlugs(slug, loc),
+    cachedGetArticleBySlug(slug, loc),
+    cachedGetArticleLocalizedSlugs(slug, loc),
   ]);
   if (!article) return { title: "Not Found" };
 
@@ -98,7 +98,7 @@ export default async function ArticlePage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const { article, redirectToSlug } = await resolveArticleBySlug(
+  const { article, redirectToSlug } = await cachedResolveArticleBySlug(
     slug,
     locale as Config["locale"],
   );
@@ -119,7 +119,7 @@ export default async function ArticlePage({ params }: Props) {
 
   const related =
     categoryIds.length > 0
-      ? await getRelatedArticles(
+      ? await cachedGetRelatedArticles(
           article.id,
           categoryIds,
           locale as Config["locale"],
@@ -134,8 +134,8 @@ export default async function ArticlePage({ params }: Props) {
 
   const [worldCupFixtures, latestNews, ads] = await Promise.all([
     getWorldCupFixtures(),
-    getArticles({ locale: loc, limit: 13 }),
-    getAds(loc),
+    cachedGetArticles({ locale: loc, limit: 13 }),
+    cachedGetAds(loc),
   ]);
   // Exclude the article being read; show up to a dozen so the 5-row slider scrolls.
   // Map publishedAt: null → undefined so it satisfies SidebarNewsList's type.
