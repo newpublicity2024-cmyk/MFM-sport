@@ -11,6 +11,9 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts')
 
 const nextConfig: NextConfig = {
   images: {
+    // Serve images directly without Vercel's optimizer.
+    // Prevents exhausting the image-optimization quota (which made images fail to load).
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",
