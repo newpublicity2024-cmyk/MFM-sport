@@ -1,13 +1,12 @@
 import Image from "next/image";
 
-const PLAYLIST_URL =
-  "https://www.youtube.com/playlist?list=PL3AfsMqHuUG2ribU3zGm6xQ9G5FSPiDuF";
+const LINK_URL = "https://www.instagram.com/mfmsportofficiel";
 const BANNER_SRC = "/images/actual-banner.jpeg";
 
 const LABELS: Record<string, string> = {
-  en: "Featured playlist on YouTube",
-  ar: "قائمة تشغيل مميزة على يوتيوب",
-  fr: "Playlist en vedette sur YouTube",
+  en: "Follow us on Instagram",
+  ar: "تابعنا على إنستغرام",
+  fr: "Suivez-nous sur Instagram",
 };
 
 type Props = {
@@ -23,7 +22,7 @@ export function LeaguePlaylistBanner({ locale }: Props) {
   // shows without zooming. On mobile the holder falls back to a square.
   return (
     <a
-      href={PLAYLIST_URL}
+      href={LINK_URL}
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
