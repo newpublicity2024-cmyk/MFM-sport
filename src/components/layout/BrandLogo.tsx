@@ -24,7 +24,10 @@ export function BrandLogo({ size = "md", priority = false, className }: Props) {
       width={dim}
       height={dim}
       priority={priority}
-      className={cn("block h-auto w-auto select-none", className)}
+      // Pin the rendered size in CSS. Without this, `unoptimized` images fall
+      // back to the PNG's full intrinsic resolution and render huge.
+      style={{ width: dim, height: dim }}
+      className={cn("block select-none", className)}
     />
   );
 }
