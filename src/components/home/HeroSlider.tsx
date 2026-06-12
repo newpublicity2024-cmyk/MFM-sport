@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { CategoryBadge } from "@/components/shared/CategoryBadge";
 import { formatDate } from "@/lib/utils";
 import type { HeroSlide } from "@/lib/home/cards";
@@ -16,6 +17,12 @@ const AUTOPLAY_MS = 6000;
 
 export function HeroSlider({ slides, locale }: Props) {
   const count = slides.length;
+  // Arrows sit on logical start/end edges (which already swap in RTL). Use SVG
+  // chevrons chosen by locale so each points OUTWARD in both directions. (Text
+  // glyphs like ‹/› are bidi-mirrored in RTL, so they render flipped no matter
+  // which codepoint you pick — that's why the previous arrows looked wrong in
+  // Arabic; SVG icons aren't mirrored.)
+  const isRtl = locale === "ar";
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const reducedMotion = useRef(false);
@@ -138,8 +145,11 @@ export function HeroSlider({ slides, locale }: Props) {
             aria-label="Previous slide"
             className="absolute start-3 top-1/2 z-20 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/40 text-white opacity-0 transition-opacity hover:bg-black/60 focus-visible:opacity-100 group-hover/slider:opacity-100"
           >
-            <span aria-hidden className="rtl:hidden">‹</span>
-            <span aria-hidden className="hidden rtl:inline">›</span>
+            {isRtl ? (
+              <ChevronRight aria-hidden className="h-5 w-5" />
+            ) : (
+              <ChevronLeft aria-hidden className="h-5 w-5" />
+            )}
           </button>
           <button
             type="button"
@@ -147,8 +157,11 @@ export function HeroSlider({ slides, locale }: Props) {
             aria-label="Next slide"
             className="absolute end-3 top-1/2 z-20 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/40 text-white opacity-0 transition-opacity hover:bg-black/60 focus-visible:opacity-100 group-hover/slider:opacity-100"
           >
-            <span aria-hidden className="rtl:hidden">›</span>
-            <span aria-hidden className="hidden rtl:inline">‹</span>
+            {isRtl ? (
+              <ChevronLeft aria-hidden className="h-5 w-5" />
+            ) : (
+              <ChevronRight aria-hidden className="h-5 w-5" />
+            )}
           </button>
 
           {/* Dots */}
