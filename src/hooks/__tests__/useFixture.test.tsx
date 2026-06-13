@@ -80,7 +80,69 @@ describe("useFixture", () => {
       });
       expect(fetchMock).not.toHaveBeenCalled();
     } finally {
+      // Delete the instance override so "hidden" doesn't leak into later tests.
+      Reflect.deleteProperty(document, "visibilityState");
       if (original) Object.defineProperty(Document.prototype, "visibilityState", original);
     }
+  });
+
+  it("stops polling once the match is finished", async () => {
+    // Live initial → polls once at intervalMs; the response is full-time, so it
+    // must not poll again.
+    fetchMock.mockResolvedValue(
+      jsonResponse({ fixture: { fixture: { id: 7, status: { short: "FT" } } } }),
+    );
+    renderHook(() =>
+      useFixture(7, {
+        initial: { fixture: { id: 7, status: { short: "1H" } } } as never,
+        intervalMs: 30000,
+        enabled: true,
+      }),
+    );
+    await act(async () => {
+      vi.advanceTimersByTime(30000);
+    });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      vi.advanceTimersByTime(120000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not poll a postponed/cancelled match", async () => {
+    renderHook(() =>
+      useFixture(7, {
+        initial: { fixture: { id: 7, status: { short: "PST" } } } as never,
+        intervalMs: 30000,
+        enabled: true,
+      }),
+    );
+    await act(async () => {
+      vi.advanceTimersByTime(120000);
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not poll a scheduled match far before kickoff", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ fixture: { fixture: { id: 7, status: { short: "NS" } } } }),
+    );
+    const kickoffTs = Date.now() + 60 * 60_000; // 1 hour away
+    renderHook(() =>
+      useFixture(7, {
+        initial: { fixture: { id: 7, status: { short: "NS" } } } as never,
+        intervalMs: 30000,
+        enabled: true,
+        kickoffTs,
+      }),
+    );
+    await act(async () => {
+      vi.advanceTimersByTime(30000);
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(120000);
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

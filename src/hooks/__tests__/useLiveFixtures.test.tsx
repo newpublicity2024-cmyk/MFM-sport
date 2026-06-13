@@ -78,7 +78,54 @@ describe("useLiveFixtures", () => {
       });
       expect(fetchMock).not.toHaveBeenCalled();
     } finally {
+      // The override above is an OWN property on the document instance; deleting
+      // it lets visibilityState fall back to the prototype (else "hidden" leaks
+      // into later tests in this file).
+      Reflect.deleteProperty(document, "visibilityState");
       if (original) Object.defineProperty(Document.prototype, "visibilityState", original);
     }
+  });
+
+  it("backs off to idleIntervalMs after a response with no live fixtures", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ fixtures: [] }));
+    renderHook(() =>
+      useLiveFixtures({
+        initial: [],
+        intervalMs: 60000,
+        enabled: true,
+        idleIntervalMs: 300000,
+      }),
+    );
+    // First poll fires at intervalMs and returns nothing live.
+    await act(async () => {
+      vi.advanceTimersByTime(60000);
+    });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    // Another intervalMs passes — but it should NOT poll again yet (now idle).
+    await act(async () => {
+      vi.advanceTimersByTime(60000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // Only after idleIntervalMs elapses does it poll again.
+    await act(async () => {
+      vi.advanceTimersByTime(240000);
+    });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  });
+
+  it("keeps the fast cadence while live fixtures are present", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ fixtures: [{ fixture: { id: 1 } }] }));
+    renderHook(() =>
+      useLiveFixtures({ initial: [], intervalMs: 60000, enabled: true }),
+    );
+    await act(async () => {
+      vi.advanceTimersByTime(60000);
+    });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    // Response had a live fixture → next poll stays at intervalMs.
+    await act(async () => {
+      vi.advanceTimersByTime(60000);
+    });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   });
 });

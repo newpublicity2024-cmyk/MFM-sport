@@ -7,11 +7,14 @@ vi.mock("@/components/home/LeaguePlaylistBanner", () => ({
 }));
 
 import { LeagueNewsSection } from "@/components/home/LeagueNewsSection";
-import { LEAGUES } from "@/lib/home/leagues";
-import type { LeagueCardArticle } from "@/lib/home/cards";
+import type { LeagueCardArticle, LeagueLite } from "@/lib/home/cards";
 
-const firstLeagueId = LEAGUES[0]!.id;
-const secondLeagueId = LEAGUES[1]!.id;
+const leagues: LeagueLite[] = [
+  { id: "botola", name: "Botola", logoUrl: "/b.png", apiFootballId: 200 },
+  { id: "premier", name: "Premier", logoUrl: "/p.png", apiFootballId: 39 },
+];
+const firstLeagueId = leagues[0]!.id;
+const secondLeagueId = leagues[1]!.id;
 const articlesByLeague: Record<string, LeagueCardArticle[]> = {
   [firstLeagueId]: [
     { id: "a1", title: "One", slug: "one", heroUrl: null },
@@ -25,7 +28,7 @@ const articlesByLeague: Record<string, LeagueCardArticle[]> = {
 describe("LeagueNewsSection", () => {
   it("renders a desktop grid (hidden lg:grid) and a mobile column (lg:hidden)", () => {
     const { container } = render(
-      <LeagueNewsSection title="News" locale="en" articlesByLeague={articlesByLeague} />,
+      <LeagueNewsSection title="News" locale="en" leagues={leagues} articlesByLeague={articlesByLeague} />,
     );
     const desktop = container.querySelector(".lg\\:grid");
     const mobile = container.querySelector(".lg\\:hidden");
@@ -35,7 +38,7 @@ describe("LeagueNewsSection", () => {
 
   it("on mobile, the filter comes before the blog slider", () => {
     const { container } = render(
-      <LeagueNewsSection title="News" locale="en" articlesByLeague={articlesByLeague} />,
+      <LeagueNewsSection title="News" locale="en" leagues={leagues} articlesByLeague={articlesByLeague} />,
     );
     const mobile = container.querySelector(".lg\\:hidden") as HTMLElement;
     const slider = mobile.querySelector(".snap-x") as HTMLElement;
@@ -49,7 +52,7 @@ describe("LeagueNewsSection", () => {
 
   it("renders the blog cards inside the mobile slider", () => {
     const { container } = render(
-      <LeagueNewsSection title="News" locale="en" articlesByLeague={articlesByLeague} />,
+      <LeagueNewsSection title="News" locale="en" leagues={leagues} articlesByLeague={articlesByLeague} />,
     );
     const mobile = container.querySelector(".lg\\:hidden") as HTMLElement;
     const slider = mobile.querySelector(".snap-x") as HTMLElement;
@@ -58,7 +61,7 @@ describe("LeagueNewsSection", () => {
 
   it("defaults to the first league and switches the slider's articles when another filter is clicked", () => {
     const { container } = render(
-      <LeagueNewsSection title="News" locale="en" articlesByLeague={articlesByLeague} />,
+      <LeagueNewsSection title="News" locale="en" leagues={leagues} articlesByLeague={articlesByLeague} />,
     );
     const mobile = container.querySelector(".lg\\:hidden") as HTMLElement;
     // Defaults to the first league's articles.

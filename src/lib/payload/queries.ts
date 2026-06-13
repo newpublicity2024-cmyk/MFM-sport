@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getPayload } from "payload";
 import configPromise from "@payload-config";
 import type { Article, Config } from "@/payload-types";
@@ -277,6 +278,22 @@ export async function getCompetitions(locale: Locale) {
     depth: 1,
   });
 }
+
+// The API-Football league IDs the site actually lists (Competitions section).
+// Used to scope live/date fixture data so we never show — or wait on — leagues
+// we don't cover. React-cached for per-request dedupe (cheap DB read).
+export const getOurLeagueIds = cache(async (): Promise<number[]> => {
+  const payload = await getPayloadClient();
+  const res = await payload.find({
+    collection: "competitions",
+    limit: 100,
+    depth: 0,
+    pagination: false,
+  });
+  return res.docs
+    .map((c) => c.apiFootballId)
+    .filter((n): n is number => typeof n === "number");
+});
 
 export async function getClubs(locale: Locale) {
   const payload = await getPayloadClient();

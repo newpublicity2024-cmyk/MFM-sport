@@ -1,5 +1,37 @@
 import { getArticleHeroUrl, getImageAlt } from "@/lib/utils";
-import type { League } from "./leagues";
+
+// A league tab/pill with an ALREADY-LOCALIZED name (derived from the
+// Competitions collection via getCompetitions(locale)), so the UI renders it
+// directly without a locale lookup.
+export type LeagueLite = {
+  id: string;
+  name: string;
+  logoUrl: string;
+  apiFootballId: number;
+};
+
+type CompetitionLike = {
+  slug: string;
+  name: string;
+  logoUrl?: string | null;
+  apiFootballId: number;
+};
+
+// Single source of truth for the homepage league lists: maps Competitions docs
+// (already localized) into LeagueLite, Botola (200) first to match the carousel.
+// Replicates the carousel's logoUrl fallback so tabs and carousel show identical crests.
+export function competitionsToLeagues(docs: CompetitionLike[]): LeagueLite[] {
+  return docs
+    .slice()
+    .sort((a, b) => (a.apiFootballId === 200 ? -1 : b.apiFootballId === 200 ? 1 : 0))
+    .map((c) => ({
+      id: c.slug,
+      name: c.name,
+      logoUrl:
+        c.logoUrl || `https://media.api-sports.io/football/leagues/${c.apiFootballId}.png`,
+      apiFootballId: c.apiFootballId,
+    }));
+}
 
 /**
  * Slim, already-localized article shapes for the homepage. We map Payload docs
@@ -66,7 +98,7 @@ export function toLeagueCard(a: any): LeagueCardArticle {
  */
 export function buildLeagueArticles(
   articles: any[],
-  leagues: League[],
+  leagues: LeagueLite[],
   perLeague = 4,
 ): Record<string, LeagueCardArticle[]> {
   const out: Record<string, LeagueCardArticle[]> = {};

@@ -39,7 +39,9 @@ describe("LiveScoreboard", () => {
     );
   });
 
-  it("calls useFixture with enabled=false when match is finished", () => {
+  it("passes enabled=true and kickoffTs so the hook self-governs (stops itself at full time)", () => {
+    // Polling cadence is now the hook's responsibility (it stops at FT and waits
+    // for a scheduled kickoff), so the component always enables it + passes kickoff.
     const finished: any = {
       ...baseFixture,
       fixture: { ...baseFixture.fixture, status: { short: "FT", elapsed: 90, long: "" } },
@@ -48,7 +50,7 @@ describe("LiveScoreboard", () => {
     wrap(<LiveScoreboard initial={finished} locale="en" />);
     expect(useFixtureMock).toHaveBeenCalledWith(
       7,
-      expect.objectContaining({ enabled: false }),
+      expect.objectContaining({ enabled: true, kickoffTs: expect.any(Number) }),
     );
     expect(screen.getByText("FT")).toBeInTheDocument();
   });

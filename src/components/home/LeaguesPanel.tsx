@@ -2,18 +2,16 @@
 
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { pickLocale } from "@/lib/api-football/localize";
-import type { League } from "@/lib/home/leagues";
+import type { LeagueLite } from "@/lib/home/cards";
 
 type Props = {
-  leagues: League[];
+  leagues: LeagueLite[];
   selectedId: string;
-  locale: string;
   onSelect: (leagueId: string) => void;
   className?: string;
 };
 
-export function LeaguesPanel({ leagues, selectedId, locale, onSelect, className }: Props) {
+export function LeaguesPanel({ leagues, selectedId, onSelect, className }: Props) {
   return (
     <div
       className={cn(
@@ -42,7 +40,7 @@ export function LeaguesPanel({ leagues, selectedId, locale, onSelect, className 
               height={20}
               className="shrink-0"
             />
-            <span className="flex-1 truncate">{pickLocale(league.name, locale)}</span>
+            <span className="flex-1 truncate">{league.name}</span>
           </button>
         );
       })}
