@@ -27,6 +27,11 @@ export async function getArticles(options: {
     limit: options.limit || 12,
     sort: options.sort || "-publishedAt",
     depth: 2,
+    // Listing results render as cards — never the body. Excluding the heavy
+    // Lexical `body` field slashes the bytes read from Neon (over its data-transfer
+    // quota) and the size of each ISR payload. Detail pages use getArticleBySlug,
+    // which keeps body.
+    select: { body: false },
   });
 }
 
@@ -144,6 +149,7 @@ export async function getArticlesByCategory(
     limit,
     sort: "-publishedAt",
     depth: 2,
+    select: { body: false }, // cards only — drop heavy body (Neon egress)
   });
 }
 
@@ -165,6 +171,7 @@ export async function getArticlesByTag(
     limit,
     sort: "-publishedAt",
     depth: 2,
+    select: { body: false }, // cards only — drop heavy body (Neon egress)
   });
 }
 
@@ -186,6 +193,7 @@ export async function getArticlesByAuthor(
     limit,
     sort: "-publishedAt",
     depth: 2,
+    select: { body: false }, // cards only — drop heavy body (Neon egress)
   });
 }
 
@@ -207,6 +215,7 @@ export async function getRelatedArticles(
     limit,
     sort: "-publishedAt",
     depth: 2,
+    select: { body: false }, // related cards — drop heavy body (Neon egress)
   });
 }
 
@@ -265,6 +274,7 @@ export async function searchArticles(
     limit,
     sort: "-publishedAt",
     depth: 2,
+    select: { body: false }, // search result cards — drop heavy body (Neon egress)
   });
 }
 
@@ -354,6 +364,7 @@ export async function getArticlesByCompetition(
     limit,
     sort: "-publishedAt",
     depth: 2,
+    select: { body: false }, // cards only — drop heavy body (Neon egress)
   });
 }
 
@@ -374,6 +385,7 @@ export async function getVideoArticles(
     limit,
     sort: "-publishedAt",
     depth: 2,
+    select: { body: false }, // cards only — drop heavy body (Neon egress)
   });
 }
 
