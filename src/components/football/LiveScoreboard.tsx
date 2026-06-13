@@ -15,12 +15,13 @@ type Props = {
 
 export function LiveScoreboard({ initial, locale }: Props) {
   const t = useTranslations("match");
-  const initialStatus = getMatchStatus(initial.fixture.status.short);
-  const isLive = initialStatus === "live";
+  // The hook self-governs: it polls a live match every 30s, stops at full time,
+  // and (for a scheduled match) waits until shortly before kickoff to start.
   const { fixture: latest } = useFixture(initial.fixture.id, {
     initial,
     intervalMs: 30000,
-    enabled: isLive,
+    enabled: true,
+    kickoffTs: new Date(initial.fixture.date).getTime(),
   });
   const fixture = latest ?? initial;
   const status = getMatchStatus(fixture.fixture.status.short);

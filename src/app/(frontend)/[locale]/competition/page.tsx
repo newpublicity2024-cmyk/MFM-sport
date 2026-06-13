@@ -6,6 +6,9 @@ import { setRequestLocale, getTranslations } from "next-intl/server";
 import { getCompetitions } from "@/lib/payload/queries";
 import { getEntityLogoUrl } from "@/lib/utils";
 
+// Competitions change rarely — serve from edge cache, revalidate hourly.
+export const revalidate = 3600;
+
 type Props = {
   params: Promise<{ locale: string }>;
 };

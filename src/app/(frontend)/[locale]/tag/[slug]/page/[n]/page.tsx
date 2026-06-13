@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import type { Config } from "@/payload-types";
+import { redirect } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { getTagBySlug } from "@/lib/payload/queries";
 import { TagListing } from "@/components/tag/TagListing";
+import { parsePageParam } from "@/lib/pagination";
 
-// ISR: page 1 is now a path-segment route (pagination lives at /page/[n]), so the
-// base listing no longer reads searchParams and can be edge-cached.
 export const revalidate = 3600;
 
 type Props = {
-  params: Promise<{ locale: string; slug: string }>;
+  params: Promise<{ locale: string; slug: string; n: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -18,11 +18,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!tag) return { title: "Not Found" };
   return {
     title: `${tag.name} | MFM Sport`,
+    robots: { index: false, follow: true },
   };
 }
 
-export default async function TagPage({ params }: Props) {
-  const { locale, slug } = await params;
+export default async function TagPageN({ params }: Props) {
+  const { locale, slug, n } = await params;
   setRequestLocale(locale);
-  return <TagListing locale={locale} slug={slug} page={1} />;
+  const page = parsePageParam(n);
+  if (page <= 1) redirect(`/${locale}/tag/${slug}`);
+  return <TagListing locale={locale} slug={slug} page={page} />;
 }

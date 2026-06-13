@@ -7,6 +7,8 @@ export type UseLiveFixturesOptions = {
   initial: ApiFixture[];
   intervalMs: number;
   enabled: boolean;
+  // Slow cadence used when nothing is live (to detect kickoff). Defaults to 5min.
+  idleIntervalMs?: number;
 };
 
 export type UseLiveFixturesResult = {
@@ -15,13 +17,16 @@ export type UseLiveFixturesResult = {
   error: Error | null;
 };
 
+const DEFAULT_IDLE_MS = 5 * 60_000;
+
 export function useLiveFixtures(options: UseLiveFixturesOptions): UseLiveFixturesResult {
-  const { initial, intervalMs, enabled } = options;
+  const { initial, intervalMs, enabled, idleIntervalMs = DEFAULT_IDLE_MS } = options;
   const [fixtures, setFixtures] = useState<ApiFixture[]>(initial);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
+  const fixturesRef = useRef<ApiFixture[]>(initial);
 
   const fetchOnce = useCallback(async () => {
     abortRef.current?.abort();
@@ -33,6 +38,7 @@ export function useLiveFixtures(options: UseLiveFixturesOptions): UseLiveFixture
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = (await res.json()) as { fixtures: ApiFixture[] };
       if (!isMountedRef.current) return;
+      fixturesRef.current = json.fixtures;
       setFixtures(json.fixtures);
       setError(null);
     } catch (e) {
@@ -45,19 +51,32 @@ export function useLiveFixtures(options: UseLiveFixturesOptions): UseLiveFixture
   }, []);
 
   useEffect(() => {
+    isMountedRef.current = true;
     if (!enabled) return;
 
-    const interval = setInterval(() => {
-      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
-      void fetchOnce();
-    }, intervalMs);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    // Active (something live in our leagues) → fast cadence; idle → slow, just
+    // enough to notice a kickoff. The FIRST poll always uses intervalMs.
+    const nextDelay = () =>
+      fixturesRef.current.length > 0 ? intervalMs : idleIntervalMs;
+
+    const tick = async () => {
+      if (typeof document === "undefined" || document.visibilityState !== "hidden") {
+        await fetchOnce();
+      }
+      if (!isMountedRef.current) return;
+      timer = setTimeout(tick, nextDelay());
+    };
+
+    timer = setTimeout(tick, intervalMs);
 
     return () => {
       isMountedRef.current = false;
-      clearInterval(interval);
+      if (timer) clearTimeout(timer);
       abortRef.current?.abort();
     };
-  }, [enabled, intervalMs, fetchOnce]);
+  }, [enabled, intervalMs, idleIntervalMs, fetchOnce]);
 
   return { fixtures, isLoading, error };
 }

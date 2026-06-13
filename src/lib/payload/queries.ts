@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getPayload } from "payload";
 import configPromise from "@payload-config";
 import type { Article, Config } from "@/payload-types";
@@ -26,6 +27,11 @@ export async function getArticles(options: {
     limit: options.limit || 12,
     sort: options.sort || "-publishedAt",
     depth: 2,
+    // Listing results render as cards — never the body. Excluding the heavy
+    // Lexical `body` field slashes the bytes read from Neon (over its data-transfer
+    // quota) and the size of each ISR payload. Detail pages use getArticleBySlug,
+    // which keeps body.
+    select: { body: false },
   });
 }
 
@@ -143,6 +149,7 @@ export async function getArticlesByCategory(
     limit,
     sort: "-publishedAt",
     depth: 2,
+    select: { body: false }, // cards only — drop heavy body (Neon egress)
   });
 }
 
@@ -164,6 +171,7 @@ export async function getArticlesByTag(
     limit,
     sort: "-publishedAt",
     depth: 2,
+    select: { body: false }, // cards only — drop heavy body (Neon egress)
   });
 }
 
@@ -185,6 +193,7 @@ export async function getArticlesByAuthor(
     limit,
     sort: "-publishedAt",
     depth: 2,
+    select: { body: false }, // cards only — drop heavy body (Neon egress)
   });
 }
 
@@ -206,6 +215,7 @@ export async function getRelatedArticles(
     limit,
     sort: "-publishedAt",
     depth: 2,
+    select: { body: false }, // related cards — drop heavy body (Neon egress)
   });
 }
 
@@ -264,6 +274,7 @@ export async function searchArticles(
     limit,
     sort: "-publishedAt",
     depth: 2,
+    select: { body: false }, // search result cards — drop heavy body (Neon egress)
   });
 }
 
@@ -277,6 +288,30 @@ export async function getCompetitions(locale: Locale) {
     depth: 1,
   });
 }
+
+// The API-Football league IDs the site actually lists (Competitions section).
+// Used to scope live/date fixture data so we never show — or wait on — leagues
+// we don't cover. React-cached for per-request dedupe (cheap DB read).
+export const getOurLeagueIds = cache(async (): Promise<number[]> => {
+  try {
+    const payload = await getPayloadClient();
+    const res = await payload.find({
+      collection: "competitions",
+      limit: 100,
+      depth: 0,
+      pagination: false,
+    });
+    return res.docs
+      .map((c) => c.apiFootballId)
+      .filter((n): n is number => typeof n === "number");
+  } catch (error) {
+    // Fail open: a DB hiccup (or quota block) must not crash the build / ISR
+    // prerender of routes that scope by league. Downstream helpers already treat
+    // an empty league list as "don't filter", so the page/endpoint still renders.
+    console.error("[queries] getOurLeagueIds failed, returning []:", error);
+    return [];
+  }
+});
 
 export async function getClubs(locale: Locale) {
   const payload = await getPayloadClient();
@@ -329,6 +364,7 @@ export async function getArticlesByCompetition(
     limit,
     sort: "-publishedAt",
     depth: 2,
+    select: { body: false }, // cards only — drop heavy body (Neon egress)
   });
 }
 
@@ -349,6 +385,7 @@ export async function getVideoArticles(
     limit,
     sort: "-publishedAt",
     depth: 2,
+    select: { body: false }, // cards only — drop heavy body (Neon egress)
   });
 }
 

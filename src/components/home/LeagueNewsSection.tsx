@@ -8,19 +8,19 @@ import { ArticleSlider } from "./ArticleSlider";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { SectionShell } from "@/components/home/SectionShell";
 import { AdCarousel } from "@/components/ads/AdCarousel";
-import { LEAGUES } from "@/lib/home/leagues";
-import type { LeagueCardArticle } from "@/lib/home/cards";
+import type { LeagueCardArticle, LeagueLite } from "@/lib/home/cards";
 import type { AdItem } from "@/lib/payload/ads";
 
 type Props = {
   title: string;
   locale: string;
+  leagues: LeagueLite[];
   articlesByLeague: Record<string, LeagueCardArticle[]>;
   ads?: AdItem[];
 };
 
-export function LeagueNewsSection({ title, locale, articlesByLeague, ads = [] }: Props) {
-  const [selectedId, setSelectedId] = useState<string>(LEAGUES[0]?.id ?? "");
+export function LeagueNewsSection({ title, locale, leagues, articlesByLeague, ads = [] }: Props) {
+  const [selectedId, setSelectedId] = useState<string>(leagues[0]?.id ?? "");
   const articles = articlesByLeague[selectedId] ?? [];
 
   return (
@@ -39,9 +39,8 @@ export function LeagueNewsSection({ title, locale, articlesByLeague, ads = [] }:
         />
         <LeaguesPanel
           className="lg:col-start-3 lg:row-start-1"
-          leagues={LEAGUES}
+          leagues={leagues}
           selectedId={selectedId}
-          locale={locale}
           onSelect={setSelectedId}
         />
         <LeaguePlaylistBanner locale={locale} />
@@ -51,9 +50,8 @@ export function LeagueNewsSection({ title, locale, articlesByLeague, ads = [] }:
           ad, then the playlist banner. */}
       <div className="flex flex-col gap-4 lg:hidden">
         <LeaguesPanel
-          leagues={LEAGUES}
+          leagues={leagues}
           selectedId={selectedId}
-          locale={locale}
           onSelect={setSelectedId}
         />
         <ArticleSlider articles={articles} locale={locale} />

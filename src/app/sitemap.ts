@@ -5,6 +5,10 @@ import configPromise from "@payload-config";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://mfmsport.ma";
 const LOCALES = ["ar", "fr", "en"];
 
+// Sitemap pulls every article/category/tag/author/competition/club from Payload —
+// expensive. Cache it for a day instead of rebuilding on every crawler hit.
+export const revalidate = 86400;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const payload = await getPayload({ config: configPromise });
   const entries: MetadataRoute.Sitemap = [];

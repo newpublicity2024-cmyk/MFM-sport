@@ -2,10 +2,17 @@ import type { ApiResponse } from "./types";
 
 const API_BASE = "https://v3.football.api-sports.io";
 
+// Either a plain revalidate (today's default) or an explicit cache mode. When a
+// call is wrapped by the shared Redis cache, pass `{ cache: "no-store" }` so we
+// don't double-cache (Redis is the source of truth there).
+export type FetchOpts =
+  | number
+  | { revalidate?: number; cache?: "no-store" | "force-cache" };
+
 export async function fetchApi<T>(
   endpoint: string,
   params: Record<string, string | number>,
-  revalidate: number = 60,
+  opts: FetchOpts = 60,
 ): Promise<T[]> {
   const apiKey = process.env.API_FOOTBALL_KEY;
 
@@ -19,12 +26,18 @@ export async function fetchApi<T>(
     url.searchParams.set(key, String(value)),
   );
 
-  const res = await fetch(url.toString(), {
-    headers: {
-      "x-apisports-key": apiKey,
-    },
-    next: { revalidate },
-  });
+  const normalized = typeof opts === "number" ? { revalidate: opts } : opts;
+  const init: RequestInit & { next?: { revalidate: number } } = {
+    headers: { "x-apisports-key": apiKey },
+  };
+  if (normalized.cache) {
+    // "no-store" and "next.revalidate" are mutually exclusive in Next.js.
+    init.cache = normalized.cache;
+  } else {
+    init.next = { revalidate: normalized.revalidate ?? 60 };
+  }
+
+  const res = await fetch(url.toString(), init);
 
   if (!res.ok) {
     console.error(`[API-Football] ${res.status} ${res.statusText} for ${endpoint}`);

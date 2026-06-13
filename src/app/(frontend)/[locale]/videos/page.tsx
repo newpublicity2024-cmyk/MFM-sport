@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
-import type { Config } from "@/payload-types";
-import { setRequestLocale } from "next-intl/server";
-import { getTranslations } from "next-intl/server";
-import { getVideoArticles } from "@/lib/payload/queries";
-import { ArticleGrid } from "@/components/articles/ArticleGrid";
-import { Pagination } from "@/components/shared/Pagination";
+import { setRequestLocale, getTranslations } from "next-intl/server";
+import { VideosListing } from "@/components/videos/VideosListing";
+
+// ISR: page 1 is now a path-segment route (pagination lives at /page/[n]), so the
+// base listing no longer reads searchParams and can be edge-cached.
+export const revalidate = 3600;
 
 type Props = {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ page?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -17,31 +16,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: `${t("title")} | MFM Sport` };
 }
 
-export default async function VideosPage({ params, searchParams }: Props) {
+export default async function VideosPage({ params }: Props) {
   const { locale } = await params;
-  const { page } = await searchParams;
   setRequestLocale(locale);
-
-  const t = await getTranslations({ locale, namespace: "videos" });
-  const currentPage = Math.max(1, parseInt(page || "1", 10));
-  const result = await getVideoArticles(locale as Config["locale"], currentPage);
-
-  return (
-    <div className="container py-8">
-      <h1 className="text-2xl font-bold mb-6">{t("title")}</h1>
-
-      {result.docs.length > 0 ? (
-        <>
-          <ArticleGrid articles={result.docs} locale={locale} columns={3} />
-          <Pagination
-            currentPage={result.page!}
-            totalPages={result.totalPages}
-            basePath={`/${locale}/videos`}
-          />
-        </>
-      ) : (
-        <p className="text-muted-foreground text-center py-12">{t("noVideos")}</p>
-      )}
-    </div>
-  );
+  return <VideosListing locale={locale} page={1} />;
 }

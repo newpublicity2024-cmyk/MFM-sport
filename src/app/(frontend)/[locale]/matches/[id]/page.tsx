@@ -11,6 +11,10 @@ import { MatchStats } from "@/components/football/MatchStats";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { localizeLeague, localizeRound, localizeTeam } from "@/lib/api-football/localize";
 
+// ISR: regenerate the match shell at most once a minute; live score/events
+// still stream client-side via LiveScoreboard polling the cached fixture API.
+export const revalidate = 60;
+
 type Props = {
   params: Promise<{ locale: string; id: string }>;
 };
