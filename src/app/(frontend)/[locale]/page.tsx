@@ -19,6 +19,12 @@ import { AdCarousel } from "@/components/ads/AdCarousel";
 import { getAds } from "@/lib/payload/ads";
 import { toHeroSlide, buildLeagueArticles, competitionsToLeagues } from "@/lib/home/cards";
 
+// ISR: render once and serve from the edge cache for 5 min instead of running a
+// function on every visit. Live scores still refresh client-side (HomeMatchesSection
+// / hero panel poll the cached /api/fixtures endpoints), and Payload edits bust the
+// cache via /api/revalidate. Big cut to Function Invocations / Fluid CPU / origin transfer.
+export const revalidate = 300;
+
 type Props = {
   params: Promise<{ locale: string }>;
 };

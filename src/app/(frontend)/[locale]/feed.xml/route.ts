@@ -2,6 +2,10 @@ import { getPayload } from "payload";
 import configPromise from "@payload-config";
 import type { Config } from "@/payload-types";
 
+// Cache the RSS render for an hour at the framework level (was relying only on an
+// HTTP header) so repeat crawler hits don't re-query Payload each time.
+export const revalidate = 3600;
+
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://mfmsport.ma";
 
 const LOCALE_NAMES: Record<string, string> = {

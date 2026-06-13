@@ -5,6 +5,9 @@ import { getTranslations } from "next-intl/server";
 import { getPageBySlug } from "@/lib/payload/queries";
 import { ArticleBody } from "@/components/articles/ArticleBody";
 
+// Static CMS page — revalidate daily (Payload edits also bust it via /api/revalidate).
+export const revalidate = 86400;
+
 type Props = { params: Promise<{ locale: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

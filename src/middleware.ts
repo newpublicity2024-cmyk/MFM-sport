@@ -26,7 +26,9 @@ export default async function middleware(request: NextRequest) {
         `/api/redirects?from=${encodeURIComponent(pathname)}`,
         request.url,
       );
-      const res = await fetch(lookupUrl);
+      // Cache lookups (incl. misses) for a day so repeated legacy hits don't
+      // re-invoke the /api/redirects function on every request.
+      const res = await fetch(lookupUrl, { next: { revalidate: 86400 } });
 
       if (res.ok) {
         const data = await res.json();

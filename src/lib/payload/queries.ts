@@ -283,16 +283,24 @@ export async function getCompetitions(locale: Locale) {
 // Used to scope live/date fixture data so we never show — or wait on — leagues
 // we don't cover. React-cached for per-request dedupe (cheap DB read).
 export const getOurLeagueIds = cache(async (): Promise<number[]> => {
-  const payload = await getPayloadClient();
-  const res = await payload.find({
-    collection: "competitions",
-    limit: 100,
-    depth: 0,
-    pagination: false,
-  });
-  return res.docs
-    .map((c) => c.apiFootballId)
-    .filter((n): n is number => typeof n === "number");
+  try {
+    const payload = await getPayloadClient();
+    const res = await payload.find({
+      collection: "competitions",
+      limit: 100,
+      depth: 0,
+      pagination: false,
+    });
+    return res.docs
+      .map((c) => c.apiFootballId)
+      .filter((n): n is number => typeof n === "number");
+  } catch (error) {
+    // Fail open: a DB hiccup (or quota block) must not crash the build / ISR
+    // prerender of routes that scope by league. Downstream helpers already treat
+    // an empty league list as "don't filter", so the page/endpoint still renders.
+    console.error("[queries] getOurLeagueIds failed, returning []:", error);
+    return [];
+  }
 });
 
 export async function getClubs(locale: Locale) {
