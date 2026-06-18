@@ -1,4 +1,5 @@
 // src/lib/payload/ads.ts
+import { cache } from "react";
 import type { Ad, Config } from "@/payload-types";
 import { getImageAlt } from "@/lib/utils";
 
@@ -96,3 +97,29 @@ export async function getAds(locale: Locale): Promise<AdsByPlacement> {
   });
   return groupAds(res.docs as Ad[]);
 }
+
+// Distinct, non-empty header snippets across all active tag ads. These are the
+// "header" halves the team pastes per ad; they're injected once site-wide (the
+// root layout), deduped so identical loaders don't load twice. Fails open to [].
+export const getAdHeadCodes = cache(async (): Promise<string[]> => {
+  try {
+    const { getPayloadClient } = await import("./queries");
+    const payload = await getPayloadClient();
+    const res = await payload.find({
+      collection: "ads",
+      where: { active: { equals: true }, type: { equals: "tag" } },
+      depth: 0,
+      limit: 100,
+      select: { headCode: true },
+    });
+    const seen = new Set<string>();
+    for (const ad of res.docs as Ad[]) {
+      const code = ad.headCode?.trim();
+      if (code) seen.add(code);
+    }
+    return [...seen];
+  } catch (error) {
+    console.error("[ads] getAdHeadCodes failed, returning []:", error);
+    return [];
+  }
+});
