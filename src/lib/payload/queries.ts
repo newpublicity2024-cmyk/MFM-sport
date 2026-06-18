@@ -313,6 +313,19 @@ export const getOurLeagueIds = cache(async (): Promise<number[]> => {
   }
 });
 
+// Homepage Settings global: the admin-configured news filter + match selections.
+// depth 2 so relationships (competition, tag, their category) come populated.
+// Fails open (null) so a DB hiccup never crashes the homepage prerender.
+export async function findHomepageSettings(locale: Locale) {
+  try {
+    const payload = await getPayloadClient();
+    return await payload.findGlobal({ slug: "homepage", locale, depth: 2 });
+  } catch (error) {
+    console.error("[queries] findHomepageSettings failed, returning null:", error);
+    return null;
+  }
+}
+
 export async function getClubs(locale: Locale) {
   const payload = await getPayloadClient();
   return payload.find({

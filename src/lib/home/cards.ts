@@ -1,4 +1,5 @@
 import { getArticleHeroUrl, getImageAlt } from "@/lib/utils";
+import { WORLD_CUP_LEAGUE_ID, WORLD_CUP_LOGO } from "@/lib/api-football/worldcup";
 
 // A league tab/pill with an ALREADY-LOCALIZED name (derived from the
 // Competitions collection via getCompetitions(locale)), so the UI renders it
@@ -9,6 +10,59 @@ export type LeagueLite = {
   logoUrl: string;
   apiFootballId: number;
 };
+
+// Crest URL for a competition: the World Cup uses its 2026 emblem; everything
+// else uses its uploaded logo, then API-Football's CDN as a last resort.
+function competitionLogoUrl(apiFootballId: number, logoUrl?: string | null): string {
+  if (apiFootballId === WORLD_CUP_LEAGUE_ID) return WORLD_CUP_LOGO;
+  return logoUrl || `https://media.api-sports.io/football/leagues/${apiFootballId}.png`;
+}
+
+// A single (already-localized) competition doc → a filter pill, World Cup logo
+// applied. Used for the admin-configured news filter (order preserved).
+function competitionToLeague(c: CompetitionLike): LeagueLite {
+  return {
+    id: c.slug,
+    name: c.name,
+    logoUrl: competitionLogoUrl(c.apiFootballId, c.logoUrl),
+    apiFootballId: c.apiFootballId,
+  };
+}
+
+// Relationship value → its id, whether populated (object) or a raw id.
+function relationId(v: unknown): number | string | undefined {
+  if (v == null) return undefined;
+  if (typeof v === "object") return (v as { id?: number | string }).id;
+  return v as number | string;
+}
+
+// A resolved Homepage Settings news-filter row: the pill plus the ids used to
+// source its articles (tag first, the competition's category as fallback).
+export type NewsFilterResolved = {
+  league: LeagueLite;
+  tagId?: number | string;
+  categoryId?: number | string;
+};
+
+// Map Homepage Settings `newsFilters` rows (depth-2 populated) into resolved
+// rows, preserving the admin's order. Rows without a populated competition are
+// skipped (can't render a pill without a crest/name).
+export function resolveNewsFilters(rows: unknown[]): NewsFilterResolved[] {
+  const out: NewsFilterResolved[] = [];
+  for (const row of rows ?? []) {
+    const r = row as { competition?: unknown; tag?: unknown };
+    const comp = r?.competition;
+    if (!comp || typeof comp !== "object") continue;
+    const c = comp as CompetitionLike & { category?: unknown };
+    if (typeof c.apiFootballId !== "number" || !c.slug) continue;
+    out.push({
+      league: competitionToLeague(c),
+      tagId: relationId(r.tag),
+      categoryId: relationId(c.category),
+    });
+  }
+  return out;
+}
 
 type CompetitionLike = {
   slug: string;

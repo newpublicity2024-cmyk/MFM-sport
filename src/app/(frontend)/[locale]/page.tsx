@@ -2,14 +2,23 @@ import type { Metadata } from "next";
 import type { Config } from "@/payload-types";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
-import { getArticles, getCompetitions, getOurLeagueIds } from "@/lib/payload/queries";
+import {
+  getArticles,
+  getArticlesByTag,
+  getArticlesByCategory,
+  getCompetitions,
+  getOurLeagueIds,
+  findHomepageSettings,
+} from "@/lib/payload/queries";
 import { getVideos } from "@/lib/videos";
-import { getFixturesByDateForLeagues } from "@/lib/api-football/fixtures";
+import { getFixturesByDateForLeagues, getFixturesByLeague } from "@/lib/api-football/fixtures";
 import {
   getAllWorldCupFixtures,
   WORLD_CUP_LEAGUE_ID,
+  WORLD_CUP_SEASON,
   WORLD_CUP_LOGO,
 } from "@/lib/api-football/worldcup";
+import type { ApiFixture } from "@/lib/api-football/types";
 import { HeroSection } from "@/components/home/HeroSection";
 import { LeagueNewsSection } from "@/components/home/LeagueNewsSection";
 import { VideosSection } from "@/components/home/VideosSection";
@@ -17,7 +26,22 @@ import { HomeMatchesSection } from "@/components/home/HomeMatchesSection";
 import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";
 import { AdCarousel } from "@/components/ads/AdCarousel";
 import { getAds } from "@/lib/payload/ads";
-import { toHeroSlide, buildLeagueArticles, competitionsToLeagues } from "@/lib/home/cards";
+import {
+  toHeroSlide,
+  toLeagueCard,
+  resolveNewsFilters,
+  type LeagueCardArticle,
+} from "@/lib/home/cards";
+
+// Articles shown per news-filter tab (NewsGrid2x2 uses 4; the mobile slider all).
+const HOME_ARTICLES_PER_TAB = 8;
+
+// Season to query fixtures for a competition: the World Cup pins its own season;
+// others use the competition's configured season (falls back to the WC season).
+function seasonForCompetition(comp: { apiFootballId?: number | null; season?: number | null }): number {
+  if (comp.apiFootballId === WORLD_CUP_LEAGUE_ID) return WORLD_CUP_SEASON;
+  return comp.season ?? WORLD_CUP_SEASON;
+}
 
 // ISR: render once and serve from the edge cache for 5 min instead of running a
 // function on every visit. Live scores still refresh client-side (HomeMatchesSection
@@ -59,17 +83,14 @@ export default async function HomePage({ params }: Props) {
   };
 
   const today = new Date().toISOString().split("T")[0];
-  // Lower matches section: today's fixtures scoped to the site's leagues (quota-friendly).
-  // Hero matches panel: World Cup 2026 only (all statuses).
+  const localeTyped = locale as Config["locale"];
+
   const ourLeagueIds = await getOurLeagueIds();
-  const [todayFixtures, worldCupFixtures] = await Promise.all([
-    getFixturesByDateForLeagues(today, ourLeagueIds),
-    getAllWorldCupFixtures(),
-  ]);
+  const homepage = await findHomepageSettings(localeTyped);
+  const competitions = await getCompetitions(localeTyped);
 
   // League carousel mirrors every competition the site has, ordered:
   // Botola (id 200) first, World Cup (id 1) second, everything else after.
-  const competitions = await getCompetitions(locale as Config["locale"]);
   const carouselRank = (apiFootballId?: number | null) =>
     apiFootballId === 200 ? 0 : apiFootballId === WORLD_CUP_LEAGUE_ID ? 1 : 2;
   const carouselLeagues = competitions.docs
@@ -84,17 +105,52 @@ export default async function HomePage({ params }: Props) {
           : c.logoUrl || `https://media.api-sports.io/football/leagues/${c.apiFootballId}.png`,
     }));
 
-  // News-by-league tabs are driven by the Competitions section (domestic leagues
-  // only), so adding/removing a competition updates them — no hardcoded list.
-  const newsLeagues = competitionsToLeagues(
-    competitions.docs.filter((c) => c.type === "league"),
+  // News-by-league filter: admin-configured via Homepage Settings. Each pill is a
+  // competition (crest + name) whose tab lists articles carrying the chosen Tag,
+  // falling back to the competition's linked category. If the global has no filter
+  // yet, fall back to the domestic leagues (Botola first) so the section persists.
+  const fallbackRows = competitions.docs
+    .filter((c) => c.type === "league")
+    .slice()
+    .sort((a, b) => (a.apiFootballId === 200 ? -1 : b.apiFootballId === 200 ? 1 : 0))
+    .map((competition) => ({ competition }));
+  const resolvedFilters = resolveNewsFilters(
+    homepage?.newsFilters?.length ? homepage.newsFilters : fallbackRows,
+  );
+  const newsLeagues = resolvedFilters.map((r) => r.league);
+
+  const articlesByLeagueEntries = await Promise.all(
+    resolvedFilters.map(async (r): Promise<[string, LeagueCardArticle[]]> => {
+      let docs: unknown[] = [];
+      if (r.tagId != null) {
+        docs = (await getArticlesByTag(r.tagId, localeTyped, 1, HOME_ARTICLES_PER_TAB)).docs;
+      }
+      if (docs.length === 0 && r.categoryId != null) {
+        docs = (await getArticlesByCategory(r.categoryId, localeTyped, 1, HOME_ARTICLES_PER_TAB)).docs;
+      }
+      return [r.league.id, docs.map(toLeagueCard)];
+    }),
+  );
+  const articlesByLeague: Record<string, LeagueCardArticle[]> = Object.fromEntries(
+    articlesByLeagueEntries,
   );
 
-  // One query feeds both sections: first 5 = hero slider, the rest are split
-  // into a distinct chunk per league.
-  const latest = await getArticles({ locale: locale as Config["locale"], page: 1, limit: 30 });
+  // Hero slider uses the latest articles regardless of league.
+  const latest = await getArticles({ locale: localeTyped, page: 1, limit: 6 });
   const heroSlides = latest.docs.slice(0, 5).map(toHeroSlide);
-  const articlesByLeague = buildLeagueArticles(latest.docs.slice(5), newsLeagues);
+
+  // Match panels: hero = configured competition (all statuses), default World Cup.
+  // Lower = a specific competition or today's fixtures across all our leagues.
+  const heroComp = homepage?.heroMatches?.competition;
+  const lowerComp = homepage?.homeMatches?.competition;
+  const [worldCupFixtures, todayFixtures]: [ApiFixture[], ApiFixture[]] = await Promise.all([
+    heroComp && typeof heroComp === "object"
+      ? getFixturesByLeague(heroComp.apiFootballId, seasonForCompetition(heroComp))
+      : getAllWorldCupFixtures(),
+    homepage?.homeMatches?.mode === "competition" && lowerComp && typeof lowerComp === "object"
+      ? getFixturesByLeague(lowerComp.apiFootballId, seasonForCompetition(lowerComp))
+      : getFixturesByDateForLeagues(today, ourLeagueIds),
+  ]);
 
   const ads = await getAds(locale as Config["locale"]);
 
