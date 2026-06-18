@@ -1,32 +1,45 @@
-import type { Config } from "@/payload-types";
 import { getTranslations } from "next-intl/server";
-import { getVideoArticles } from "@/lib/payload/queries";
-import { ArticleGrid } from "@/components/articles/ArticleGrid";
-import { Pagination } from "@/components/shared/Pagination";
+import { getVideos } from "@/lib/videos";
+import { VIDEOS_PAGE_LIMIT } from "@/lib/youtube";
+import { VideosSection } from "@/components/home/VideosSection";
 
-/** Shared body for the videos base page and its /page/[n] route. */
-export async function VideosListing({
-  locale,
-  page,
-}: {
-  locale: string;
-  page: number;
-}) {
+/**
+ * Dedicated /videos archive page. Shows the two YouTube playlists (the same ones
+ * teased on the homepage) as full sections — a navy player + scrollable list per
+ * playlist — but with more videos than the homepage teaser.
+ */
+export async function VideosListing({ locale }: { locale: string }) {
   const t = await getTranslations({ locale, namespace: "videos" });
-  const result = await getVideoArticles(locale as Config["locale"], page);
+  const tHome = await getTranslations({ locale, namespace: "home" });
+
+  const [thirdHalfVideos, fromStadiumsVideos] = await Promise.all([
+    getVideos("the-third-half", VIDEOS_PAGE_LIMIT),
+    getVideos("from-the-stadiums", VIDEOS_PAGE_LIMIT),
+  ]);
+
+  const hasAny = thirdHalfVideos.length > 0 || fromStadiumsVideos.length > 0;
 
   return (
-    <div className="container py-8">
-      <h1 className="text-2xl font-bold mb-6">{t("title")}</h1>
+    <div className="container space-y-6 py-8">
+      <h1 className="text-2xl font-bold">{t("title")}</h1>
 
-      {result.docs.length > 0 ? (
+      {hasAny ? (
         <>
-          <ArticleGrid articles={result.docs} locale={locale} columns={3} />
-          <Pagination
-            currentPage={result.page!}
-            totalPages={result.totalPages}
-            basePath={`/${locale}/videos`}
-          />
+          {thirdHalfVideos.length > 0 && (
+            <VideosSection
+              title={tHome("videoThirdHalf")}
+              locale={locale}
+              videos={thirdHalfVideos}
+            />
+          )}
+
+          {fromStadiumsVideos.length > 0 && (
+            <VideosSection
+              title={tHome("videoFromStadiums")}
+              locale={locale}
+              videos={fromStadiumsVideos}
+            />
+          )}
         </>
       ) : (
         <p className="text-muted-foreground text-center py-12">{t("noVideos")}</p>

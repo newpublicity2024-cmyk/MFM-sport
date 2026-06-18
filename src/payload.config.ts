@@ -1,6 +1,9 @@
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
+import { ar } from '@payloadcms/translations/languages/ar'
+import { en } from '@payloadcms/translations/languages/en'
+import { fr } from '@payloadcms/translations/languages/fr'
 import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
@@ -48,6 +51,11 @@ export default buildConfig({
     },
   },
   collections: [Users, Media, Categories, Tags, Authors, Articles, Competitions, Clubs, Subscribers, Pages, Redirects, Videos, Ads],
+  // Admin-panel languages. Each user picks their language in account settings;
+  // العربية switches the whole panel to Arabic + RTL. Default stays English.
+  i18n: {
+    supportedLanguages: { en, fr, ar },
+  },
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET,
   typescript: {

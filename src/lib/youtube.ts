@@ -26,8 +26,11 @@ export const PLAYLISTS: {
   },
 ];
 
-/** Max videos pulled & shown per playlist. */
+/** Max videos pulled & shown per playlist on the homepage teaser. */
 export const VIDEOS_PER_PLAYLIST = 12;
+
+/** Max videos shown per playlist on the dedicated /videos archive page. */
+export const VIDEOS_PAGE_LIMIT = 24;
 
 /**
  * Convert an ISO-8601 duration (e.g. "PT8M12S") to a display string.
