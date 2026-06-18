@@ -481,7 +481,11 @@ export interface Ad {
    */
   image?: (number | null) | Media;
   /**
-   * Paste the full ad snippet from your network (the <ins>/<script> code). It runs as-is and the network fills the slot. Leave Image empty for tag ads.
+   * Optional. Paste the part of the snippet that belongs in the page <head> (the loader/script). Loaded once site-wide; identical headers across ads load only once. Leave empty if your snippet is body-only.
+   */
+  headCode?: string | null;
+  /**
+   * Paste the part placed where the ad appears (the unit markup, e.g. the <ins>/<script> push). The network fills it. Leave Image empty for tag ads.
    */
   embedCode?: string | null;
   /**
@@ -849,6 +853,7 @@ export interface AdsSelect<T extends boolean = true> {
   name?: T;
   type?: T;
   image?: T;
+  headCode?: T;
   embedCode?: T;
   linkUrl?: T;
   placement?: T;

@@ -113,6 +113,8 @@ export const revalidateCategoryDelete: CollectionAfterDeleteHook = async ({ doc,
 export const revalidateAdChange: CollectionAfterChangeHook = async ({ doc, req }) => {
   try {
     revalidateTag(ADS_TAG, "max");
+    // Ad header snippets are injected in the root layout (all pages).
+    revalidatePath("/", "layout");
   } catch (err) {
     req.payload.logger.error({ err }, "[revalidate] ad afterChange failed");
   }
@@ -122,6 +124,7 @@ export const revalidateAdChange: CollectionAfterChangeHook = async ({ doc, req }
 export const revalidateAdDelete: CollectionAfterDeleteHook = async ({ doc, req }) => {
   try {
     revalidateTag(ADS_TAG, "max");
+    revalidatePath("/", "layout");
   } catch (err) {
     req.payload.logger.error({ err }, "[revalidate] ad afterDelete failed");
   }

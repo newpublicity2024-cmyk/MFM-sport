@@ -147,21 +147,34 @@ export const Ads: CollectionConfig = {
       },
     },
     {
-      name: "embedCode",
+      name: "headCode",
       type: "textarea",
-      label: { en: "Embed code", fr: "Code d'intégration", ar: "كود التضمين" },
+      label: { en: "Header code", fr: "Code d'en-tête", ar: "كود الترويسة" },
       admin: {
         condition: (_, siblingData) => siblingData?.type === "tag",
         description: {
-          en: "Paste the full ad snippet from your network (the <ins>/<script> code). It runs as-is and the network fills the slot. Leave Image empty for tag ads.",
-          fr: "Collez l'extrait publicitaire complet de votre régie (le code <ins>/<script>). Il s'exécute tel quel et la régie remplit l'espace. Laissez le champ Image vide pour les balises.",
-          ar: "الصق كود الإعلان الكامل من شبكتك (وسوم <ins>/<script>). يعمل كما هو وتملأ الشبكة المساحة. اترك حقل الصورة فارغًا لإعلانات الوسم.",
+          en: "Optional. Paste the part of the snippet that belongs in the page <head> (the loader/script). Loaded once site-wide; identical headers across ads load only once. Leave empty if your snippet is body-only.",
+          fr: "Facultatif. Collez la partie de l'extrait destinée au <head> de la page (le loader/script). Chargée une seule fois sur tout le site ; des en-têtes identiques ne se chargent qu'une fois. Laissez vide si votre extrait ne contient que le corps.",
+          ar: "اختياري. الصق الجزء المخصّص لوسم <head> في الصفحة (السكربت/المُحمِّل). يُحمَّل مرة واحدة في كامل الموقع، والترويسات المتطابقة لا تُحمَّل إلا مرة. اتركه فارغًا إذا كان الكود يحتوي على الجسم فقط.",
+        },
+      },
+    },
+    {
+      name: "embedCode",
+      type: "textarea",
+      label: { en: "Body code", fr: "Code du corps", ar: "كود الجسم" },
+      admin: {
+        condition: (_, siblingData) => siblingData?.type === "tag",
+        description: {
+          en: "Paste the part placed where the ad appears (the unit markup, e.g. the <ins>/<script> push). The network fills it. Leave Image empty for tag ads.",
+          fr: "Collez la partie placée là où la publicité apparaît (le code de l'unité, ex. <ins>/<script>). La régie la remplit. Laissez le champ Image vide pour les balises.",
+          ar: "الصق الجزء الذي يوضع في مكان ظهور الإعلان (كود الوحدة، مثل <ins>/<script>). تملؤه الشبكة. اترك حقل الصورة فارغًا لإعلانات الوسم.",
         },
       },
       validate: (value: unknown, { siblingData }: AdFieldValidateOptions) => {
         const t = siblingData?.type;
         if (t === "tag" && (typeof value !== "string" || !value.trim())) {
-          return "Paste the ad-manager embed code for tag-type ads.";
+          return "Paste the ad-manager body code for tag-type ads.";
         }
         return true;
       },

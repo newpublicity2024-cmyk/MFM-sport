@@ -5,6 +5,8 @@ import React from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { AdHeadInjector } from "@/components/ads/AdHeadInjector";
+import { getAdHeadCodes } from "@/lib/payload/ads";
 import "./styles.css";
 
 const plexSans = IBM_Plex_Sans({
@@ -31,7 +33,8 @@ export const metadata: Metadata = {
 
 const adsenseClientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
 
-export default function FrontendLayout({ children }: { children: React.ReactNode }) {
+export default async function FrontendLayout({ children }: { children: React.ReactNode }) {
+  const adHeadCodes = await getAdHeadCodes();
   return (
     <html suppressHydrationWarning>
       <body
@@ -53,6 +56,8 @@ export default function FrontendLayout({ children }: { children: React.ReactNode
             crossOrigin="anonymous"
           />
         )}
+        {/* Per-ad header snippets pasted in the admin, injected once site-wide. */}
+        <AdHeadInjector codes={adHeadCodes} />
         <Analytics />
         <SpeedInsights />
       </body>
