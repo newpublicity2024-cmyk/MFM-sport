@@ -22,6 +22,7 @@ import { Pages } from './collections/Pages'
 import { Redirects } from './collections/Redirects'
 import { Videos } from './collections/Videos'
 import { Ads } from './collections/Ads'
+import { Homepage } from './globals/Homepage'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -51,6 +52,7 @@ export default buildConfig({
     },
   },
   collections: [Users, Media, Categories, Tags, Authors, Articles, Competitions, Clubs, Subscribers, Pages, Redirects, Videos, Ads],
+  globals: [Homepage],
   // Admin-panel languages. Each user picks their language in account settings;
   // العربية switches the whole panel to Arabic + RTL. Default stays English.
   i18n: {

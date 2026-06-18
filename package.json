@@ -29,6 +29,7 @@
     "i18n:taxonomy:dry": "tsx scripts/i18n-translate-taxonomy.ts --import --dry-run",
     "seed": "tsx scripts/seed.ts",
     "seed:ads": "tsx scripts/seed-ads.ts",
+    "seed:homepage": "tsx scripts/seed-homepage.ts",
     "seed:preview": "tsx scripts/seed-preview.ts",
     "seed:preview:reset": "tsx scripts/seed-preview.ts --reset",
     "regen:favicons": "tsx scripts/regen-favicons.ts",

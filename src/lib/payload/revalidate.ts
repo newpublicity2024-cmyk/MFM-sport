@@ -2,6 +2,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import type {
   CollectionAfterChangeHook,
   CollectionAfterDeleteHook,
+  GlobalAfterChangeHook,
 } from "payload";
 import { ARTICLES_TAG, ADS_TAG } from "./cache-tags";
 
@@ -123,6 +124,18 @@ export const revalidateAdDelete: CollectionAfterDeleteHook = async ({ doc, req }
     revalidateTag(ADS_TAG, "max");
   } catch (err) {
     req.payload.logger.error({ err }, "[revalidate] ad afterDelete failed");
+  }
+  return doc;
+};
+
+/** Homepage Settings drive the homepage news filter + match panels; bust the
+ *  homepage (and listings, since the article data cache feeds the tabs) on change. */
+export const revalidateHomepageChange: GlobalAfterChangeHook = async ({ doc, req }) => {
+  try {
+    revalidateTag(ARTICLES_TAG, "max");
+    for (const locale of LOCALES) revalidatePath(`/${locale}`);
+  } catch (err) {
+    req.payload.logger.error({ err }, "[revalidate] homepage global afterChange failed");
   }
   return doc;
 };

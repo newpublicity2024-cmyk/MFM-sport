@@ -109,8 +109,12 @@ export interface Config {
     defaultIDType: number;
   };
   fallbackLocale: ('false' | 'none' | 'null') | false | null | ('ar' | 'fr' | 'en') | ('ar' | 'fr' | 'en')[];
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    homepage: Homepage;
+  };
+  globalsSelect: {
+    homepage: HomepageSelect<false> | HomepageSelect<true>;
+  };
   locale: 'ar' | 'fr' | 'en';
   widgets: {
     collections: CollectionsWidget;
@@ -892,6 +896,73 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   batch?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * Control the homepage news filter and which matches show in the hero and lower match sections.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "homepage".
+ */
+export interface Homepage {
+  id: number;
+  /**
+   * The pills in the 'News by league' section, top to bottom. Each pill shows a competition's crest/name and lists articles carrying the chosen tag.
+   */
+  newsFilters?:
+    | {
+        /**
+         * Provides the pill's crest and name.
+         */
+        competition: number | Competition;
+        /**
+         * Articles with this tag fill this tab. If empty (or none yet), the tab falls back to the competition's linked category.
+         */
+        tag?: (number | null) | Tag;
+        id?: string | null;
+      }[]
+    | null;
+  heroMatches?: {
+    /**
+     * Its fixtures (finished, live, upcoming) fill the hero matches panel. Leave empty for the World Cup.
+     */
+    competition?: (number | null) | Competition;
+  };
+  homeMatches: {
+    mode: 'today' | 'competition';
+    /**
+     * Shown when Source is 'A specific competition'.
+     */
+    competition?: (number | null) | Competition;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "homepage_select".
+ */
+export interface HomepageSelect<T extends boolean = true> {
+  newsFilters?:
+    | T
+    | {
+        competition?: T;
+        tag?: T;
+        id?: T;
+      };
+  heroMatches?:
+    | T
+    | {
+        competition?: T;
+      };
+  homeMatches?:
+    | T
+    | {
+        mode?: T;
+        competition?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
