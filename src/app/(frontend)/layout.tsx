@@ -40,6 +40,10 @@ export default async function FrontendLayout({ children }: { children: React.Rea
       <body
         className={`${plexSans.variable} ${plexArabic.variable} font-sans antialiased`}
       >
+        {/* Per-ad header snippets pasted in the admin, injected once site-wide.
+            Rendered first + server-side so they parse/execute before any ad body
+            (e.g. a GPT body's googletag.display) runs in a client effect. */}
+        <AdHeadInjector codes={adHeadCodes} />
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
@@ -56,8 +60,6 @@ export default async function FrontendLayout({ children }: { children: React.Rea
             crossOrigin="anonymous"
           />
         )}
-        {/* Per-ad header snippets pasted in the admin, injected once site-wide. */}
-        <AdHeadInjector codes={adHeadCodes} />
         <Analytics />
         <SpeedInsights />
       </body>
