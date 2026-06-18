@@ -272,7 +272,7 @@ export interface Article {
   id: number;
   title: string;
   /**
-   * URL-friendly identifier for THIS locale. Arabic keeps the original keyword slug; fr/en get an ASCII keyword slug. Unique per language.
+   * Auto-generated from the title (spaces become dashes), per language. Leave it blank — it fills in automatically when you save.
    */
   slug: string;
   /**
@@ -303,6 +303,9 @@ export interface Article {
   categories?: (number | Category)[] | null;
   tags?: (number | Tag)[] | null;
   status: 'draft' | 'published';
+  /**
+   * Leave empty — set automatically to now when you publish.
+   */
   publishedAt?: string | null;
   /**
    * Mark as video article (shows YouTube embed)

@@ -2,6 +2,10 @@ import type { CollectionConfig } from "payload";
 
 export const Media: CollectionConfig = {
   slug: "media",
+  labels: {
+    singular: { en: "Media", fr: "Média", ar: "ملف وسائط" },
+    plural: { en: "Media", fr: "Médias", ar: "الوسائط" },
+  },
   access: {
     // Media (uploaded images) are served to the public site via the REST
     // file endpoint (/api/media/file/...), which the browser hits directly
@@ -39,19 +43,26 @@ export const Media: CollectionConfig = {
       type: "text",
       required: true,
       localized: true,
+      label: { en: "Alt text", fr: "Texte alternatif", ar: "النص البديل" },
     },
     {
       name: "caption",
       type: "text",
       localized: true,
+      label: { en: "Caption", fr: "Légende", ar: "التعليق" },
     },
     {
       name: "wpUrl",
       type: "text",
       unique: true,
       index: true,
+      label: { en: "WordPress URL", fr: "URL WordPress", ar: "رابط ووردبريس" },
       admin: {
-        description: "Original WordPress URL - used for dedup during migration.",
+        description: {
+          en: "Original WordPress URL - used for dedup during migration.",
+          fr: "URL WordPress d'origine — utilisée pour éviter les doublons lors de la migration.",
+          ar: "رابط ووردبريس الأصلي — يُستخدم لمنع التكرار أثناء الترحيل.",
+        },
         readOnly: true,
       },
     },
