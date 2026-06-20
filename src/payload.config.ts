@@ -23,6 +23,7 @@ import { Redirects } from './collections/Redirects'
 import { Videos } from './collections/Videos'
 import { Ads } from './collections/Ads'
 import { Homepage } from './globals/Homepage'
+import { blobBaseUrl, blobFileURL } from './lib/storage/blobUrl'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -36,9 +37,25 @@ if (!process.env.DATABASE_URL) {
 
 const plugins: any[] = []
 if (process.env.BLOB_READ_WRITE_TOKEN) {
+  const blobBase = blobBaseUrl()
   plugins.push(
     vercelBlobStorage({
-      collections: { media: true },
+      collections: {
+        media: {
+          // Resolve each media `url` (and every image size) to the public Blob CDN
+          // URL at read time, so the browser fetches image bytes straight from blob
+          // instead of through the DB-backed `/api/media/file` function. This applies
+          // to existing AND new media — no backfill needed — and keeps images loading
+          // from ISR-cached pages even during a DB outage (the cause of the Arabic-
+          // filename 500s). We intentionally do NOT set `disablePayloadAccessControl`,
+          // so the legacy `/api/media/file` route stays registered as a fallback for
+          // any already-cached HTML. Falls back to the Payload path in envs without a
+          // blob base (e.g. local dev). See src/lib/storage/blobUrl.ts.
+          generateFileURL: ({ filename }) =>
+            blobFileURL(filename as string, blobBase) ??
+            `/api/media/file/${encodeURIComponent(filename as string)}`,
+        },
+      },
       token: process.env.BLOB_READ_WRITE_TOKEN,
     })
   )
