@@ -4,18 +4,14 @@ import { LeagueNewsCarousel } from "@/components/home/LeagueNewsCarousel";
 import type { LeagueCardArticle } from "@/lib/home/cards";
 import type { AdItem } from "@/lib/payload/ads";
 
-// Stub the per-page grid so the test targets the carousel's paging/dots logic
-// (and avoids the AdCarousel / next-image chain). Each page shows its titles and
-// an "AD" marker when an ad is passed through.
-vi.mock("@/components/home/NewsGrid2x2", () => ({
-  NewsGrid2x2: ({ articles, ads }: { articles: LeagueCardArticle[]; ads?: AdItem[] }) => (
-    <div data-testid="page">
-      {articles.map((a) => (
-        <span key={a.id}>{a.title}</span>
-      ))}
-      {ads && ads.length > 0 ? <span>AD</span> : null}
-    </div>
+// Stub the card + ad so the test targets the carousel's paging/dots logic.
+vi.mock("@/components/home/LeagueArticleCard", () => ({
+  LeagueArticleCard: ({ article }: { article: LeagueCardArticle }) => (
+    <span data-testid="card">{article.title}</span>
   ),
+}));
+vi.mock("@/components/ads/AdCarousel", () => ({
+  AdCarousel: ({ ads }: { ads: AdItem[] }) => <span data-testid="ad">AD:{ads.length}</span>,
 }));
 
 // Disable auto-advance in tests via reduced-motion so no timers run.
@@ -38,6 +34,7 @@ function makeArticles(n: number): LeagueCardArticle[] {
 }
 
 const dots = () => screen.queryAllByRole("tab");
+const cards = () => screen.queryAllByTestId("card");
 
 describe("LeagueNewsCarousel", () => {
   it("pages 4 at a time with no ad (20 articles -> 5 pages/dots)", () => {
@@ -45,12 +42,19 @@ describe("LeagueNewsCarousel", () => {
     expect(dots()).toHaveLength(5);
   });
 
-  it("pages 3 at a time when an ad is present (20 articles -> 7 pages/dots)", () => {
+  it("shows only the current page's 4 cards, not all 20", () => {
+    render(<LeagueNewsCarousel articles={makeArticles(20)} locale="ar" />);
+    expect(cards()).toHaveLength(4);
+    expect(screen.getByText("Title 0")).toBeInTheDocument();
+    expect(screen.queryByText("Title 4")).not.toBeInTheDocument(); // page 2
+  });
+
+  it("pages 3 at a time when an ad is present (20 articles -> 7 pages) with the ad on the page", () => {
     const ads = [{ id: "ad1" }] as unknown as AdItem[];
     render(<LeagueNewsCarousel articles={makeArticles(20)} locale="ar" ads={ads} />);
     expect(dots()).toHaveLength(7);
-    // The ad renders on every page (its fixed place), not just one.
-    expect(screen.getAllByText("AD").length).toBe(7);
+    expect(cards()).toHaveLength(3); // 3 blogs + the ad fills the 4th cell
+    expect(screen.getByTestId("ad")).toBeInTheDocument();
   });
 
   it("hides the dots when there is only one page", () => {
@@ -63,19 +67,18 @@ describe("LeagueNewsCarousel", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("keeps every article in the DOM (crossfade stack) and marks the active page", () => {
+  it("first dot active by default", () => {
     render(<LeagueNewsCarousel articles={makeArticles(20)} locale="ar" />);
-    // All 20 titles are present (hidden pages are opacity-0, still mounted).
-    expect(screen.getByText("Title 0")).toBeInTheDocument();
-    expect(screen.getByText("Title 19")).toBeInTheDocument();
-    // First dot active by default.
     expect(dots()[0]).toHaveAttribute("aria-selected", "true");
   });
 
-  it("activates the page whose dot is clicked", () => {
+  it("activates the page whose dot is clicked and swaps the visible cards", () => {
     render(<LeagueNewsCarousel articles={makeArticles(20)} locale="ar" />);
-    fireEvent.click(dots()[2]);
-    expect(dots()[2]).toHaveAttribute("aria-selected", "true");
+    fireEvent.click(dots()[1]);
+    expect(dots()[1]).toHaveAttribute("aria-selected", "true");
     expect(dots()[0]).toHaveAttribute("aria-selected", "false");
+    // page 2 shows Title 4..7
+    expect(screen.getByText("Title 4")).toBeInTheDocument();
+    expect(screen.queryByText("Title 0")).not.toBeInTheDocument();
   });
 });
