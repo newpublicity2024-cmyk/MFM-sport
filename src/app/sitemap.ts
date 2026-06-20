@@ -3,7 +3,8 @@ import { getPayload } from "payload";
 import configPromise from "@payload-config";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://mfmsport.ma";
-const LOCALES = ["ar", "fr", "en"];
+// Arabic-only front end: only advertise /ar URLs (fr/en are 301'd to /ar).
+const LOCALES = ["ar"];
 
 // Sitemap pulls every article/category/tag/author/competition/club from Payload —
 // expensive. Cache it for a day instead of rebuilding on every crawler hit.
