@@ -77,6 +77,14 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        // Retired-locale RSS feeds: middleware skips dotted paths, so redirect the
+        // French/English feeds to the Arabic feed here (mirrors the /fr,/en -> /ar
+        // locale redirect in middleware.ts).
+        source: "/:locale(fr|en)/feed.xml",
+        destination: "/ar/feed.xml",
+        permanent: true,
+      },
+      {
         source: "/:locale/articles",
         // Only redirect page>=2; ?page=1 (and ?page=0) just render the base listing.
         has: [{ type: "query", key: "page", value: "(?<n>[2-9]|[1-9]\\d+)" }],
