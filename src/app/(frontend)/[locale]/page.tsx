@@ -33,8 +33,9 @@ import {
   type LeagueCardArticle,
 } from "@/lib/home/cards";
 
-// Articles shown per news-filter tab (NewsGrid2x2 uses 4; the mobile slider all).
-const HOME_ARTICLES_PER_TAB = 8;
+// Articles fetched per news-filter tab. The desktop carousel pages through these
+// 4 at a time (up to 5 pages of 20); the mobile slider swipes through them all.
+const HOME_ARTICLES_PER_TAB = 20;
 
 // Season to query fixtures for a competition: the World Cup pins its own season;
 // others use the competition's configured season (falls back to the WC season).

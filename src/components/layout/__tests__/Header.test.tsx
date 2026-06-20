@@ -33,18 +33,6 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-// Mock @/i18n/routing (used by LanguageSwitcher)
-vi.mock("@/i18n/routing", () => ({
-  routing: { locales: ["ar", "fr", "en"], defaultLocale: "ar" },
-}));
-
-// Mock LanguageSwitcher to avoid class-variance-authority / lucide-react chain
-vi.mock("../LanguageSwitcher", () => ({
-  LanguageSwitcher: ({ locale }: { locale: string }) => (
-    <button data-testid="language-switcher">{locale.toUpperCase()}</button>
-  ),
-}));
-
 // Mock MobileNav to avoid sheet / lucide-react chain
 vi.mock("../MobileNav", () => ({
   MobileNav: ({ locale }: { locale: string }) => (

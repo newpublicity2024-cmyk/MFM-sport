@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { LeaguesPanel } from "./LeaguesPanel";
 import { LeaguePlaylistBanner } from "./LeaguePlaylistBanner";
-import { NewsGrid2x2 } from "./NewsGrid2x2";
+import { LeagueNewsCarousel } from "./LeagueNewsCarousel";
 import { ArticleSlider } from "./ArticleSlider";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { SectionShell } from "@/components/home/SectionShell";
@@ -27,12 +27,14 @@ export function LeagueNewsSection({ title, locale, leagues, articlesByLeague, ad
     <SectionShell>
       <SectionHeader title={title} />
 
-      {/* Desktop (lg+): unchanged 3-col grid. The 2x2 article grid spans cols 1-2
-          (grid-rows-subgrid so its two card rows ARE the section's two rows), the
-          leagues panel sits in row 1, and the playlist banner sits in row 2. */}
+      {/* Desktop (lg+): 3-col grid. The article carousel spans cols 1-2 (rotating
+          pages of the 2x2 grid), the leagues panel sits in row 1, and the playlist
+          banner sits in row 2. The carousel is keyed by the selected league so it
+          resets to the first page when the tab changes. */}
       <div className="hidden gap-4 lg:grid lg:grid-cols-3 lg:grid-rows-[auto_auto] lg:gap-x-4 lg:gap-y-3">
-        <NewsGrid2x2
-          className="lg:col-span-2 lg:row-span-2 lg:grid-rows-subgrid"
+        <LeagueNewsCarousel
+          key={selectedId}
+          className="lg:col-span-2 lg:row-span-2"
           articles={articles}
           locale={locale}
           ads={ads}

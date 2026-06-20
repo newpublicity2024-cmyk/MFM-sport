@@ -13,11 +13,25 @@ function isLegacyCandidate(pathname: string): boolean {
   return true;
 }
 
+// Retired locales: the site is Arabic-only now, but /fr and /en URLs still exist
+// in the wild (Google, social). 301 them to the same path under /ar so visitors
+// and link equity land on the Arabic equivalent instead of a 404.
+const RETIRED_LOCALES = ["fr", "en"];
+
 export default async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   if (pathname.startsWith("/admin") || pathname.startsWith("/api")) {
     return NextResponse.next();
+  }
+
+  // /fr, /fr/..., /en, /en/... -> /ar(/...), preserving the query string.
+  const firstSegment = pathname.split("/")[1];
+  if (RETIRED_LOCALES.includes(firstSegment)) {
+    const rest = pathname.slice(firstSegment.length + 1); // drop the "/fr" | "/en"
+    const url = request.nextUrl.clone();
+    url.pathname = `/ar${rest}`;
+    return NextResponse.redirect(url, 301);
   }
 
   if (isLegacyCandidate(pathname)) {
