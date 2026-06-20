@@ -27,6 +27,12 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "i.ytimg.com",
       },
+      {
+        // Uploaded media now resolves to the Vercel Blob CDN directly
+        // (see src/lib/storage/blobUrl.ts). Allow any blob store subdomain.
+        protocol: "https",
+        hostname: "*.public.blob.vercel-storage.com",
+      },
     ],
     localPatterns: [
       {
