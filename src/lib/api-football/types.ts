@@ -104,3 +104,17 @@ export function getMatchStatus(shortStatus: string): MatchStatus {
   if (["FT", "AET", "PEN"].includes(shortStatus)) return "finished";
   return "other";
 }
+
+export type ApiLeagueSeason = {
+  year: number;
+  start: string; // e.g. "2026-06-11"
+  end: string; // e.g. "2026-07-19"
+  current: boolean;
+  coverage?: unknown;
+};
+
+export type ApiLeagueInfo = {
+  league: { id: number; name: string; type: string; logo: string };
+  country: { name: string; code: string | null; flag: string | null };
+  seasons: ApiLeagueSeason[];
+};
