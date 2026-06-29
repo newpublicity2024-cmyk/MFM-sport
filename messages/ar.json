@@ -134,7 +134,15 @@
     "goalDiff": "الفارق",
     "points": "نقاط",
     "form": "آخر 5",
-    "allCompetitions": "جميع المسابقات"
+    "allCompetitions": "جميع المسابقات",
+    "liveNow": "مباشر الآن",
+    "startsIn": "تنطلق خلال",
+    "firstMatch": "أول مباراة",
+    "notStarted": "لم تبدأ البطولة بعد",
+    "days": "يوم",
+    "hours": "س",
+    "minutes": "د",
+    "seconds": "ث"
   },
   "club": {
     "info": "معلومات",
