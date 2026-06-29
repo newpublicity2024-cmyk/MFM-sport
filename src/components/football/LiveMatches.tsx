@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MatchList } from "./MatchList";
+import { SectionHeader } from "@/components/shared/SectionHeader";
 import type { ApiFixture } from "@/lib/api-football/types";
 
-type Props = { leagueId: number; locale: string; pollMs?: number };
+type Props = { leagueId: number; locale: string; title: string; pollMs?: number };
 
-export function LiveMatches({ leagueId, locale, pollMs = 30000 }: Props) {
+export function LiveMatches({ leagueId, locale, title, pollMs = 30000 }: Props) {
   const [fixtures, setFixtures] = useState<ApiFixture[]>([]);
   const mountedRef = useRef(true);
 
@@ -40,5 +41,10 @@ export function LiveMatches({ leagueId, locale, pollMs = 30000 }: Props) {
   }, [leagueId, pollMs]);
 
   if (fixtures.length === 0) return null;
-  return <MatchList fixtures={fixtures} locale={locale} groupByLeague={false} />;
+  return (
+    <section className="mb-10">
+      <SectionHeader title={title} />
+      <MatchList fixtures={fixtures} locale={locale} groupByLeague={false} />
+    </section>
+  );
 }

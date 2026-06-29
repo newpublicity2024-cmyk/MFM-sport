@@ -17,12 +17,23 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 beforeEach(() => { vi.stubGlobal("fetch", vi.fn()); });
 
 describe("LiveMatches", () => {
-  it("renders live fixtures filtered to the league", async () => {
+  it("renders live fixtures filtered to the league and shows header", async () => {
     (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true, json: async () => ({ fixtures: [fixture(10, 1, "Alpha"), fixture(11, 99, "Other")] }),
     });
-    render(<LiveMatches leagueId={1} locale="en" pollMs={10} />);
+    render(<LiveMatches leagueId={1} locale="en" title="Live now" pollMs={10} />);
     await waitFor(() => expect(screen.getByText("Alpha")).toBeTruthy());
+    expect(screen.queryByText("Other")).toBeNull();
+    expect(screen.getByText("Live now")).toBeTruthy();
+  });
+
+  it("renders nothing (no header) when live poll returns only out-of-league fixtures", async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true, json: async () => ({ fixtures: [fixture(11, 99, "Other")] }),
+    });
+    render(<LiveMatches leagueId={1} locale="en" title="Live now" pollMs={10} />);
+    await waitFor(() => expect((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0));
+    expect(screen.queryByText("Live now")).toBeNull();
     expect(screen.queryByText("Other")).toBeNull();
   });
 });

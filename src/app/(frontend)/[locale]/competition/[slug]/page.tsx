@@ -90,12 +90,7 @@ export default async function CompetitionPage({ params }: Props) {
         <p className="mb-10 text-muted-foreground">{tComp("notStarted")}</p>
       )}
 
-      {live && (
-        <section className="mb-10">
-          <SectionHeader title={tComp("liveNow")} />
-          <LiveMatches leagueId={leagueId} locale={locale} />
-        </section>
-      )}
+      <LiveMatches leagueId={leagueId} locale={locale} title={tComp("liveNow")} />
 
       {standings.length > 0 && (
         <section className="mb-10">
