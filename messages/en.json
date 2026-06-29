@@ -134,7 +134,15 @@
     "goalDiff": "GD",
     "points": "Pts",
     "form": "Form",
-    "allCompetitions": "All Competitions"
+    "allCompetitions": "All Competitions",
+    "liveNow": "Live now",
+    "startsIn": "Starts in",
+    "firstMatch": "First match",
+    "notStarted": "The competition hasn't started yet",
+    "days": "d",
+    "hours": "h",
+    "minutes": "m",
+    "seconds": "s"
   },
   "club": {
     "info": "Info",
