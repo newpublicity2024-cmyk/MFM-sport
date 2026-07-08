@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Sans_Arabic } from "next/font/google";
-import Script from "next/script";
 import React from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -59,11 +58,14 @@ export default async function FrontendLayout({ children }: { children: React.Rea
         >
           {children}
         </ThemeProvider>
+        {/* AdSense loader, exactly as Google provides it. React 19 hoists this
+            async <script> into <head> and dedupes it — the placement Auto Ads
+            expects. One tag only; loading adsbygoogle.js twice throws AdSense
+            errors. Powers both Auto Ads (dashboard toggle) and manual AdSlot units. */}
         {adsenseClientId && (
-          <Script
-            id="adsbygoogle"
+          <script
+            async
             src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}`}
-            strategy="afterInteractive"
             crossOrigin="anonymous"
           />
         )}
