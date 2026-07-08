@@ -31,6 +31,17 @@ function getLeaguePriority(league: ApiFixture["league"]): number {
   return 2;
 }
 
+// Order fixtures within a league group: finished games first, newest played on
+// top (most recent result leads); upcoming/live games follow, soonest first.
+function sortFixtures(a: ApiFixture, b: ApiFixture): number {
+  const aFinished = getMatchStatus(a.fixture.status.short) === "finished";
+  const bFinished = getMatchStatus(b.fixture.status.short) === "finished";
+  if (aFinished !== bFinished) return aFinished ? -1 : 1;
+  const ta = new Date(a.fixture.date).getTime();
+  const tb = new Date(b.fixture.date).getTime();
+  return aFinished ? tb - ta : ta - tb;
+}
+
 function groupAndSort(fixtures: ApiFixture[]): LeagueGroup[] {
   const map = new Map<number, LeagueGroup>();
   for (const f of fixtures) {
@@ -43,6 +54,9 @@ function groupAndSort(fixtures: ApiFixture[]): LeagueGroup[] {
       });
     }
     map.get(id)!.fixtures.push(f);
+  }
+  for (const group of map.values()) {
+    group.fixtures.sort(sortFixtures);
   }
   return Array.from(map.values()).sort((a, b) => a.priority - b.priority);
 }
