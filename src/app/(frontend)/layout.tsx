@@ -24,15 +24,21 @@ const plexArabic = IBM_Plex_Sans_Arabic({
   display: "swap",
 });
 
+const adsenseClientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
+
 export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL || "https://mfmsport.ma",
   ),
   title: "MFM Sport",
   description: "Moroccan Football News Portal",
+  // AdSense site verification: emits <meta name="google-adsense-account"> so
+  // Google can confirm ownership during review. Present only once the client ID
+  // is configured; complements the adsbygoogle loader below.
+  ...(adsenseClientId && {
+    other: { "google-adsense-account": adsenseClientId },
+  }),
 };
-
-const adsenseClientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
 
 export default async function FrontendLayout({ children }: { children: React.ReactNode }) {
   const adHeadCodes = await getAdHeadCodes();
