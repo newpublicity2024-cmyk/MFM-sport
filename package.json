@@ -42,7 +42,8 @@
     "redirects:normalize:dry": "tsx scripts/normalize-redirects.ts --dry-run",
     "redirects:verify": "tsx scripts/verify-redirects.ts",
     "backfill:wp-ids": "tsx scripts/backfill-wp-post-id.ts",
-    "audit:body-length": "tsx scripts/audit-body-length.ts"
+    "audit:body-length": "tsx scripts/audit-body-length.ts",
+    "spotcheck": "tsx scripts/spotcheck-import.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.84.0",
