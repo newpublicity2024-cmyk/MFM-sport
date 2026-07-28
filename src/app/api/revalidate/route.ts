@@ -43,6 +43,16 @@ export async function POST(request: Request) {
       }
     }
 
+    // The sitemap caches for a day (see app/sitemap.ts). Any change to the set
+    // of indexable articles therefore takes up to 24h to be advertised unless it
+    // is busted explicitly — which matters most after a bulk import, where
+    // thousands of URLs are otherwise invisible to crawlers for a day. Cheap to
+    // do here: the sitemap is one cached render, not a per-article cost.
+    if (collection === "articles" || collection === "sitemap") {
+      revalidatePath("/sitemap.xml");
+      revalidatePath("/news-sitemap.xml");
+    }
+
     return NextResponse.json({ revalidated: true, collection, slug });
   } catch (error) {
     console.error("[Revalidate] Error:", error);

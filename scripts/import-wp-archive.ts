@@ -36,6 +36,8 @@
  *   pnpm import:wp --min-year=2024          # only recent years
  */
 
+// Must precede the @payload-config import — see normalize-redirects.ts.
+import "dotenv/config";
 import fs from "node:fs";
 import readline from "node:readline";
 import path from "node:path";
@@ -71,6 +73,10 @@ const value = (name: string, fallback?: string) =>
 const DRY_RUN = flag("dry-run");
 const LIMIT = Number(value("limit", "0")) || Infinity;
 const MIN_YEAR = Number(value("min-year", "0")) || 0;
+// Upper bound so a staged release can be run one year at a time. Per-year
+// batching is what makes a year-specific parsing failure visible: 2021-22 is 53%
+// of the corpus, and a defect confined to one year disappears into an aggregate.
+const MAX_YEAR = Number(value("max-year", "0")) || Infinity;
 const CONCURRENCY = Number(value("concurrency", "4"));
 const PROGRESS_EVERY = Number(value("progress-every", "250"));
 
@@ -127,6 +133,42 @@ const stats = {
   redirects: 0, failed: 0, tierFull: 0, tierBrief: 0, empty: 0, skippedNoDate: 0, videoPosts: 0,
 };
 
+type YearStat = {
+  created: number; tierFull: number; tierBrief: number; empty: number;
+  video: number; noDate: number; failed: number;
+};
+
+/**
+ * Per-year counters. The aggregate totals cannot answer the question that
+ * actually matters during a staged import — "is one year parsing differently
+ * from the others?" A zero-date or video-extraction rate that is unremarkable
+ * across 37k posts can be a total failure confined to a single year.
+ */
+const byYear = new Map<string, YearStat>();
+
+function yearStat(year: string): YearStat {
+  let s = byYear.get(year);
+  if (!s) {
+    s = { created: 0, tierFull: 0, tierBrief: 0, empty: 0, video: 0, noDate: 0, failed: 0 };
+    byYear.set(year, s);
+  }
+  return s;
+}
+
+/**
+ * The year a post belongs to, resolved the same way its publishedAt will be.
+ *
+ * Deliberately NOT `item.date.slice(0,4)`: WordPress writes "0000-00-00" into
+ * post_date for some rows while post_date_gmt or post_modified still carry the
+ * real timestamp. Filtering on the raw field gives Number("0000") = 0, so those
+ * posts fall below every --min-year and drop out of the batch silently — and
+ * their zero-date never shows up in the count meant to reveal them.
+ */
+function resolvedYear(item: WpItem): string {
+  const iso = resolvePublishedAt(item.date, item.dateGmt, item.modified);
+  return iso ? iso.slice(0, 4) : "no-date";
+}
+
 async function main() {
   if (!fs.existsSync(XML_PATH)) {
     console.error(`Export not found: ${XML_PATH}`);
@@ -138,6 +180,7 @@ async function main() {
   console.log(`mode:        ${DRY_RUN ? "DRY RUN (no writes)" : "LIVE"}`);
   console.log(`limit:       ${LIMIT === Infinity ? "none" : LIMIT}`);
   console.log(`min-year:    ${MIN_YEAR || "none"}`);
+  console.log(`max-year:    ${MAX_YEAR === Infinity ? "none" : MAX_YEAR}`);
   console.log(`concurrency: ${CONCURRENCY}\n`);
 
   const payload = await getPayload({ config });
@@ -231,14 +274,67 @@ async function main() {
   rl.close();
   await drain(queue, payload, editorConfig, taxonomy);
   report();
+  await revalidateAll();
   process.exit(0);
+}
+
+/**
+ * Bust the site caches once, after the run.
+ *
+ * Every article is written with `disableRevalidate`, so nothing is refreshed
+ * during the import. The sitemap in particular caches for a day, which would
+ * leave thousands of freshly-imported URLs unadvertised to crawlers for 24h
+ * after a bulk import — the one thing a backfill exists to avoid.
+ *
+ * A previous version of this file claimed in a comment that this happened, and
+ * no such call existed. Skipping is reported loudly rather than silently, since
+ * "nothing printed" is what made the omission invisible.
+ */
+async function revalidateAll() {
+  if (DRY_RUN) return;
+
+  const secret = process.env.REVALIDATION_SECRET;
+  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.mfmsport.ma";
+  if (!secret) {
+    console.warn(
+      `\n  [revalidate] SKIPPED — REVALIDATION_SECRET not set.\n` +
+        `  The sitemap caches for 24h, so imported URLs will not be advertised\n` +
+        `  until it expires. Set the secret and POST {"collection":"sitemap"} to\n` +
+        `  ${base}/api/revalidate to bust it now.`,
+    );
+    return;
+  }
+
+  try {
+    const res = await fetch(new URL("/api/revalidate", base).toString(), {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-revalidate-secret": secret },
+      body: JSON.stringify({ collection: "sitemap" }),
+    });
+    console.log(
+      res.ok
+        ? `\n  [revalidate] sitemap + news-sitemap busted (${res.status})`
+        : `\n  [revalidate] FAILED ${res.status} ${res.statusText} — sitemap stays stale up to 24h`,
+    );
+  } catch (err: any) {
+    console.error(`\n  [revalidate] FAILED: ${err.message} — sitemap stays stale up to 24h`);
+  }
 }
 
 function shouldImport(item: WpItem, seen: Set<number>): boolean {
   if (item.type !== "post" || item.status !== "publish") return false;
   if (item.wpPostId === null) return false;
   if (seen.has(item.wpPostId)) { stats.skippedExisting++; return false; }
-  if (MIN_YEAR && Number(item.date.slice(0, 4)) < MIN_YEAR) return false;
+
+  // A post whose date cannot be resolved at all has no year to compare against.
+  // Let it through so importOne records it as skip-no-date and it appears in the
+  // report; dropping it here would hide exactly what we are counting.
+  const year = resolvedYear(item);
+  if (year === "no-date") return true;
+
+  const y = Number(year);
+  if (MIN_YEAR && y < MIN_YEAR) return false;
+  if (y > MAX_YEAR) return false;
   return true;
 }
 
@@ -264,15 +360,18 @@ async function importOne(
   editorConfig: any,
   taxonomy: TaxonomyCache,
 ) {
+  const ys = yearStat(resolvedYear(item));
   try {
     const textLen = bodyTextLength(item.contentHtml) + stripToText(item.acfText).length;
-    if (textLen === 0) stats.empty++;
+    if (textLen === 0) { stats.empty++; ys.empty++; }
     const tier = tierFor(textLen);
-    tier === "archive-full" ? stats.tierFull++ : stats.tierBrief++;
+    if (tier === "archive-full") { stats.tierFull++; ys.tierFull++; }
+    else { stats.tierBrief++; ys.tierBrief++; }
 
     const publishedAt = resolvePublishedAt(item.date, item.dateGmt, item.modified);
     if (!publishedAt) {
       stats.skippedNoDate++;
+      ys.noDate++;
       console.warn(`  [skip-no-date] #${item.wpPostId} ${item.slug?.slice(0, 40)}`);
       return;
     }
@@ -287,6 +386,7 @@ async function importOne(
         `  [dry] #${item.wpPostId} ${tier.padEnd(13)} ${String(textLen).padStart(5)}ch  ${baseSlug.slice(0, 60)}`,
       );
       stats.created++;
+      ys.created++;
       return;
     }
 
@@ -302,7 +402,7 @@ async function importOne(
     const htmlForBody =
       stripToText(cleanHtml).length > 0 ? cleanHtml.trim() : `<p>${escapeHtml(fallbackText)}</p>`;
     const videoUrl = extractYouTubeUrl(item.contentHtml);
-    if (videoUrl) stats.videoPosts++;
+    if (videoUrl) { stats.videoPosts++; ys.video++; }
 
     let lexical: any;
     try {
@@ -343,11 +443,12 @@ async function importOne(
       // Suppress the afterChange revalidation hook. Outside a Next request
       // there is no static-generation store, so revalidateTag throws (it is
       // caught and logged, but noisily), and each call costs an extra findByID
-      // — 37,000 pointless round trips over a full run. The site is
-      // revalidated once at the end of the import instead.
+      // — 37,000 pointless round trips over a full run. revalidateAll() below
+      // busts the caches once, after the run.
       context: { disableRevalidate: true },
     });
     stats.created++;
+    ys.created++;
 
     // The redirect is the whole point of importing the long tail — it is what
     // carries a decade of link equity forward. Create it even for brief tiers.
@@ -372,6 +473,7 @@ async function importOne(
     }
   } catch (err: any) {
     stats.failed++;
+    ys.failed++;
     console.error(`  [fail] #${item.wpPostId} ${item.slug?.slice(0, 40)}: ${err.message}`);
   }
 }
@@ -475,6 +577,29 @@ function report() {
   console.log(`  video posts:        ${stats.videoPosts}`);
   console.log(`  skipped (no date):  ${stats.skippedNoDate}`);
   console.log(`  failed:             ${stats.failed}`);
+
+  // Per-year breakdown. Rates, not just counts: a year-specific parsing failure
+  // shows up as an outlier column, and an outlier is only visible relative to
+  // its neighbours. This is the table to read before releasing the next batch.
+  if (byYear.size) {
+    console.log(`\n  by year:`);
+    console.log(
+      `    ${"year".padEnd(8)}${"created".padStart(9)}${"full".padStart(8)}${"brief".padStart(8)}` +
+        `${"empty".padStart(8)}${"video".padStart(8)}${"video%".padStart(9)}` +
+        `${"no-date".padStart(9)}${"failed".padStart(8)}`,
+    );
+    for (const year of [...byYear.keys()].sort()) {
+      const s = byYear.get(year)!;
+      const pct = s.created ? ((s.video / s.created) * 100).toFixed(1) : "0.0";
+      console.log(
+        `    ${year.padEnd(8)}${String(s.created).padStart(9)}${String(s.tierFull).padStart(8)}` +
+          `${String(s.tierBrief).padStart(8)}${String(s.empty).padStart(8)}` +
+          `${String(s.video).padStart(8)}${pct.padStart(9)}` +
+          `${String(s.noDate).padStart(9)}${String(s.failed).padStart(8)}`,
+      );
+    }
+  }
+
   if (DRY_RUN) console.log(`\n  DRY RUN — nothing was written.`);
 }
 

@@ -48,7 +48,17 @@ export const metadata: Metadata = {
 export default async function FrontendLayout({ children }: { children: React.ReactNode }) {
   const adHeadCodes = await getAdHeadCodes();
   return (
-    <html suppressHydrationWarning>
+    // lang/dir belong on <html>, not on a nested <div>. This element sits above
+    // [locale], so it never had access to the locale — which is why they ended
+    // up on an inner div and the root element carried neither. The site is
+    // Arabic-only (see Conventions), so they are simply constants here.
+    //
+    // Both matter beyond tidiness. `lang` is the first language signal Google
+    // and screen readers read. `dir` on <html>, not on a descendant, is what
+    // makes anything rendered OUTSIDE the locale subtree lay out right-to-left —
+    // most importantly not-found.tsx, which is a sibling of [locale] and was
+    // rendering an Arabic 404 left-to-right.
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
       <body
         className={`${plexSans.variable} ${plexArabic.variable} font-sans antialiased`}
       >
