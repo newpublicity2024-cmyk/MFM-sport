@@ -12,8 +12,7 @@ Arabic-language Moroccan football news site. Next.js 16 (App Router) + Payload C
 
 **The 2024 batch COMPLETED.** 6,570 created, 0 failed, 0 no-date, 0 empty, 6,570 redirects, 101 correctly skipped as already-imported. Tier split 5,706 `archive-full` / 864 `archive-brief` — and `audit:body-length` independently predicted exactly 864 thin posts for 2024, which is the real corroboration.
 
-**Unresolved before trusting later batches: `video posts: 0` across all 6,570.**
-Video-only posts were one of the three bugs found during the Neon-branch trial run — `extractYouTubeUrl` exists precisely because they occur. Zero extractions may be genuine for 2024, but a broken matcher would produce the identical number, and nothing else in the report distinguishes them. Check before reading later batches' video counts as meaningful: grep the 2024 slice of the export for `youtube|youtu.be` and compare against 0.
+**`video posts: 0` for 2024 is RESOLVED and correct.** 0 posts in 2024 even mention YouTube, and `extractYouTubeUrl` resolves 16 of 16 mentions across 2022 and 2025. The extractor works; the zero is a property of the year, not a broken matcher. `pnpm audit:body-length` reports both raw mentions and resolved URLs, so this stays checkable rather than assumed.
 
 ```bash
 # 1. next: 2025 (1,509 posts) and 2026 (564). Audit already passed for both.
@@ -72,33 +71,28 @@ Archive-fields DDL is **applied to production** (`broad-snow-50246164` / branch 
 
 Verification branch **`br-gentle-hat-a2bzeay0`** is alive deliberately — keep it until the full import is done. It holds ~2,378 imported archive articles and 2,178 normalised redirects, and is useful to diff against.
 
-**The 2024 import is partially applied to production.** State as of the interruption:
+**The 2024 import COMPLETED against production.**
 
 | | |
 |---|---|
-| articles | 6,594 — 398 `editorial` (pre-existing, untouched) + 6,196 imported |
-| `archive-full` / `archive-brief` | 5,383 / 813 |
-| with `wp_post_id` | 6,297 = 101 backfilled + 6,196 imported |
-| redirects | 6,396 = 200 original + 6,196 new |
-| imported date range | 2024-01-03 → 2024-12-11 (confirms `--max-year` works) |
+| created | 6,570 (exactly the corpus-predicted count) |
+| `archive-full` / `archive-brief` | 5,706 / 864 |
+| skipped as already-imported | 101 (the backfill working) |
+| redirects created | 6,570 |
 | failures / zero-date / empty bodies | **0 / 0 / 0** |
+| imported date range | 2024-01-03 → 2024-12-11 (confirms `--max-year`) |
 
-Two invariants held for every row and are worth re-checking after each batch: `redirects − 200 == imported`, and `archive-full + archive-brief == imported`. Both mean one redirect and one tier per article, with nothing silently dropped.
+Two invariants to re-check after each batch: `redirects - 200 == imported`, and `archive-full + archive-brief == imported`. Both mean one redirect and one tier per article, with nothing silently dropped.
 
-Tier split landed at **13.3% `archive-brief`**, against the 13.2% predicted in `docs/wp-corpus-analysis.md`. An earlier reading of 21.2% was a partial-sample artifact of a chronological export — not a bug. `pnpm audit:body-length --year=<Y>` is the tool that settled it.
+The strong result is not the percentage: `audit:body-length` independently predicted **864** thin posts for 2024, and the importer produced **864** `archive-brief`. Two code paths, same number. An earlier reading of 21.2% was a partial-sample artifact of a chronological export.
 
 **A backfill was required before any import could run safely.** All 398 pre-existing articles had `wp_post_id` NULL, so the importer's checkpoint could not see them and would have re-created every one at `<slug>-2` — indexable, sitemap-listed, and with no redirect, since the legacy redirect already points at the original. `pnpm backfill:wp-ids` matched 101 via the redirect map; the other 297 postdate the export and cannot collide. The proof those numbers are complete: exactly 101 articles have `published_at` on or before the export date.
 
-### The exact next command
+### Import order
 
-```bash
-# BLOCKED pending the owner's own fresh-URL spot-check on an untouched legacy URL.
-# Then, and only then, the first import batch:
-pnpm import:wp -- --dry-run --limit=25
-pnpm import:wp -- --min-year=2024
-```
+**DDL → deploy → normalize → import.** All of DDL, deploy and normalize are done. The order matters: without `lib/seo/indexation` deployed, every imported article is immediately indexable and listed in the sitemap, which defeats the staged release.
 
-Import order is **DDL → deploy → normalize → import**, and it matters: without `lib/seo/indexation` deployed, every imported article is immediately indexable and listed in the sitemap, which defeats the staged release. DDL, deploy and normalize are all now done.
+See **Resume here** at the top for the next command.
 
 ### Open defects — found, not yet fixed
 
