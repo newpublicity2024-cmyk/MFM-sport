@@ -57,6 +57,7 @@ import {
   stripToText,
   tierFor,
 } from "../src/lib/seo/wpArchive";
+import { normalizeLegacyPath } from "../src/lib/seo/legacyPath";
 
 // ---------------------------------------------------------------------------
 // CLI
@@ -350,7 +351,11 @@ async function importOne(
 
     // The redirect is the whole point of importing the long tail — it is what
     // carries a decade of link equity forward. Create it even for brief tiers.
-    const from = legacyPathFromLink(item.link);
+    // Store the canonical form so the exact-match lookup in middleware actually
+    // hits. Storing the raw WordPress permalink is what left the original 200
+    // redirects dead — see lib/seo/legacyPath.
+    const rawFrom = legacyPathFromLink(item.link);
+    const from = rawFrom ? normalizeLegacyPath(rawFrom) : null;
     if (from) {
       const existing = await payload.find({
         collection: "redirects",

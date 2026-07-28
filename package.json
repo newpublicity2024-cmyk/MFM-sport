@@ -37,7 +37,9 @@
     "build:ar-dicts:players": "tsx scripts/build-ar-dictionaries.ts --players",
     "build:ar-dicts:national": "tsx scripts/build-ar-dictionaries.ts --national",
     "import:wp": "tsx scripts/import-wp-archive.ts",
-    "import:wp:dry": "tsx scripts/import-wp-archive.ts --dry-run --limit=20"
+    "import:wp:dry": "tsx scripts/import-wp-archive.ts --dry-run --limit=20",
+    "redirects:normalize": "tsx scripts/normalize-redirects.ts",
+    "redirects:normalize:dry": "tsx scripts/normalize-redirects.ts --dry-run"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.84.0",

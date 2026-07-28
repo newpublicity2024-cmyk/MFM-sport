@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
+import { normalizeLegacyPath } from "./lib/seo/legacyPath";
 
 const intlMiddleware = createIntlMiddleware(routing);
 
@@ -36,8 +37,14 @@ export default async function middleware(request: NextRequest) {
 
   if (isLegacyCandidate(pathname)) {
     try {
+      // Look up the canonical form, not the raw pathname. WordPress stored these
+      // paths percent-encoded in lowercase with a trailing slash; the platform
+      // 308-normalises incoming requests to uppercase hex without one, so an
+      // exact match on the raw value missed every Arabic URL in the map. See
+      // lib/seo/legacyPath. Normalising also collapses the encoding variants
+      // onto one CDN cache key.
       const lookupUrl = new URL(
-        `/api/redirects?from=${encodeURIComponent(pathname)}`,
+        `/api/redirects?from=${encodeURIComponent(normalizeLegacyPath(pathname))}`,
         request.url,
       );
       // Cache lookups (incl. misses) for a day so repeated legacy hits don't
