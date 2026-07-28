@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     "آخر أخبار الكرة المغربية: البطولة الاحترافية، المنتخب المغربي، الوداد والرجاء، دوري أبطال أفريقيا، نتائج المباريات وترتيب الفرق مباشرة على إم إف إم سبور.",
   // AdSense site verification: emits <meta name="google-adsense-account"> so
   // Google can confirm ownership during review. Present only once the client ID
-  // is configured; complements the adsbygoogle loader below.
+  // is configured; complements the adsbygoogle loader in the (site) layout.
   ...(adsenseClientId && {
     other: { "google-adsense-account": adsenseClientId },
   }),
@@ -64,11 +64,12 @@ export default async function FrontendLayout({ children }: { children: React.Rea
         >
           {children}
         </ThemeProvider>
-        {/* The AdSense loader deliberately lives in [locale]/layout.tsx, NOT here.
+        {/* The AdSense loader deliberately lives in [locale]/(site)/layout.tsx, NOT here.
             This layout also wraps not-found.tsx, and Google's policy prohibits ads
             on screens without publisher content. GA4 showed >50% of all page views
             were error pages, every one of them carrying Auto Ads. Keeping the
-            loader one level down means real pages get ads and 404s never do. */}
+            loader inside the (site) route group means real pages get ads and
+            404s — which render outside that group — structurally cannot. */}
         <GoogleAnalytics />
         <Analytics />
         <SpeedInsights />
