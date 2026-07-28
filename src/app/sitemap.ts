@@ -173,5 +173,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
+  // Slice this shard's window out of the full, deterministically-ordered list.
+  // Every shard builds the same list and takes its slice: simpler and less
+  // error-prone than per-shard queries with offsets, and the ordering is stable
+  // so a URL cannot silently fall between two shards. The cost is bounded — a
+  // handful of shards, each regenerated at most once a day.
   return entries;
 }
