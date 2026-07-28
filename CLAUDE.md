@@ -137,15 +137,29 @@ The short version, when you don't have time for the long one:
 
 ## Hard gates
 
-**2023-and-earlier batches MUST NOT run until `pnpm audit:body-length --year=<Y>` passes for that year with zero disagreements.**
+**2023-and-earlier batches MUST NOT run until `pnpm audit:body-length --year=<Y>` reports `MIS-TIERED to archive-brief: 0` for that year.**
 
-651 multi-line ACF `meta_value` blocks are known to exist outside the 2024–2026 window and will silently under-count bodies into `archive-brief`, which is never released.
+Gate on **MIS-TIERED**, not on "posts where they disagree". The disagreement count compares the importer's total against a plain-text measure that *ignores ACF entirely* — so when the ACF read returns nothing, both measures agree on the same wrong answer and the count stays 0 while articles are silently mis-tiered. It happened to be non-zero for 2021, but incidentally, and it does not measure the harm.
+
+**2021 is confirmed affected: 417 posts under-counted, 183,545 characters lost, 246 full articles mis-tiered into `archive-brief`** — which is never released, so they would be `noindex` permanently. 2022 and 2024 measure clean.
 
 The mechanism: `readTag()` matches `<tag>…</tag>` on a *single line*. ACF flexible-content values are multi-line HTML, so `readTag` returns `null`, the value contributes **0 characters**, and `lastMetaKey = null` discards the remainder. A full article scores under 500, lands in `archive-brief`, and is `noindex` indefinitely — with no error, no failed row, and nothing in the import summary to distinguish it from a genuinely short post.
 
 This is verified *absent* from 2024, 2025 and 2026 (zero disagreements in all three, and all three match `docs/wp-corpus-analysis.md` to the decimal). It is verified *present* in the corpus as a whole. Since the per-year disagreement count is zero across the whole released window, all 651 sit in earlier years — most likely 2021–2022, which is 53% of the corpus.
 
-Run the audit per year. If disagreements are non-zero, fix the multi-line read in `scripts/import-wp-archive.ts` (~line 258) **before** importing that year — re-tiering after the fact is a bulk write, which is exactly what the tier field exists to avoid.
+Run the audit per year. If MIS-TIERED is non-zero, fix the multi-line read in `scripts/import-wp-archive.ts` (~line 258) **before** importing that year — re-tiering after the fact is a bulk write, which is exactly what the tier field exists to avoid.
+
+Measured per year so far:
+
+| Year | under-counted | chars lost | mis-tiered | verdict |
+|---|---|---|---|---|
+| 2026 | 0 | 0 | 0 | clean |
+| 2025 | 0 | 0 | 0 | clean |
+| 2024 | 0 | 0 | 0 | clean |
+| 2022 | 0 | 0 | 0 | clean |
+| **2021** | **417** | **183,545** | **246** | **BLOCKED — fix first** |
+
+2023, 2020, 2019 and 2010 are unmeasured. Run the audit before each.
 
 ## Landmines
 

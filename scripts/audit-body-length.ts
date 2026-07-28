@@ -24,7 +24,13 @@ import fs from "node:fs";
 import readline from "node:readline";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { bodyTextLength, resolvePublishedAt, stripToText, ACF_BODY_KEY } from "../src/lib/seo/wpArchive";
+import {
+  ACF_BODY_KEY,
+  bodyTextLength,
+  extractYouTubeUrl,
+  resolvePublishedAt,
+  stripToText,
+} from "../src/lib/seo/wpArchive";
 
 const argv = process.argv.slice(2);
 const val = (n: string, d?: string) =>
@@ -59,18 +65,26 @@ async function main() {
   let inItem = false, inContent = false, inExcerpt = false;
   let id: number | null = null;
   let slug = "", type = "", status = "", date = "", dateGmt = "", modified = "";
-  let content = "", excerpt = "", acf = "";
+  let content = "", excerpt = "", acf = "", acfMulti = "";
   let lastMetaKey: string | null = null;
+  let inMetaValue = false, capturingAcf = false;
   let multilineMetaValues = 0;
 
   let n = 0, thinImporter = 0, thinPlain = 0, disagree = 0;
+  // Video counters. `video posts: 0` in an import report is indistinguishable
+  // from a broken matcher, so count the raw mentions separately from what
+  // extractYouTubeUrl actually resolves.
+  let rawYouTube = 0, extracted = 0;
+  let acfUnderCounted = 0, acfCharsLost = 0, acfMistiered = 0;
+  const videoMisses: string[] = [];
   const samples: Sample[] = [];
 
   for await (const line of rl) {
     if (line.includes("<item>")) {
       inItem = true; inContent = false; inExcerpt = false;
       id = null; slug = ""; type = ""; status = ""; date = ""; dateGmt = ""; modified = "";
-      content = ""; excerpt = ""; acf = ""; lastMetaKey = null;
+      content = ""; excerpt = ""; acf = ""; acfMulti = "";
+      lastMetaKey = null; inMetaValue = false; capturingAcf = false;
       continue;
     }
     if (!inItem) continue;
@@ -83,6 +97,13 @@ async function main() {
           n++;
           // Exactly what the importer computes.
           const importer = bodyTextLength(content) + stripToText(acf).length;
+          // The importer's total vs one that reads ACF across lines.
+          const importerMulti = bodyTextLength(content) + stripToText(acfMulti).length;
+          if (importerMulti > importer) {
+            acfUnderCounted++;
+            acfCharsLost += importerMulti - importer;
+            if (importer < 500 && importerMulti >= 500) acfMistiered++;
+          }
           // An independent measure of the same body, multi-line safe.
           const plain = plainFromBlock(content).length;
 
@@ -92,6 +113,17 @@ async function main() {
 
           if (importer < 500 && samples.length < SAMPLES) {
             samples.push({ id, slug, importer, plain, rawChars: content.length });
+          }
+
+          const mentionsYouTube = /youtube|youtu\.be/i.test(content);
+          const url = extractYouTubeUrl(content);
+          if (mentionsYouTube) rawYouTube++;
+          if (url) extracted++;
+          // A post that names YouTube but yields no URL is where a matcher bug
+          // would live — record a sample of the surrounding markup.
+          if (mentionsYouTube && !url && videoMisses.length < 5) {
+            const at = content.search(/youtube|youtu\.be/i);
+            videoMisses.push(`#${id} …${content.slice(Math.max(0, at - 90), at + 110).replace(/\s+/g, " ")}…`);
           }
         }
       }
@@ -116,16 +148,31 @@ async function main() {
     if (inExcerpt) excerpt += line + "\n";
     if (line.includes("</excerpt:encoded>")) inExcerpt = false;
 
-    // Mirror the importer's ACF handling, and count how often its single-line
-    // assumption is violated — that is the failure mode under suspicion.
-    if (line.includes("<wp:meta_key>")) lastMetaKey = readTag(line, "wp:meta_key");
-    if (line.includes("<wp:meta_value>") && lastMetaKey) {
-      if (ACF_BODY_KEY.test(lastMetaKey)) {
+    // Two ACF readings of the same bytes.
+    //
+    // `acf` mirrors the importer exactly, single-line regex and all. `acfMulti`
+    // accumulates across lines. Comparing the two is the ONLY way to see the
+    // under-count: comparing importer-vs-plain cannot, because the plain measure
+    // ignores ACF entirely, so a dropped ACF body makes both measures agree on
+    // the same wrong answer.
+    if (inMetaValue) {
+      if (capturingAcf) acfMulti += " " + stripToText(line);
+      if (line.includes("</wp:meta_value>")) { inMetaValue = false; capturingAcf = false; }
+    } else {
+      if (line.includes("<wp:meta_key>")) lastMetaKey = readTag(line, "wp:meta_key");
+      if (line.includes("<wp:meta_value>") && lastMetaKey) {
+        const isAcfBody = ACF_BODY_KEY.test(lastMetaKey);
         const v = readTag(line, "wp:meta_value");
-        if (v === null && !line.includes("</wp:meta_value>")) multilineMetaValues++;
-        acf += " " + stripToText(v ?? "");
+        const singleLine = v !== null || line.includes("</wp:meta_value>");
+
+        if (isAcfBody) {
+          acf += " " + stripToText(v ?? "");           // importer's view
+          acfMulti += " " + stripToText(line);          // multi-line-safe view
+          if (!singleLine) multilineMetaValues++;
+        }
+        if (!singleLine) { inMetaValue = true; capturingAcf = isAcfBody; }
+        lastMetaKey = null;
       }
-      lastMetaKey = null;
     }
   }
   rl.close();
@@ -137,6 +184,17 @@ async function main() {
   console.log(`thin (<500) per plain text: ${thinPlain}  (${pct(thinPlain)}%)`);
   console.log(`posts where they disagree:  ${disagree}`);
   console.log(`multi-line ACF meta_values: ${multilineMetaValues}`);
+  console.log(`
+ACF single-line vs multi-line read:`);
+  console.log(`  posts under-counted:       ${acfUnderCounted}`);
+  console.log(`  characters lost:           ${acfCharsLost}`);
+  console.log(`  MIS-TIERED to archive-brief: ${acfMistiered}`);
+  console.log(`
+video:`);
+  console.log(`  posts mentioning YouTube:  ${rawYouTube}`);
+  console.log(`  extractYouTubeUrl resolves:${String(extracted).padStart(6)}`);
+  console.log(`  mention but no URL:        ${rawYouTube - extracted}`);
+  for (const v of videoMisses) console.log(`    ${v.slice(0, 200)}`);
 
   console.log(`\nshortest posts as scored by the importer:`);
   console.log(`  ${"wp_id".padEnd(9)}${"importer".padStart(10)}${"plain".padStart(8)}${"rawHTML".padStart(9)}  slug`);
