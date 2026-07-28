@@ -76,16 +76,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const pathFor = (l: Config["locale"]) => `/${l}/articles/${encodeURIComponent(slugs[l])}`;
   const canonical = pathFor(loc);
 
-  const languages: Record<string, string> = {};
-  for (const l of ["ar", "fr", "en"] as const) {
-    const isTranslated = l === "ar" || slugs[l] !== slugs.ar;
-    if (l === loc || isTranslated) languages[HREFLANG[l]] = pathFor(l);
-  }
-  languages["x-default"] = pathFor("ar");
+  // Arabic only. The site retired /fr and /en (PR #43) and middleware 301s both
+  // to /ar — so advertising them as hreflang alternates pointed Google at URLs
+  // that immediately redirect. Google discards alternates that don't resolve
+  // directly and reports them as errors, which at best wasted the annotation and
+  // at worst muddied which URL is authoritative on a domain whose identity is
+  // already in question. The Payload fr/en translations are still stored and this
+  // is reversible: restore the loop when a locale is actually served again.
+  const languages: Record<string, string> = {
+    [HREFLANG.ar]: pathFor("ar"),
+    "x-default": pathFor("ar"),
+  };
 
-  const alternateLocale = (["ar", "fr", "en"] as const)
-    .filter((l) => l !== loc && (l === "ar" || slugs[l] !== slugs.ar))
-    .map((l) => OG_LOCALE[l]);
+  const alternateLocale: string[] = [];
 
   return {
     title: `${article.title} | MFM Sport`,

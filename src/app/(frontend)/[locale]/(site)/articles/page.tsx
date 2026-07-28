@@ -12,6 +12,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "article" });
   return {
+    alternates: { canonical: `/${locale}/articles` },
     title: `${t("allArticles")} | MFM Sport`,
   };
 }
