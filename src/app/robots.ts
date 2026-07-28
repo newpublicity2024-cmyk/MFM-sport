@@ -37,7 +37,9 @@ export default function robots(): MetadataRoute.Robots {
         disallow: "/",
       },
     ],
-    sitemap: `${SITE_URL}/sitemap.xml`,
+    // Both feeds: the main sitemap (a sharded index once the archive lands) and
+    // the rolling 48-hour Google News feed.
+    sitemap: [`${SITE_URL}/sitemap.xml`, `${SITE_URL}/news-sitemap.xml`],
     host: SITE_URL,
   };
 }

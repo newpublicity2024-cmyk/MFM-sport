@@ -14,6 +14,7 @@ import {
   cachedGetAds,
 } from "@/lib/payload/cached-queries";
 import { decodeSlug } from "@/lib/payload/slug";
+import { robotsFor } from "@/lib/seo/indexation";
 import {
   formatDate,
   formatTime,
@@ -90,6 +91,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${article.title} | MFM Sport`,
     description: article.excerpt || undefined,
     alternates: { canonical, languages },
+    // Archive backfill articles are released into the index in batches rather
+    // than all at once — see lib/seo/indexation.ts. Held-back articles are
+    // `noindex, follow`, so they still pass authority through their internal
+    // links. Native editorial articles are always indexable and get no tag.
+    robots: robotsFor(article),
     openGraph: {
       type: "article", url: canonical, siteName: "MFM Sport",
       locale: OG_LOCALE[loc], alternateLocale,

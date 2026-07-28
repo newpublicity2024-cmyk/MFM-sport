@@ -319,6 +319,18 @@ export interface Article {
    * YouTube video URL (e.g., https://youtube.com/watch?v=...)
    */
   videoUrl?: string | null;
+  /**
+   * Set by the archive importer. The resume key — an existing row is skipped, never duplicated.
+   */
+  wpPostId?: number | null;
+  /**
+   * The original WordPress post_name, so old URLs resolve by exact match rather than fuzzy title comparison.
+   */
+  legacySlug?: string | null;
+  /**
+   * Drives indexation. Native articles are always indexable; archive tiers are released in batches by publish year — see lib/seo/indexation.ts. Changing the release config is a config edit, never a re-import.
+   */
+  seoTier?: ('editorial' | 'archive-full' | 'archive-brief') | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -759,6 +771,9 @@ export interface ArticlesSelect<T extends boolean = true> {
   publishedAt?: T;
   isVideo?: T;
   videoUrl?: T;
+  wpPostId?: T;
+  legacySlug?: T;
+  seoTier?: T;
   updatedAt?: T;
   createdAt?: T;
 }

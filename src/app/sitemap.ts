@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { getPayload } from "payload";
 import configPromise from "@payload-config";
 import { SITE_URL } from "@/lib/seo/siteUrl";
+import { isIndexable, type SeoTier } from "@/lib/seo/indexation";
 
 // Arabic-only front end: only advertise /ar URLs (fr/en are 301'd to /ar).
 const LOCALES = ["ar"];
@@ -10,7 +11,33 @@ const LOCALES = ["ar"];
 // expensive. Cache it for a day instead of rebuilding on every crawler hit.
 export const revalidate = 86400;
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+/** URLs per sitemap file. The protocol caps a single file at 50,000; the
+ *  WordPress backfill takes this site past 27,000 URLs, so a comfortable shard
+ *  size keeps every file well clear of the limit and keeps each daily
+ *  regeneration cheap. Next serves these as /sitemap/0.xml, /sitemap/1.xml, …
+ *  behind an automatically generated index. */
+const URLS_PER_SITEMAP = 10000;
+
+/**
+ * Next calls this to discover the shards, then calls the default export once per
+ * shard id. Building the full entry list to count it is wasteful, so the shard
+ * count comes from a cheap count-only query with headroom for taxonomy and
+ * static URLs.
+ */
+export async function generateSitemaps() {
+  const payload = await getPayload({ config: configPromise });
+  const { totalDocs } = await payload.count({
+    collection: "articles",
+    where: { status: { equals: "published" } },
+  });
+  // + ~1,000 for categories, tags, authors, competitions, clubs and static pages.
+  const shards = Math.max(1, Math.ceil((totalDocs + 1000) / URLS_PER_SITEMAP));
+  return Array.from({ length: shards }, (_, id) => ({ id }));
+}
+
+export default async function sitemap({
+  id = 0,
+}: { id?: number } = {}): Promise<MetadataRoute.Sitemap> {
   const payload = await getPayload({ config: configPromise });
   const entries: MetadataRoute.Sitemap = [];
 
@@ -40,11 +67,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     locale: "all",
     limit: 50000,
     depth: 0,
-    select: { slug: true, updatedAt: true },
+    select: { slug: true, updatedAt: true, seoTier: true, publishedAt: true },
     sort: "-publishedAt",
   });
 
   for (const article of articles.docs) {
+    // A sitemap must not advertise a URL that serves `noindex` — the two are
+    // contradictory signals. Archive articles still held back by the staged
+    // release (lib/seo/indexation) are therefore omitted here, and appear
+    // automatically as each batch is released.
+    if (!isIndexable(article as { seoTier?: SeoTier; publishedAt?: string })) continue;
+
     const raw = (article as { slug?: Partial<Record<string, string>> | string }).slug;
     const slugMap: Partial<Record<string, string>> =
       raw && typeof raw === "object" ? raw : { ar: typeof raw === "string" ? raw : undefined };
@@ -146,5 +179,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  return entries;
+  // Slice this shard's window out of the full, deterministically-ordered list.
+  // Every shard builds the same list and takes its slice: simpler and less
+  // error-prone than per-shard queries with offsets, and the ordering is stable
+  // so a URL cannot silently fall between two shards. The cost is bounded — a
+  // handful of shards, each regenerated at most once a day.
+  return entries.slice(id * URLS_PER_SITEMAP, (id + 1) * URLS_PER_SITEMAP);
 }
