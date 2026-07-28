@@ -6,7 +6,28 @@ Arabic-language Moroccan football news site. Next.js 16 (App Router) + Payload C
 
 ## Session state — SEO remediation
 
-**Updated: 28 July 2026, phase boundary — redirect map repaired and verified.** Update this at every phase boundary. It is deliberately ground truth on disk rather than in a conversation summary.
+**Updated: 28 July 2026, phase boundary — 2024 import batch in flight.** Update this at every phase boundary. It is deliberately ground truth on disk rather than in a conversation summary.
+
+### Resume here
+
+The 2024 batch was interrupted mid-run at **6,196 of 6,570**. This is safe: `wpPostId` is unique and indexed, and the importer loads the set of existing ids as its checkpoint, so re-running skips what already landed.
+
+```bash
+# 1. finish 2024 (resumes automatically — no flags change)
+pnpm import:wp -- --min-year=2024 --max-year=2024
+
+# 2. then 2025 (1,509 posts) and 2026 (564). Audit already passed for both.
+pnpm import:wp -- --min-year=2025 --max-year=2025
+pnpm import:wp -- --min-year=2026 --max-year=2026
+
+# 3. then STOP for Search Console review before any older year.
+```
+
+Do not run 2023 or earlier — see **Hard gates** below.
+
+**Known gap, not yet fixed:** the importer writes with `context.disableRevalidate` and a comment at ~line 403 claims the site is "revalidated once at the end of the import". *No such call exists.* `src/app/sitemap.ts` has `revalidate = 86400`, so the imported URLs will not appear in `/sitemap.xml` for up to 24h. `/api/revalidate` does not cover `/sitemap.xml` either — it revalidates article, listing and home paths only. Either add `revalidatePath("/sitemap.xml")` to that route and call it once after the import, or wait out the 24h.
+
+**Still unfixed:** `<html>` carries no `lang`/`dir` (see open defects). One-line hardcode now the site is Arabic-only.
 
 ### Merged and deployed
 
@@ -51,7 +72,22 @@ Archive-fields DDL is **applied to production** (`broad-snow-50246164` / branch 
 
 Verification branch **`br-gentle-hat-a2bzeay0`** is alive deliberately — keep it until the full import is done. It holds ~2,378 imported archive articles and 2,178 normalised redirects, and is useful to diff against.
 
-**No import has run against production.** Production has 397 articles and 200 (now normalised) redirects.
+**The 2024 import is partially applied to production.** State as of the interruption:
+
+| | |
+|---|---|
+| articles | 6,594 — 398 `editorial` (pre-existing, untouched) + 6,196 imported |
+| `archive-full` / `archive-brief` | 5,383 / 813 |
+| with `wp_post_id` | 6,297 = 101 backfilled + 6,196 imported |
+| redirects | 6,396 = 200 original + 6,196 new |
+| imported date range | 2024-01-03 → 2024-12-11 (confirms `--max-year` works) |
+| failures / zero-date / empty bodies | **0 / 0 / 0** |
+
+Two invariants held for every row and are worth re-checking after each batch: `redirects − 200 == imported`, and `archive-full + archive-brief == imported`. Both mean one redirect and one tier per article, with nothing silently dropped.
+
+Tier split landed at **13.3% `archive-brief`**, against the 13.2% predicted in `docs/wp-corpus-analysis.md`. An earlier reading of 21.2% was a partial-sample artifact of a chronological export — not a bug. `pnpm audit:body-length --year=<Y>` is the tool that settled it.
+
+**A backfill was required before any import could run safely.** All 398 pre-existing articles had `wp_post_id` NULL, so the importer's checkpoint could not see them and would have re-created every one at `<slug>-2` — indexable, sitemap-listed, and with no redirect, since the legacy redirect already points at the original. `pnpm backfill:wp-ids` matched 101 via the redirect map; the other 297 postdate the export and cannot collide. The proof those numbers are complete: exactly 101 articles have `published_at` on or before the export date.
 
 ### The exact next command
 
