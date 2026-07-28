@@ -36,6 +36,8 @@
  *   pnpm import:wp --min-year=2024          # only recent years
  */
 
+// Must precede the @payload-config import — see normalize-redirects.ts.
+import "dotenv/config";
 import fs from "node:fs";
 import readline from "node:readline";
 import path from "node:path";

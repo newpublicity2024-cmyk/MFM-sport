@@ -39,7 +39,8 @@
     "import:wp": "tsx scripts/import-wp-archive.ts",
     "import:wp:dry": "tsx scripts/import-wp-archive.ts --dry-run --limit=20",
     "redirects:normalize": "tsx scripts/normalize-redirects.ts",
-    "redirects:normalize:dry": "tsx scripts/normalize-redirects.ts --dry-run"
+    "redirects:normalize:dry": "tsx scripts/normalize-redirects.ts --dry-run",
+    "redirects:verify": "tsx scripts/verify-redirects.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.84.0",

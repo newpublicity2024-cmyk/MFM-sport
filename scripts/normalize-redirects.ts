@@ -22,6 +22,10 @@
  *   pnpm redirects:normalize
  */
 
+// Must precede the @payload-config import: payload.config.ts throws at module
+// load if PAYLOAD_SECRET/DATABASE_URI are absent, and a bare `tsx` run does not
+// read .env the way `next` does.
+import "dotenv/config";
 import { getPayload } from "payload";
 import config from "@payload-config";
 import { normalizeLegacyPath } from "../src/lib/seo/legacyPath";

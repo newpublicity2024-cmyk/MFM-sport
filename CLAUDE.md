@@ -6,7 +6,7 @@ Arabic-language Moroccan football news site. Next.js 16 (App Router) + Payload C
 
 ## Session state — SEO remediation
 
-**Updated: 28 July 2026, end of session 1.** Update this at every phase boundary. It is deliberately ground truth on disk rather than in a conversation summary.
+**Updated: 28 July 2026, phase boundary — redirect map repaired and verified.** Update this at every phase boundary. It is deliberately ground truth on disk rather than in a conversation summary.
 
 ### Merged and deployed
 
@@ -15,33 +15,58 @@ Arabic-language Moroccan football news site. Next.js 16 (App Router) + Payload C
 | #52 | Real 404s, ad-free error pages, `www` canonical, 307→308, Arabic description, match whitelist, archive importer |
 | #53 | Reverted sitemap sharding (it served zero URLs and 404'd `/sitemap.xml`) |
 | #54 | hreflang → Arabic only, canonicals on all page types, `docs/verification-principles.md`, this file |
+| #55 | Upstream API failure no longer serves 404 for fixtures that exist |
 
-Deploy of #52/#53 is **live and verified on production**: `/ar/transfers` → 404, locale redirect → 308, `/sitemap.xml` → 200, `/news-sitemap.xml` → 200, zero real ad `<script>` tags on both 404 types.
+All four are **live on production and verified against the served bytes** (deployment `dpl_9mR6QBDznjofSoHUSSn9xbafdG1i`):
+
+- `/ar/transfers` and a missing article slug → **404** (real, not soft)
+- apex → `/ar` → **308**
+- `/sitemap.xml` → 200 with **906 `<loc>`**, of which 398 are articles
+- `/news-sitemap.xml` → 200 with **13 `<loc>`** — the 48h window is holding, not leaking the archive
+- article page → exactly **2** hreflang alternates, `ar-MA` + `x-default`, both `/ar`; canonical on `www`; no `robots` meta (indexable)
+- 404 page → **0** real `adsbygoogle.js` script tags
+
+### Redirect map — repaired and verified end-to-end
+
+All 200 rows were stored in the dead format (100% had *both* a trailing slash and lowercase hex). `pnpm redirects:normalize` rewrote all 200; **0 duplicate collisions**.
+
+Verified on the artefact, not the table:
+
+| Check | Result |
+|---|---|
+| `/api/redirects?from=…` — the exact request middleware makes | **200/200** return the correct target |
+| Stale `{to: null}` cached by the CDN before the repair | **0** (the deploy reset the cache) |
+| Destination article URLs | **200/200** return HTTP 200 |
+| One full legacy chain, end to end | `308` → `301` → `200` |
+
+**Breakdown of the 200: all 200 → live published article.** Zero category-hub fallbacks, zero dead targets.
+
+`pnpm redirects:verify` (`scripts/verify-redirects.ts`) re-runs the whole check any time. It probes the lookup endpoint rather than the legacy URLs, deliberately: fetching all 200 legacy URLs would consume the untouched sample someone may want for an independent spot-check.
+
+The legacy URL consumed for the end-to-end chain test was **`/الجامعة-تبرم-اتفاقية-شراكة-مع-المكتب-ا`** (row 356). The other 199 are untouched.
 
 ### Database
 
-Archive-fields DDL is **applied to production** (`broad-snow-50246164` / branch `production`): `wp_post_id`, `legacy_slug`, `seo_tier`, three indexes, `payload_migrations` batch 8. All pre-existing articles default to `editorial`, so they stay indexable.
+Archive-fields DDL is **applied to production** (`broad-snow-50246164` / branch `br-royal-wildflower-a21skzaw`): `wp_post_id`, `legacy_slug`, `seo_tier`, three indexes, `payload_migrations` batch 8. All pre-existing articles default to `editorial`, so they stay indexable.
 
 Verification branch **`br-gentle-hat-a2bzeay0`** is alive deliberately — keep it until the full import is done. It holds ~2,378 imported archive articles and 2,178 normalised redirects, and is useful to diff against.
 
-**No import has run against production.** Production has 397 articles and 200 (unnormalised) redirects.
+**No import has run against production.** Production has 397 articles and 200 (now normalised) redirects.
 
 ### The exact next command
 
 ```bash
-# 1. verify hreflang on prod once #54 deploys (expect ar-MA + x-default, no /fr or /en)
-curl -s https://www.mfmsport.ma/ar/articles/<slug> | grep -oiE 'hreflang="[^"]*"'
-
-# 2. repair the production redirect map (200 rows, currently matching nothing)
-pnpm redirects:normalize:dry     # inspect first
-pnpm redirects:normalize
-
-# 3. then, and only then, the first import batch
+# BLOCKED pending the owner's own fresh-URL spot-check on an untouched legacy URL.
+# Then, and only then, the first import batch:
 pnpm import:wp -- --dry-run --limit=25
 pnpm import:wp -- --min-year=2024
 ```
 
-Import order is **DDL → deploy → normalize → import**, and it matters: without `lib/seo/indexation` deployed, every imported article is immediately indexable and listed in the sitemap, which defeats the staged release.
+Import order is **DDL → deploy → normalize → import**, and it matters: without `lib/seo/indexation` deployed, every imported article is immediately indexable and listed in the sitemap, which defeats the staged release. DDL, deploy and normalize are all now done.
+
+### Open defects — found, not yet fixed
+
+- **`<html>` carries no `lang` and no `dir`.** Production serves `<html data-dpl-id="…">` on every page type including the 404. `dir="rtl"` / `lang="ar"` are set on an inner `<div>` in `[locale]/layout.tsx:44` instead. `<html lang>` is the language signal Google and screen readers read first, and the missing `dir` means anything rendered outside that div — the 404 page among them — lays out left-to-right on an Arabic site. The `<html>` element lives in `(frontend)/layout.tsx`, above `[locale]`, which is why it never got the locale; now that the site is Arabic-only it can simply be hardcoded. Small fix, real signal.
 
 ### Open blockers
 
