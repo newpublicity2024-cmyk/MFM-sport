@@ -22,7 +22,7 @@ export const revalidate = 900;
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   const club = await getClubBySlug(slug, locale as Config["locale"]);
-  if (!club) return { title: "Not Found" };
+  if (!club) notFound();
   return { title: `${club.name} | MFM Sport` };
 }
 

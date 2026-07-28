@@ -58,8 +58,19 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
-  // Normal next-intl locale routing
-  return intlMiddleware(request);
+  // Normal next-intl locale routing.
+  // next-intl issues its locale redirects as 307 (temporary), which asks Google
+  // to keep the old URL and re-check it every crawl. "/" -> "/ar" is permanent,
+  // so upgrade any redirect it produces to 308 (the method-preserving permanent
+  // equivalent of 301). Non-redirect responses pass through untouched.
+  const response = intlMiddleware(request);
+  if (response.status === 307) {
+    const location = response.headers.get("location");
+    if (location) {
+      return NextResponse.redirect(new URL(location, request.url), 308);
+    }
+  }
+  return response;
 }
 
 export const config = {

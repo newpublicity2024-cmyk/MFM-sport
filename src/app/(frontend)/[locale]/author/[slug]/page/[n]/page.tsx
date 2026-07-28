@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import type { Config } from "@/payload-types";
 import { redirect } from "next/navigation";
@@ -15,7 +16,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   const author = await getAuthorBySlug(slug, locale as Config["locale"]);
-  if (!author) return { title: "Not Found" };
+  if (!author) notFound();
   return {
     title: `${author.name} | MFM Sport`,
     description: author.bio || undefined,

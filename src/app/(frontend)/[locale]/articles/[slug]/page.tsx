@@ -55,7 +55,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     cachedGetArticleBySlug(slug, loc),
     cachedGetArticleLocalizedSlugs(slug, loc),
   ]);
-  if (!article) return { title: "Not Found" };
+  // notFound() must be raised HERE, in generateMetadata, not just in the page
+  // body. generateMetadata resolves before the response starts streaming, so the
+  // 404 status can still be set. By the time the page component runs, the
+  // [locale]/loading.tsx Suspense boundary has already flushed the shell and the
+  // status is locked at 200 — which is why every missing article, category, tag
+  // and fixture was answering "200 OK" with a not-found page rendered inside it.
+  if (!article) notFound();
 
   const heroImageUrl = getArticleHeroUrl(article, "hero");
   const category = article.categories?.[0];

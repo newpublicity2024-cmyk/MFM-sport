@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
 import { getPayload } from "payload";
 import configPromise from "@payload-config";
+import { SITE_URL } from "@/lib/seo/siteUrl";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://mfmsport.ma";
 // Arabic-only front end: only advertise /ar URLs (fr/en are 301'd to /ar).
 const LOCALES = ["ar"];
 

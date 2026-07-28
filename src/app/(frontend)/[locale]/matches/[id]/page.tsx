@@ -10,6 +10,7 @@ import { MatchLineup } from "@/components/football/MatchLineup";
 import { MatchStats } from "@/components/football/MatchStats";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { localizeLeague, localizeRound, localizeTeam } from "@/lib/api-football/localize";
+import { isIndexableFixture } from "@/lib/seo/matchIndexing";
 
 // ISR: regenerate the match shell at most once a minute; live score/events
 // still stream client-side via LiveScoreboard polling the cached fixture API.
@@ -22,11 +23,42 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, id } = await params;
   const fixture = await getFixtureById(Number(id));
-  if (!fixture) return { title: "Not Found" };
+  // Raised here, before the response streams, so the 404 status is still
+  // settable — see the same note in articles/[slug]/page.tsx.
+  if (!fixture) notFound();
+
   const home = localizeTeam(fixture.teams.home.id, fixture.teams.home.name, locale);
   const away = localizeTeam(fixture.teams.away.id, fixture.teams.away.name, locale);
+  const league = localizeLeague(fixture.league.id, fixture.league.name, locale);
+  const title = `${home} ضد ${away} | MFM Sport`;
+
+  const kickoff = new Date(fixture.fixture.date).toLocaleDateString("ar-MA", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const description = `${home} ضد ${away} في ${league}. النتيجة المباشرة، التشكيلة، الأهداف وإحصائيات المباراة يوم ${kickoff}.`;
+
+  const indexable = isIndexableFixture(fixture);
+
   return {
-    title: `${home} vs ${away} | MFM Sport`,
+    title,
+    description,
+    alternates: { canonical: `/${locale}/matches/${id}` },
+    // Every fixture API-Football returns generates a crawlable URL — tens of
+    // thousands of near-empty pages worldwide. Only competitions this newsroom
+    // actually covers earn indexation; the rest stay reachable for deep links
+    // but are kept out of the index. See lib/seo/matchIndexing.
+    ...(indexable ? {} : { robots: { index: false, follow: true } }),
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: `/${locale}/matches/${id}`,
+      siteName: "MFM Sport",
+      locale: "ar_MA",
+    },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 

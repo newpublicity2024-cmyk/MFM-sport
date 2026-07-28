@@ -8,6 +8,8 @@ import { AdSlot } from "@/components/ads/AdSlot";
 import { StickyMobileAd } from "@/components/ads/StickyMobileAd";
 import { SocialFloater } from "@/components/social/SocialFloater";
 
+const adsenseClientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
+
 type Props = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
@@ -42,6 +44,19 @@ export default async function LocaleLayout({ children, params }: Props) {
         <StickyMobileAd />
         <SocialFloater />
       </NextIntlClientProvider>
+      {/* AdSense loader, exactly as Google provides it. React 19 hoists this
+          async <script> into <head> and dedupes it — the placement Auto Ads
+          expects. One tag only; loading adsbygoogle.js twice throws AdSense errors.
+          Powers both Auto Ads (dashboard toggle) and manual AdSlot units.
+          Lives here rather than in the parent (frontend)/layout.tsx so that
+          not-found.tsx — which renders outside this segment — serves no ads. */}
+      {adsenseClientId && (
+        <script
+          async
+          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}`}
+          crossOrigin="anonymous"
+        />
+      )}
     </div>
   );
 }

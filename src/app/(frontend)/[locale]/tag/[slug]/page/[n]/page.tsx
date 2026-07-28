@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import type { Config } from "@/payload-types";
 import { redirect } from "next/navigation";
@@ -15,7 +16,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   const tag = await getTagBySlug(slug, locale as Config["locale"]);
-  if (!tag) return { title: "Not Found" };
+  if (!tag) notFound();
   return {
     title: `${tag.name} | MFM Sport`,
     robots: { index: false, follow: true },

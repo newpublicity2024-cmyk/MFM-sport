@@ -26,7 +26,7 @@ export const revalidate = 120;
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   const competition = await getCompetitionBySlug(slug, locale as Config["locale"]);
-  if (!competition) return { title: "Not Found" };
+  if (!competition) notFound();
   return { title: `${competition.name} | MFM Sport` };
 }
 
