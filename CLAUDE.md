@@ -10,7 +10,33 @@ Arabic-language Moroccan football news site. Next.js 16 (App Router) + Payload C
 
 ### Resume here
 
-**The 2024–2026 staged release is IMPORTED. Next action is yours, not the code's: review Search Console before importing any older year.**
+**The 2024-2026 release is IMPORTED, DEPLOYED and VERIFIED ON PRODUCTION. Nothing further runs until Search Console has been read.**
+
+#### Release timestamp — the Search Console clock starts here
+
+**Deployed and advertised 2026-07-28, between 19:45Z (baseline) and 19:58Z (verified).**
+Deployment `dpl_2x5JJec3b8Q7RGZNJdvHh66Mx5be`, superseding `dpl_9mR6QBDznjofSoHUSSn9xbafdG1i`.
+
+| Metric | Before (19:45Z) | After (19:58Z) |
+|---|---|---|
+| `/sitemap.xml` total `<loc>` | 906 | **8,934** |
+| `/sitemap.xml` article `<loc>` | 398 | **7,850** |
+| `/sitemap.xml` bytes | 258,483 | 2,982,343 |
+| `/news-sitemap.xml` `<loc>` | 13 | **13** (unchanged — no archive leak) |
+| `<html>` on homepage | no `lang`, no `dir` | `lang="ar" dir="rtl"` |
+
+7,850 = 398 `editorial` + 7,452 released `archive-full`. All 1,090 `archive-brief` are correctly excluded, so the sitemap and the `robots` meta agree.
+
+That is a **19.7x** expansion of advertised article URLs. It is the number to watch in Search Console: indexed count and impressions over the next 2-3 weeks decide whether older years are released.
+
+#### Verified on production, on the served bytes
+
+- imported 2024 article → **200**, real Arabic `<h1>`, 16,227 Arabic characters, no `robots` meta (indexable), `<html lang="ar" dir="rtl">`
+- 2024 legacy URL → **308 → 301 → 200**
+- route-miss 404 (`/ar/transfers`) → 404, `lang="ar" dir="rtl"`
+- both 404 types → **0** real `adsbygoogle.js` script tags, Arabic branded title
+
+#### Import totals
 
 | Batch | created | archive-full | archive-brief | video | no-date | empty | failed |
 |---|---|---|---|---|---|---|---|
@@ -19,24 +45,11 @@ Arabic-language Moroccan football news site. Next.js 16 (App Router) + Payload C
 | 2026 | 463 | 461 | 2 | 0 | 0 | 0 | 0 |
 | **total** | **8,542** | **7,452** | **1,090** | 1 | 0 | 0 | **0** |
 
-Every batch matched its independently-audited prediction exactly — thin counts of 864 / 224, and 2026's `463 + 101 already-imported = 564`. Two code paths, same numbers.
+Database: 8,940 articles, 8,742 redirects (= 200 + 8,542), 0 null dates, 0 articles older than 2024. Spot-checks 30/30 at ratio 1.00 (`pnpm spotcheck --year=<Y>`).
 
-Database after the release: **8,940 articles** (8,542 imported + 398 `editorial`), **8,742 redirects** (= 200 + 8,542), **0** null publish dates, **0** articles older than 2024. The staged boundary held; nothing leaked.
+#### Next
 
-Spot-checked 10 evenly-spaced articles per batch against the XML — **30/30 at ratio 1.00**, dates and redirects correct (`pnpm spotcheck --year=<Y>`).
-
-**BLOCKED on a deploy:** `/sitemap.xml` still serves the pre-import 906 URLs / 398 articles, byte-identical to before. It caches for 24h and the route that busts it is in this branch, undeployed. Once deployed, POST `{"collection":"sitemap"}` to `/api/revalidate` — or the importer now does it automatically at the end of a run. Expect the sitemap to go to roughly **7,850** article URLs (398 editorial + 7,452 released `archive-full`); `archive-brief` must stay out.
-
-`/news-sitemap.xml` is verified still at **13 URLs** — the archive did not leak into the 48h feed.
-
-```bash
-# after this branch deploys, confirm the release is advertised:
-curl -s https://www.mfmsport.ma/sitemap.xml | grep -o '<loc>' | wc -l
-
-# then STOP. Do not import 2023 or earlier — see Hard gates.
-```
-
-**Still unfixed:** `<html>` carries no `lang`/`dir` (see open defects).
+Read Search Console. Then, and only then, consider older years — subject to **Hard gates** below.
 
 ### Merged and deployed
 
@@ -106,7 +119,8 @@ See **Resume here** at the top for the next command.
 
 ### Open defects — found, not yet fixed
 
-- **`<html>` carries no `lang` and no `dir`.** Production serves `<html data-dpl-id="…">` on every page type including the 404. `dir="rtl"` / `lang="ar"` are set on an inner `<div>` in `[locale]/layout.tsx:44` instead. `<html lang>` is the language signal Google and screen readers read first, and the missing `dir` means anything rendered outside that div — the 404 page among them — lays out left-to-right on an Arabic site. The `<html>` element lives in `(frontend)/layout.tsx`, above `[locale]`, which is why it never got the locale; now that the site is Arabic-only it can simply be hardcoded. Small fix, real signal.
+- **Entity-miss 404s render without `lang`/`dir`.** `/ar/articles/<missing>` raises `notFound()` from `generateMetadata`, and Next serves its own `__next_error__` document rather than rendering through `(frontend)/layout.tsx` — so the root element's `lang="ar" dir="rtl"` never applies and the Arabic 404 lays out left-to-right. Route-miss 404s (`/ar/transfers`) are unaffected and correct. Everything else about the entity 404 is verified good: HTTP 404, Arabic branded title, **0** ad scripts. `global-not-found.tsx` already sets both attributes but is not the file being used on this path. Narrow, cosmetic-to-a-crawler, real to a reader.
+
 
 ### Open blockers
 
