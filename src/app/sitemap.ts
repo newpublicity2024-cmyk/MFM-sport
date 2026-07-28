@@ -11,33 +11,27 @@ const LOCALES = ["ar"];
 // expensive. Cache it for a day instead of rebuilding on every crawler hit.
 export const revalidate = 86400;
 
-/** URLs per sitemap file. The protocol caps a single file at 50,000; the
- *  WordPress backfill takes this site past 27,000 URLs, so a comfortable shard
- *  size keeps every file well clear of the limit and keeps each daily
- *  regeneration cheap. Next serves these as /sitemap/0.xml, /sitemap/1.xml, …
- *  behind an automatically generated index. */
-const URLS_PER_SITEMAP = 10000;
-
 /**
- * Next calls this to discover the shards, then calls the default export once per
- * shard id. Building the full entry list to count it is wasteful, so the shard
- * count comes from a cheap count-only query with headroom for taxonomy and
- * static URLs.
+ * Deliberately a SINGLE sitemap at /sitemap.xml, not sharded.
+ *
+ * An earlier version of this file used Next's `generateSitemaps()` to shard at
+ * 10,000 URLs. That was a mistake on two counts, both caught by fetching the
+ * output rather than reading the code:
+ *
+ *  1. It moves the sitemap to /sitemap/0.xml and makes /sitemap.xml return 404 —
+ *     the URL robots.txt advertises and the one Google already has on file.
+ *  2. Next passes the shard id in a form that arithmetic turns into NaN, and
+ *     `entries.slice(NaN, NaN)` is empty, so every shard served zero URLs. The
+ *     build reported success and the file was valid XML with no <url> in it.
+ *
+ * Sharding is also simply not needed at this site's size. Even with the whole
+ * WordPress archive released into the index, the projection is ~28,000 URLs
+ * against a 50,000-per-file protocol limit. Match pages are not listed here at
+ * all. If the count ever approaches ~45,000, add a real sitemap index as
+ * explicit routes (/sitemap.xml listing /sitemaps/*.xml) rather than reaching
+ * for generateSitemaps, so the canonical URL keeps working.
  */
-export async function generateSitemaps() {
-  const payload = await getPayload({ config: configPromise });
-  const { totalDocs } = await payload.count({
-    collection: "articles",
-    where: { status: { equals: "published" } },
-  });
-  // + ~1,000 for categories, tags, authors, competitions, clubs and static pages.
-  const shards = Math.max(1, Math.ceil((totalDocs + 1000) / URLS_PER_SITEMAP));
-  return Array.from({ length: shards }, (_, id) => ({ id }));
-}
-
-export default async function sitemap({
-  id = 0,
-}: { id?: number } = {}): Promise<MetadataRoute.Sitemap> {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const payload = await getPayload({ config: configPromise });
   const entries: MetadataRoute.Sitemap = [];
 
@@ -179,10 +173,5 @@ export default async function sitemap({
     }
   }
 
-  // Slice this shard's window out of the full, deterministically-ordered list.
-  // Every shard builds the same list and takes its slice: simpler and less
-  // error-prone than per-shard queries with offsets, and the ordering is stable
-  // so a URL cannot silently fall between two shards. The cost is bounded — a
-  // handful of shards, each regenerated at most once a day.
-  return entries.slice(id * URLS_PER_SITEMAP, (id + 1) * URLS_PER_SITEMAP);
+  return entries;
 }
