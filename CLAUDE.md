@@ -99,6 +99,18 @@ The short version, when you don't have time for the long one:
 
 ---
 
+## Hard gates
+
+**2023-and-earlier batches MUST NOT run until `pnpm audit:body-length --year=<Y>` passes for that year with zero disagreements.**
+
+651 multi-line ACF `meta_value` blocks are known to exist outside the 2024–2026 window and will silently under-count bodies into `archive-brief`, which is never released.
+
+The mechanism: `readTag()` matches `<tag>…</tag>` on a *single line*. ACF flexible-content values are multi-line HTML, so `readTag` returns `null`, the value contributes **0 characters**, and `lastMetaKey = null` discards the remainder. A full article scores under 500, lands in `archive-brief`, and is `noindex` indefinitely — with no error, no failed row, and nothing in the import summary to distinguish it from a genuinely short post.
+
+This is verified *absent* from 2024, 2025 and 2026 (zero disagreements in all three, and all three match `docs/wp-corpus-analysis.md` to the decimal). It is verified *present* in the corpus as a whole. Since the per-year disagreement count is zero across the whole released window, all 651 sit in earlier years — most likely 2021–2022, which is 53% of the corpus.
+
+Run the audit per year. If disagreements are non-zero, fix the multi-line read in `scripts/import-wp-archive.ts` (~line 258) **before** importing that year — re-tiering after the fact is a bulk write, which is exactly what the tier field exists to avoid.
+
 ## Landmines
 
 **Never add a `loading.tsx` to a route segment that has 404-capable children.** Its Suspense boundary flushes the response shell before the page body runs, committing HTTP 200 — so `notFound()` renders its page inside an already-successful response and every 404 on the site silently becomes a soft 200. This happened; see the principles doc. `/search` has the only `loading.tsx`, and it has no child routes and never calls `notFound()`.
