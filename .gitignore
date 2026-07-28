@@ -60,3 +60,4 @@ qa-*.png
 
 # i18n translation work files (large, transient)
 /translations/
+.import-logs/
