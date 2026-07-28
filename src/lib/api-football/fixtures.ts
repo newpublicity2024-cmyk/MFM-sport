@@ -13,13 +13,14 @@ function fixturesCached(
   opts: { ttlSeconds: number; staleSeconds?: number },
   revalidate: number,
   params: Record<string, string | number>,
+  { throwOnFailure = false }: { throwOnFailure?: boolean } = {},
 ): Promise<ApiFixture[]> {
   if (hasUpstash()) {
     return cachedJson(key, opts, () =>
-      fetchApi<ApiFixture>("/fixtures", params, { cache: "no-store" }),
+      fetchApi<ApiFixture>("/fixtures", params, { cache: "no-store", throwOnFailure }),
     );
   }
-  return fetchApi<ApiFixture>("/fixtures", params, revalidate);
+  return fetchApi<ApiFixture>("/fixtures", params, { revalidate, throwOnFailure });
 }
 
 function isTodayUtc(date: string): boolean {
@@ -35,11 +36,26 @@ export const getFixturesByDate = cache((date: string): Promise<ApiFixture[]> => 
   return fixturesCached(`date:${date}`, opts, 60, { date });
 });
 
+/**
+ * A single fixture, for the match page.
+ *
+ * Unlike the list getters this one THROWS when upstream is unavailable rather
+ * than degrading to null. The match page turns null into `notFound()`, so with
+ * the old behaviour an exhausted daily quota made every real fixture page serve
+ * a 404 — telling Google to drop pages that exist. A thrown error surfaces as
+ * 5xx instead, which crawlers treat as "temporary, retry" and which costs no
+ * indexing. Returning null stays reserved for its true meaning: the fixture id
+ * does not exist.
+ */
 export const getFixtureById = cache(
   async (id: number): Promise<ApiFixture | null> => {
-    const fixtures = await fixturesCached(`fx:${id}`, { ttlSeconds: 30 }, 30, {
-      id,
-    });
+    const fixtures = await fixturesCached(
+      `fx:${id}`,
+      { ttlSeconds: 30 },
+      30,
+      { id },
+      { throwOnFailure: true },
+    );
     return fixtures[0] || null;
   },
 );

@@ -4,6 +4,58 @@ Arabic-language Moroccan football news site. Next.js 16 (App Router) + Payload C
 
 ---
 
+## Session state — SEO remediation
+
+**Updated: 28 July 2026, end of session 1.** Update this at every phase boundary. It is deliberately ground truth on disk rather than in a conversation summary.
+
+### Merged and deployed
+
+| PR | What |
+|---|---|
+| #52 | Real 404s, ad-free error pages, `www` canonical, 307→308, Arabic description, match whitelist, archive importer |
+| #53 | Reverted sitemap sharding (it served zero URLs and 404'd `/sitemap.xml`) |
+| #54 | hreflang → Arabic only, canonicals on all page types, `docs/verification-principles.md`, this file |
+
+Deploy of #52/#53 is **live and verified on production**: `/ar/transfers` → 404, locale redirect → 308, `/sitemap.xml` → 200, `/news-sitemap.xml` → 200, zero real ad `<script>` tags on both 404 types.
+
+### Database
+
+Archive-fields DDL is **applied to production** (`broad-snow-50246164` / branch `production`): `wp_post_id`, `legacy_slug`, `seo_tier`, three indexes, `payload_migrations` batch 8. All pre-existing articles default to `editorial`, so they stay indexable.
+
+Verification branch **`br-gentle-hat-a2bzeay0`** is alive deliberately — keep it until the full import is done. It holds ~2,378 imported archive articles and 2,178 normalised redirects, and is useful to diff against.
+
+**No import has run against production.** Production has 397 articles and 200 (unnormalised) redirects.
+
+### The exact next command
+
+```bash
+# 1. verify hreflang on prod once #54 deploys (expect ar-MA + x-default, no /fr or /en)
+curl -s https://www.mfmsport.ma/ar/articles/<slug> | grep -oiE 'hreflang="[^"]*"'
+
+# 2. repair the production redirect map (200 rows, currently matching nothing)
+pnpm redirects:normalize:dry     # inspect first
+pnpm redirects:normalize
+
+# 3. then, and only then, the first import batch
+pnpm import:wp -- --dry-run --limit=25
+pnpm import:wp -- --min-year=2024
+```
+
+Import order is **DDL → deploy → normalize → import**, and it matters: without `lib/seo/indexation` deployed, every imported article is immediately indexable and listed in the sitemap, which defeats the staged release.
+
+### Open blockers
+
+- **Ahrefs connector not authorised** — blocks referring-domain data, which would set import *order* (highest-value URLs first). Does not block the import itself.
+- **Vercel connector scoped to the wrong account** (`lallafatimamagazine-4500s-projects`, not `newpublicitys-projects`) — blocks the ASN/user-agent breakdown behind the WAF rules. GA4 says >50% of traffic is datacenter-region bots.
+- **API-Football daily quota exhausted** — match pages return null upstream. Blocks verifying that a *whitelisted* fixture is indexable; the non-whitelisted `noindex` case is verified.
+- **`wp-content/uploads` backup** — owner is checking. All 43,584 legacy images already 404; the WordPress REST API is gone. Bodies import with `<img>` stripped. Images can be backfilled later against `legacy_slug` without re-importing text.
+
+### Agreed plan
+
+Tiering at 500 characters of body text: **26,982** `archive-full`, **10,006** `archive-brief`, **4** genuinely empty. Import everything, 301 everything, but stage *indexation*: 2024–2026 first (~8,600), then pause for Search Console before releasing older years. `archive-brief` stays `noindex, follow` indefinitely.
+
+---
+
 ## Verification
 
 **Read [`docs/verification-principles.md`](docs/verification-principles.md) before claiming that anything works.**
