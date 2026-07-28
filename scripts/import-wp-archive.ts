@@ -46,6 +46,17 @@ import { convertHTMLToLexical, editorConfigFactory } from "@payloadcms/richtext-
 import config from "@payload-config";
 import { decodeSlug } from "../src/lib/payload/slug";
 import { slugify } from "../src/lib/payload/slugify";
+import {
+  ACF_BODY_KEY,
+  bodyTextLength,
+  escapeHtml,
+  extractYouTubeUrl,
+  legacyPathFromLink,
+  resolvePublishedAt,
+  stripDeadMedia,
+  stripToText,
+  tierFor,
+} from "../src/lib/seo/wpArchive";
 
 // ---------------------------------------------------------------------------
 // CLI
@@ -66,9 +77,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const XML_PATH =
   value("file") ?? path.resolve(__dirname, "..", "mfmsport.WordPress.2026-04-24.xml");
 
-/** Below this many characters of body text an article is "brief" — a headline
- *  and a sentence. Confirmed with the site owner; see docs/wp-corpus-analysis.md. */
-const BRIEF_THRESHOLD = 500;
 
 // ---------------------------------------------------------------------------
 // Parsing helpers
@@ -80,6 +88,8 @@ type WpItem = {
   slug: string;
   link: string;
   date: string;
+  dateGmt: string;
+  modified: string;
   type: string | null;
   status: string | null;
   creator: string | null;
@@ -92,7 +102,7 @@ type WpItem = {
 
 function newItem(): WpItem {
   return {
-    wpPostId: null, title: "", slug: "", link: "", date: "",
+    wpPostId: null, title: "", slug: "", link: "", date: "", dateGmt: "", modified: "",
     type: null, status: null, creator: null,
     contentHtml: "", excerpt: "", acfText: "",
     categories: [], tags: [],
@@ -107,71 +117,13 @@ function readTag(line: string, tag: string): string | null {
   return m ? m[1] : null;
 }
 
-/**
- * Plain-text length of a body.
- *
- * The CDATA wrapper MUST be removed before stripping tags. `<![CDATA[` opens
- * with "<" and `]]>` closes with ">", so a naive /<[^>]+>/ swallows the entire
- * section as if it were a single tag and reports every plain-text article as
- * empty. That bug produced a fake "2,224 posts are empty" result during
- * analysis; the real figure is 4.
- */
-export function bodyTextLength(raw: string): number {
-  return stripToText(raw).length;
-}
-
-function stripToText(raw: string): string {
-  return raw
-    .replace(/<!\[CDATA\[/g, "")
-    .replace(/\]\]>/g, "")
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
-    .replace(/\[[^\]]{0,80}\]/g, " ")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&[a-z]+;/gi, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/** ACF flexible-content fields carry body paragraphs alongside content:encoded.
- *  Ignoring them silently truncates articles. */
-const ACF_BODY_KEY = /^content(_block)?_\d+(_content_\d+|_article)?$/;
-
-/**
- * Strip <img>/<figure> whose source is the dead legacy CDN, and unwrap the
- * anchors around them, so bodies don't render broken images.
- */
-export function stripDeadMedia(html: string): string {
-  return html
-    .replace(/<figure[^>]*>[\s\S]*?<\/figure>/gi, "")
-    .replace(/<img[^>]*>/gi, "")
-    .replace(/<a[^>]*>\s*<\/a>/gi, "")
-    .replace(/<p>\s*<\/p>/gi, "");
-}
-
-export function tierFor(textLength: number): "archive-full" | "archive-brief" {
-  return textLength >= BRIEF_THRESHOLD ? "archive-full" : "archive-brief";
-}
-
-/** The path a legacy URL should redirect FROM, normalised to what the middleware
- *  will actually receive. WordPress permalinks are percent-encoded for Arabic. */
-export function legacyPathFromLink(link: string): string | null {
-  try {
-    const u = new URL(link);
-    return u.pathname.endsWith("/") ? u.pathname : `${u.pathname}/`;
-  } catch {
-    return null;
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Import
 // ---------------------------------------------------------------------------
 
 const stats = {
   scanned: 0, eligible: 0, skippedExisting: 0, created: 0,
-  redirects: 0, failed: 0, tierFull: 0, tierBrief: 0, empty: 0,
+  redirects: 0, failed: 0, tierFull: 0, tierBrief: 0, empty: 0, skippedNoDate: 0, videoPosts: 0,
 };
 
 async function main() {
@@ -239,6 +191,8 @@ async function main() {
     if (!cur.type && line.includes("<wp:post_type>")) cur.type = readTag(line, "wp:post_type");
     if (!cur.status && line.includes("<wp:status>")) cur.status = readTag(line, "wp:status");
     if (!cur.date && line.includes("<wp:post_date>")) cur.date = readTag(line, "wp:post_date") ?? "";
+    if (!cur.dateGmt && line.includes("<wp:post_date_gmt>")) cur.dateGmt = readTag(line, "wp:post_date_gmt") ?? "";
+    if (!cur.modified && line.includes("<wp:post_modified>")) cur.modified = readTag(line, "wp:post_modified") ?? "";
     if (!cur.slug && line.includes("<wp:post_name>")) cur.slug = readTag(line, "wp:post_name") ?? "";
     if (!cur.title && line.includes("<title>")) cur.title = readTag(line, "title") ?? "";
     if (!cur.link && line.includes("<link>")) cur.link = readTag(line, "link") ?? "";
@@ -315,6 +269,13 @@ async function importOne(
     const tier = tierFor(textLen);
     tier === "archive-full" ? stats.tierFull++ : stats.tierBrief++;
 
+    const publishedAt = resolvePublishedAt(item.date, item.dateGmt, item.modified);
+    if (!publishedAt) {
+      stats.skippedNoDate++;
+      console.warn(`  [skip-no-date] #${item.wpPostId} ${item.slug?.slice(0, 40)}`);
+      return;
+    }
+
     const baseSlug = decodeSlug(item.slug) || slugify(item.title) || `post-${item.wpPostId}`;
     const cleanHtml = stripDeadMedia(
       item.contentHtml.replace(/<\/?content:encoded>/g, "").replace(/<!\[CDATA\[|\]\]>/g, ""),
@@ -328,15 +289,30 @@ async function importOne(
       return;
     }
 
+    // `body` is a required field, so an empty Lexical state fails validation and
+    // loses the row — and with it the redirect, which is the point of importing
+    // the tail at all. A handful of posts have no body in WordPress; fall back to
+    // the excerpt, then the title, so the article is valid and never literally
+    // blank. These land in archive-brief and are noindex regardless.
+    const excerptText = stripToText(item.excerpt);
+    const fallbackText = excerptText || item.title || baseSlug;
+    // Emptiness is decided on TEXT, not markup: a body that is only an <iframe>
+    // or a stripped <img> still has markup but converts to an empty state.
+    const htmlForBody =
+      stripToText(cleanHtml).length > 0 ? cleanHtml.trim() : `<p>${escapeHtml(fallbackText)}</p>`;
+    const videoUrl = extractYouTubeUrl(item.contentHtml);
+    if (videoUrl) stats.videoPosts++;
+
     let lexical: any;
     try {
+      lexical = convertHTMLToLexical({ editorConfig, html: htmlForBody, JSDOM: JSDOM as any });
+      if (!lexical?.root?.children?.length) throw new Error("empty lexical root");
+    } catch {
       lexical = convertHTMLToLexical({
         editorConfig,
-        html: cleanHtml.trim() || "<p></p>",
+        html: `<p>${escapeHtml(fallbackText)}</p>`,
         JSDOM: JSDOM as any,
       });
-    } catch {
-      lexical = convertHTMLToLexical({ editorConfig, html: "<p></p>", JSDOM: JSDOM as any });
     }
 
     const categoryIds = await Promise.all(item.categories.map((c) => taxonomy.category(c)));
@@ -356,12 +332,19 @@ async function importOne(
         categories: categoryIds.filter(Boolean),
         tags: tagIds.filter(Boolean),
         status: "published",
-        publishedAt: new Date(item.date.replace(" ", "T") + "Z").toISOString(),
+        publishedAt,
         wpPostId: item.wpPostId,
         legacySlug: item.slug,
         seoTier: tier,
+        ...(videoUrl ? { isVideo: true, videoUrl } : {}),
       },
       locale: "ar",
+      // Suppress the afterChange revalidation hook. Outside a Next request
+      // there is no static-generation store, so revalidateTag throws (it is
+      // caught and logged, but noisily), and each call costs an extra findByID
+      // — 37,000 pointless round trips over a full run. The site is
+      // revalidated once at the end of the import instead.
+      context: { disableRevalidate: true },
     });
     stats.created++;
 
@@ -454,7 +437,14 @@ class TaxonomyCache {
     let id = found.docs[0]?.id;
     if (!id) {
       try {
-        id = (await this.payload.create({ collection, data, locale: "ar" })).id;
+        id = (
+          await this.payload.create({
+            collection,
+            data,
+            locale: "ar",
+            context: { disableRevalidate: true },
+          })
+        ).id;
       } catch {
         const retry = await this.payload.find({
           collection, where: { slug: { equals: key } }, limit: 1, depth: 0,
@@ -477,11 +467,20 @@ function report() {
   console.log(`    archive-brief:    ${stats.tierBrief}`);
   console.log(`    empty body:       ${stats.empty}`);
   console.log(`  redirects created:  ${stats.redirects}`);
+  console.log(`  video posts:        ${stats.videoPosts}`);
+  console.log(`  skipped (no date):  ${stats.skippedNoDate}`);
   console.log(`  failed:             ${stats.failed}`);
   if (DRY_RUN) console.log(`\n  DRY RUN — nothing was written.`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// Only run when executed directly. The pure helpers above are unit-tested, and
+// importing this module must not kick off an import as a side effect.
+const isDirectRun =
+  process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+
+if (isDirectRun) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

@@ -59,7 +59,13 @@ async function articleRevalidateTargets(
   return articlePaths(slugByLocale, categorySlugs);
 }
 
-export const revalidateArticleChange: CollectionAfterChangeHook = async ({ doc, req }) => {
+export const revalidateArticleChange: CollectionAfterChangeHook = async ({ doc, req, context }) => {
+  // Bulk imports opt out. Outside a Next request there is no static-generation
+  // store, so revalidateTag throws — harmlessly caught below, but it also costs
+  // an extra findByID per row, which is 37,000 pointless round trips over an
+  // archive import. The importer revalidates once when it finishes instead.
+  if (context?.disableRevalidate) return doc;
+
   try {
     // Invalidate the dynamic article route's data cache (see cached-queries.ts)
     // so an edit/publish is visible immediately, not after the 5-min TTL.
@@ -86,7 +92,11 @@ export const revalidateArticleDelete: CollectionAfterDeleteHook = async ({ doc, 
   return doc;
 };
 
-export const revalidateCategoryChange: CollectionAfterChangeHook = async ({ doc, req }) => {
+export const revalidateCategoryChange: CollectionAfterChangeHook = async ({ doc, req, context }) => {
+  // See revalidateArticleChange — bulk imports create taxonomy on demand and
+  // opt out of per-row revalidation.
+  if (context?.disableRevalidate) return doc;
+
   try {
     // A renamed category shows on article category badges, so bust article data too.
     revalidateTag(ARTICLES_TAG, "max");
