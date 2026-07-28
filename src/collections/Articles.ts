@@ -192,5 +192,65 @@ export const Articles: CollectionConfig = {
         },
       },
     },
+
+    // ---------------------------------------------------------------------
+    // WordPress archive provenance.
+    //
+    // The 2026 export holds 36,992 published posts against the ~400 originally
+    // migrated. Recording where each imported row came from turns the redirect
+    // map from a fuzzy title-matching exercise into an exact lookup, and makes
+    // the import itself idempotent and resumable.
+    // ---------------------------------------------------------------------
+    {
+      name: "wpPostId",
+      type: "number",
+      index: true,
+      unique: true,
+      label: { en: "WordPress post ID", fr: "ID WordPress", ar: "معرّف ووردبريس" },
+      admin: {
+        position: "sidebar",
+        readOnly: true,
+        description: {
+          en: "Set by the archive importer. The resume key — an existing row is skipped, never duplicated.",
+          fr: "Défini par l'importateur d'archives. Clé de reprise.",
+          ar: "يضبطه مستورد الأرشيف. مفتاح الاستئناف.",
+        },
+      },
+    },
+    {
+      name: "legacySlug",
+      type: "text",
+      index: true,
+      label: { en: "Legacy slug", fr: "Identifiant d'origine", ar: "المعرّف القديم" },
+      admin: {
+        position: "sidebar",
+        readOnly: true,
+        description: {
+          en: "The original WordPress post_name, so old URLs resolve by exact match rather than fuzzy title comparison.",
+          fr: "Le post_name WordPress d'origine.",
+          ar: "المعرّف الأصلي في ووردبريس.",
+        },
+      },
+    },
+    {
+      name: "seoTier",
+      type: "select",
+      defaultValue: "editorial",
+      index: true,
+      options: [
+        { label: { en: "Editorial (native)", fr: "Éditorial", ar: "تحريري" }, value: "editorial" },
+        { label: { en: "Archive — substantive", fr: "Archive — substantiel", ar: "أرشيف — مكتمل" }, value: "archive-full" },
+        { label: { en: "Archive — brief", fr: "Archive — bref", ar: "أرشيف — موجز" }, value: "archive-brief" },
+      ],
+      label: { en: "SEO tier", fr: "Niveau SEO", ar: "مستوى الأرشفة" },
+      admin: {
+        position: "sidebar",
+        description: {
+          en: "Drives indexation. Native articles are always indexable; archive tiers are released in batches by publish year — see lib/seo/indexation.ts. Changing the release config is a config edit, never a re-import.",
+          fr: "Détermine l'indexation. Voir lib/seo/indexation.ts.",
+          ar: "يحدّد الأرشفة. انظر lib/seo/indexation.ts.",
+        },
+      },
+    },
   ],
 };
