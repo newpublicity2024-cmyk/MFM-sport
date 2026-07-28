@@ -16,7 +16,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "nav" });
-  return { title: `${t("competitions")} | MFM Sport` };
+  return { title: `${t("competitions")} | MFM Sport`, alternates: { canonical: `/${locale}/competition` }, };
 }
 
 export default async function CompetitionsIndexPage({ params }: Props) {

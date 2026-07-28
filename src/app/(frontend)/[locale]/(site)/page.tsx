@@ -57,6 +57,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   return {
+    alternates: { canonical: `/${locale}` },
     title:
       locale === "ar"
         ? "MFM Sport - أخبار الكرة المغربية"

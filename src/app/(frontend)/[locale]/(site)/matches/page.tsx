@@ -27,7 +27,7 @@ function isValidLeague(s: string | undefined): s is string {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "match" });
-  return { title: `${t("today")} | MFM Sport` };
+  return { title: `${t("today")} | MFM Sport`, alternates: { canonical: `/${locale}/matches` }, };
 }
 
 export default async function MatchesPage({ params, searchParams }: Props) {

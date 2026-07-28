@@ -13,7 +13,7 @@ type Props = { params: Promise<{ locale: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "pages" });
-  return { title: `${t("legal")} | MFM Sport` };
+  return { title: `${t("legal")} | MFM Sport`, alternates: { canonical: `/${locale}/legal` }, };
 }
 
 export default async function LegalPage({ params }: Props) {
