@@ -274,7 +274,51 @@ async function main() {
   rl.close();
   await drain(queue, payload, editorConfig, taxonomy);
   report();
+  await revalidateAll();
   process.exit(0);
+}
+
+/**
+ * Bust the site caches once, after the run.
+ *
+ * Every article is written with `disableRevalidate`, so nothing is refreshed
+ * during the import. The sitemap in particular caches for a day, which would
+ * leave thousands of freshly-imported URLs unadvertised to crawlers for 24h
+ * after a bulk import — the one thing a backfill exists to avoid.
+ *
+ * A previous version of this file claimed in a comment that this happened, and
+ * no such call existed. Skipping is reported loudly rather than silently, since
+ * "nothing printed" is what made the omission invisible.
+ */
+async function revalidateAll() {
+  if (DRY_RUN) return;
+
+  const secret = process.env.REVALIDATION_SECRET;
+  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.mfmsport.ma";
+  if (!secret) {
+    console.warn(
+      `\n  [revalidate] SKIPPED — REVALIDATION_SECRET not set.\n` +
+        `  The sitemap caches for 24h, so imported URLs will not be advertised\n` +
+        `  until it expires. Set the secret and POST {"collection":"sitemap"} to\n` +
+        `  ${base}/api/revalidate to bust it now.`,
+    );
+    return;
+  }
+
+  try {
+    const res = await fetch(new URL("/api/revalidate", base).toString(), {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-revalidate-secret": secret },
+      body: JSON.stringify({ collection: "sitemap" }),
+    });
+    console.log(
+      res.ok
+        ? `\n  [revalidate] sitemap + news-sitemap busted (${res.status})`
+        : `\n  [revalidate] FAILED ${res.status} ${res.statusText} — sitemap stays stale up to 24h`,
+    );
+  } catch (err: any) {
+    console.error(`\n  [revalidate] FAILED: ${err.message} — sitemap stays stale up to 24h`);
+  }
 }
 
 function shouldImport(item: WpItem, seen: Set<number>): boolean {
@@ -399,8 +443,8 @@ async function importOne(
       // Suppress the afterChange revalidation hook. Outside a Next request
       // there is no static-generation store, so revalidateTag throws (it is
       // caught and logged, but noisily), and each call costs an extra findByID
-      // — 37,000 pointless round trips over a full run. The site is
-      // revalidated once at the end of the import instead.
+      // — 37,000 pointless round trips over a full run. revalidateAll() below
+      // busts the caches once, after the run.
       context: { disableRevalidate: true },
     });
     stats.created++;

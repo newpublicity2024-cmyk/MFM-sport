@@ -10,23 +10,33 @@ Arabic-language Moroccan football news site. Next.js 16 (App Router) + Payload C
 
 ### Resume here
 
-**The 2024 batch COMPLETED.** 6,570 created, 0 failed, 0 no-date, 0 empty, 6,570 redirects, 101 correctly skipped as already-imported. Tier split 5,706 `archive-full` / 864 `archive-brief` — and `audit:body-length` independently predicted exactly 864 thin posts for 2024, which is the real corroboration.
+**The 2024–2026 staged release is IMPORTED. Next action is yours, not the code's: review Search Console before importing any older year.**
 
-**`video posts: 0` for 2024 is RESOLVED and correct.** 0 posts in 2024 even mention YouTube, and `extractYouTubeUrl` resolves 16 of 16 mentions across 2022 and 2025. The extractor works; the zero is a property of the year, not a broken matcher. `pnpm audit:body-length` reports both raw mentions and resolved URLs, so this stays checkable rather than assumed.
+| Batch | created | archive-full | archive-brief | video | no-date | empty | failed |
+|---|---|---|---|---|---|---|---|
+| 2024 | 6,570 | 5,706 | 864 | 0 | 0 | 0 | 0 |
+| 2025 | 1,509 | 1,285 | 224 | 1 | 0 | 0 | 0 |
+| 2026 | 463 | 461 | 2 | 0 | 0 | 0 | 0 |
+| **total** | **8,542** | **7,452** | **1,090** | 1 | 0 | 0 | **0** |
+
+Every batch matched its independently-audited prediction exactly — thin counts of 864 / 224, and 2026's `463 + 101 already-imported = 564`. Two code paths, same numbers.
+
+Database after the release: **8,940 articles** (8,542 imported + 398 `editorial`), **8,742 redirects** (= 200 + 8,542), **0** null publish dates, **0** articles older than 2024. The staged boundary held; nothing leaked.
+
+Spot-checked 10 evenly-spaced articles per batch against the XML — **30/30 at ratio 1.00**, dates and redirects correct (`pnpm spotcheck --year=<Y>`).
+
+**BLOCKED on a deploy:** `/sitemap.xml` still serves the pre-import 906 URLs / 398 articles, byte-identical to before. It caches for 24h and the route that busts it is in this branch, undeployed. Once deployed, POST `{"collection":"sitemap"}` to `/api/revalidate` — or the importer now does it automatically at the end of a run. Expect the sitemap to go to roughly **7,850** article URLs (398 editorial + 7,452 released `archive-full`); `archive-brief` must stay out.
+
+`/news-sitemap.xml` is verified still at **13 URLs** — the archive did not leak into the 48h feed.
 
 ```bash
-# 1. next: 2025 (1,509 posts) and 2026 (564). Audit already passed for both.
-pnpm import:wp -- --min-year=2025 --max-year=2025
-pnpm import:wp -- --min-year=2026 --max-year=2026
+# after this branch deploys, confirm the release is advertised:
+curl -s https://www.mfmsport.ma/sitemap.xml | grep -o '<loc>' | wc -l
 
-# 3. then STOP for Search Console review before any older year.
+# then STOP. Do not import 2023 or earlier — see Hard gates.
 ```
 
-Do not run 2023 or earlier — see **Hard gates** below.
-
-**Known gap, not yet fixed:** the importer writes with `context.disableRevalidate` and a comment at ~line 403 claims the site is "revalidated once at the end of the import". *No such call exists.* `src/app/sitemap.ts` has `revalidate = 86400`, so the imported URLs will not appear in `/sitemap.xml` for up to 24h. `/api/revalidate` does not cover `/sitemap.xml` either — it revalidates article, listing and home paths only. Either add `revalidatePath("/sitemap.xml")` to that route and call it once after the import, or wait out the 24h.
-
-**Still unfixed:** `<html>` carries no `lang`/`dir` (see open defects). One-line hardcode now the site is Arabic-only.
+**Still unfixed:** `<html>` carries no `lang`/`dir` (see open defects).
 
 ### Merged and deployed
 
