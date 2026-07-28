@@ -10,13 +10,13 @@ Arabic-language Moroccan football news site. Next.js 16 (App Router) + Payload C
 
 ### Resume here
 
-The 2024 batch was interrupted mid-run at **6,196 of 6,570**. This is safe: `wpPostId` is unique and indexed, and the importer loads the set of existing ids as its checkpoint, so re-running skips what already landed.
+**The 2024 batch COMPLETED.** 6,570 created, 0 failed, 0 no-date, 0 empty, 6,570 redirects, 101 correctly skipped as already-imported. Tier split 5,706 `archive-full` / 864 `archive-brief` — and `audit:body-length` independently predicted exactly 864 thin posts for 2024, which is the real corroboration.
+
+**Unresolved before trusting later batches: `video posts: 0` across all 6,570.**
+Video-only posts were one of the three bugs found during the Neon-branch trial run — `extractYouTubeUrl` exists precisely because they occur. Zero extractions may be genuine for 2024, but a broken matcher would produce the identical number, and nothing else in the report distinguishes them. Check before reading later batches' video counts as meaningful: grep the 2024 slice of the export for `youtube|youtu.be` and compare against 0.
 
 ```bash
-# 1. finish 2024 (resumes automatically — no flags change)
-pnpm import:wp -- --min-year=2024 --max-year=2024
-
-# 2. then 2025 (1,509 posts) and 2026 (564). Audit already passed for both.
+# 1. next: 2025 (1,509 posts) and 2026 (564). Audit already passed for both.
 pnpm import:wp -- --min-year=2025 --max-year=2025
 pnpm import:wp -- --min-year=2026 --max-year=2026
 
