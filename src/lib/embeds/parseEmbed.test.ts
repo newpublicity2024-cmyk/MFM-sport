@@ -102,3 +102,51 @@ describe("parseEmbed — pasted markup passes through", () => {
     expect(result.kind).toBe("html");
   });
 });
+
+describe("parseEmbed — security and URL parsing robustness", () => {
+  it("rejects Twitter URLs with quote characters in the username (XSS attempt)", () => {
+    const result = parseEmbed('https://twitter.com/a" onmouseover="alert(1)/status/123');
+    expect(result.kind).toBe("invalid");
+  });
+
+  it("rejects substring matches for YouTube (hostname must match exactly)", () => {
+    const result = parseEmbed("https://evil.com/?x=youtube.com/watch?v=AAAAAAAAAAA");
+    expect(result.kind).toBe("invalid");
+  });
+
+  it("rejects substring matches for Facebook (hostname must match exactly)", () => {
+    const result = parseEmbed("https://notfacebook.com/");
+    expect(result.kind).toBe("invalid");
+  });
+
+  it("rejects l.facebook.com (redirect host, not in allowlist)", () => {
+    const result = parseEmbed("https://l.facebook.com/l.php?u=https%3A%2F%2Fyoutu.be%2FdQw4w9WgXcQ");
+    expect(result.kind).toBe("invalid");
+  });
+
+  it("accepts m.facebook.com (mobile subdomain in allowlist)", () => {
+    const result = parseEmbed("https://m.facebook.com/MFMSport/posts/123");
+    expect(result.kind).toBe("iframe");
+    if (result.kind !== "iframe") throw new Error("unreachable");
+    expect(result.src).toContain("facebook.com/plugins/post.php");
+  });
+
+  it("accepts Twitter handles with underscores (real Twitter handle format)", () => {
+    const result = parseEmbed("https://x.com/MFM_Sport/status/123");
+    expect(result.kind).toBe("script");
+    if (result.kind !== "script") throw new Error("unreachable");
+    expect(result.platform).toBe("twitter");
+  });
+
+  it("rejects malformed URLs without throwing", () => {
+    const malformed = [
+      "https://",
+      "http://[",
+      "://invalid",
+    ];
+    for (const url of malformed) {
+      expect(() => parseEmbed(url)).not.toThrow();
+      expect(parseEmbed(url).kind).toBe("invalid");
+    }
+  });
+});

@@ -31,12 +31,14 @@ const SDK_MARKERS: { platform: EmbedPlatform; pattern: RegExp }[] = [
   { platform: "tiktok", pattern: /tiktok-embed/ },
 ];
 
-const YOUTUBE =
-  /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/;
-const INSTAGRAM = /instagram\.com\/(p|reel|tv)\/([A-Za-z0-9_-]+)/;
-const TIKTOK = /tiktok\.com\/@[^/]+\/video\/(\d+)/;
-const TWITTER = /(?:twitter|x)\.com\/([^/]+)\/status\/(\d+)/;
-const FACEBOOK = /facebook\.com\//;
+// Hostname allowlists per platform (exact match, lowercase)
+const HOSTNAME_ALLOWLISTS: { [key: string]: string[] } = {
+  youtube: ["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"],
+  instagram: ["instagram.com", "www.instagram.com"],
+  tiktok: ["tiktok.com", "www.tiktok.com", "m.tiktok.com"],
+  twitter: ["twitter.com", "www.twitter.com", "mobile.twitter.com", "x.com", "www.x.com"],
+  facebook: ["facebook.com", "www.facebook.com", "m.facebook.com", "web.facebook.com", "fb.watch"],
+};
 
 export function parseEmbed(input: string | null | undefined): ParsedEmbed {
   const raw = (input ?? "").trim();
@@ -51,49 +53,71 @@ export function parseEmbed(input: string | null | undefined): ParsedEmbed {
 
   if (!/^https?:\/\//i.test(raw)) return { kind: "invalid" };
 
-  const youtube = YOUTUBE.exec(raw);
-  if (youtube) {
-    return {
-      kind: "iframe",
-      src: `https://www.youtube-nocookie.com/embed/${youtube[1]}`,
-      title: "YouTube",
-      ratio: RATIO_VIDEO,
-    };
+  // Parse the URL. Invalid URLs return invalid, not an exception.
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return { kind: "invalid" };
   }
 
-  const instagram = INSTAGRAM.exec(raw);
-  if (instagram) {
-    return {
-      kind: "iframe",
-      src: `https://www.instagram.com/${instagram[1]}/${instagram[2]}/embed`,
-      title: "Instagram",
-      ratio: RATIO_SOCIAL,
-    };
+  const hostname = url.hostname.toLowerCase();
+
+  // YouTube
+  if (HOSTNAME_ALLOWLISTS.youtube.includes(hostname)) {
+    const videoId = extractYouTubeId(url);
+    if (videoId) {
+      return {
+        kind: "iframe",
+        src: `https://www.youtube-nocookie.com/embed/${videoId}`,
+        title: "YouTube",
+        ratio: RATIO_VIDEO,
+      };
+    }
   }
 
-  const tiktok = TIKTOK.exec(raw);
-  if (tiktok) {
-    return {
-      kind: "iframe",
-      src: `https://www.tiktok.com/embed/v2/${tiktok[1]}`,
-      title: "TikTok",
-      ratio: RATIO_VERTICAL,
-    };
+  // Instagram
+  if (HOSTNAME_ALLOWLISTS.instagram.includes(hostname)) {
+    const match = url.pathname.match(/\/(p|reel|tv)\/([A-Za-z0-9_-]+)/);
+    if (match) {
+      return {
+        kind: "iframe",
+        src: `https://www.instagram.com/${match[1]}/${match[2]}/embed`,
+        title: "Instagram",
+        ratio: RATIO_SOCIAL,
+      };
+    }
   }
 
-  const twitter = TWITTER.exec(raw);
-  if (twitter) {
-    const canonical = `https://twitter.com/${twitter[1]}/status/${twitter[2]}`;
-    return {
-      kind: "script",
-      platform: "twitter",
-      html: `<blockquote class="twitter-tweet" dir="rtl"><a href="${canonical}"></a></blockquote>`,
-    };
+  // TikTok
+  if (HOSTNAME_ALLOWLISTS.tiktok.includes(hostname)) {
+    const match = url.pathname.match(/@[^/]+\/video\/(\d+)/);
+    if (match) {
+      return {
+        kind: "iframe",
+        src: `https://www.tiktok.com/embed/v2/${match[1]}`,
+        title: "TikTok",
+        ratio: RATIO_VERTICAL,
+      };
+    }
   }
 
-  if (FACEBOOK.test(raw)) {
-    // Facebook splits its plugin by content type; /videos/ and /watch use video.php.
-    const plugin = /\/(videos?|watch)\b/.test(raw) ? "video" : "post";
+  // Twitter / X
+  if (HOSTNAME_ALLOWLISTS.twitter.includes(hostname)) {
+    const match = url.pathname.match(/\/([A-Za-z0-9_]{1,15})\/status\/(\d+)/);
+    if (match) {
+      const canonical = `https://twitter.com/${match[1]}/status/${match[2]}`;
+      return {
+        kind: "script",
+        platform: "twitter",
+        html: `<blockquote class="twitter-tweet" dir="rtl"><a href="${canonical}"></a></blockquote>`,
+      };
+    }
+  }
+
+  // Facebook
+  if (HOSTNAME_ALLOWLISTS.facebook.includes(hostname)) {
+    const plugin = /\/(videos?|watch)\b/.test(url.pathname) ? "video" : "post";
     return {
       kind: "iframe",
       src: `https://www.facebook.com/plugins/${plugin}.php?href=${encodeURIComponent(raw)}&show_text=true`,
@@ -103,4 +127,36 @@ export function parseEmbed(input: string | null | undefined): ParsedEmbed {
   }
 
   return { kind: "invalid" };
+}
+
+/**
+ * Extract video ID from various YouTube URL formats.
+ */
+function extractYouTubeId(url: URL): string | null {
+  const hostname = url.hostname.toLowerCase();
+
+  if (hostname === "youtu.be") {
+    const match = url.pathname.match(/^\/([A-Za-z0-9_-]{11})/);
+    if (match) return match[1];
+  }
+
+  if (hostname === "youtube.com" || hostname === "www.youtube.com" || hostname === "m.youtube.com") {
+    // watch?v=ID
+    const v = url.searchParams.get("v");
+    if (v && /^[A-Za-z0-9_-]{11}$/.test(v)) return v;
+
+    // /shorts/ID
+    const shortsMatch = url.pathname.match(/\/shorts\/([A-Za-z0-9_-]{11})/);
+    if (shortsMatch) return shortsMatch[1];
+
+    // /embed/ID
+    const embedMatch = url.pathname.match(/\/embed\/([A-Za-z0-9_-]{11})/);
+    if (embedMatch) return embedMatch[1];
+
+    // /live/ID
+    const liveMatch = url.pathname.match(/\/live\/([A-Za-z0-9_-]{11})/);
+    if (liveMatch) return liveMatch[1];
+  }
+
+  return null;
 }
