@@ -167,6 +167,26 @@ The feed has two independent guards: a 48-hour rolling window, and a hard publis
 
 `payload_preferences` key `collection-articles` had `{"active": false, "accessor": "title"}`.
 A saved column preference permanently overrides `admin.defaultColumns`, so this is a data
-fix, not a code fix. Repaired by flipping that one entry to `true`; see
-`docs/superpowers/plans/2026-07-29-journalist-authoring-blocks.md` Task 1 for the SQL.
-If it recurs, someone unticked Title in the list's Columns picker.
+fix, not a code fix. If it recurs, someone unticked Title in the list's Columns picker.
+
+The repair is to delete the row rather than patch the one entry, because preferences are
+**per user**: patching fixes whoever's row you patched and leaves every other account in
+whatever state it is in. Deleting is idempotent and drops each user back to
+`defaultColumns` in `src/collections/Articles.ts`.
+
+```sql
+DELETE FROM payload_preferences WHERE key = 'collection-articles';
+```
+
+The key is `collection-articles` — **not** `collection-articles-list`. Confirm against the
+live table before running; a wrong key makes this a silent no-op that looks like it worked:
+
+```sql
+SELECT key, count(*) FROM payload_preferences GROUP BY key ORDER BY key;
+```
+
+The trade is that the user also loses their saved sort and page size for that list. That
+is accepted — a list you cannot identify rows in is worse than a reset sort order.
+
+A verified database row is a **proxy**. The artefact is the rendered page: confirm the
+title column by loading `/admin/collections/articles` in an authenticated browser.
