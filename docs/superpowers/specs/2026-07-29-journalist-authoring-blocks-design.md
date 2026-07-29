@@ -1,285 +1,203 @@
-# Journalist authoring: embeds, content images, galleries, audio, custom HTML
+# Journalist authoring: embeds, content images, galleries, audio
 
-**Date:** 2026-07-29
-**Status:** Approved (design)
-**Scope:** `src/payload.config.ts` (editor features), `src/collections/Media.ts` (audio
-mime types), new `src/blocks/` definitions, new `src/components/articles/` renderers,
-the three existing `RichText` call sites, and one row in `payload_preferences`.
+**Date:** 2026-07-29 (rewritten — the original described an architecture that was deleted)
+**Status:** Approved (design), partially implemented
+**Branch:** `feat/journalist-authoring-blocks`
 
 ## Problem
 
 The journalist dashboard (Payload admin) cannot do four things the newsroom needs:
 
-1. **Embed a social post.** No way to put a Facebook, X/Twitter, Instagram or TikTok
-   video inside an article body.
-2. **Place an image inside the body.** Journalists believe only the hero
-   (`featuredImage`) is possible.
-3. **Publish a gallery, an audio file, or custom HTML.** No mechanism at all.
-4. **See article titles in the list view.** The articles list shows status, author
-   and date, but no title — making it near-unusable at 8,940 articles.
+1. Embed a social post — Facebook, X, Instagram — inside an article body.
+2. Place an image inside the body. Journalists believe only the hero is possible.
+3. Publish a gallery or an audio segment. MFM is a radio brand; audio is a real content type.
+4. See article titles in the list view.
 
-Two of these have causes that differ from the reported symptom, and both were
-confirmed against the running system rather than inferred:
+Two of these had causes different from the reported symptom, both confirmed against the
+running system rather than inferred:
 
-**The list is a data problem, not a code problem.** `Articles.ts` already declares
-`useAsTitle: "title"` and `defaultColumns: ["title", "status", "author", "publishedAt"]`.
-But `payload_preferences` row `id = 8`, key `collection-articles`, holds:
+**The list was a data problem.** `Articles.ts` already declared `useAsTitle: "title"` and the
+right `defaultColumns`. A saved per-user row in `payload_preferences` had `{"active": false}`
+on the title accessor, and a saved preference overrides `defaultColumns` permanently. Fixed by
+deleting the row, not by changing code.
 
-```json
-{ "sort": "-publishedAt", "limit": 10,
-  "columns": [ { "active": false, "accessor": "title" },
-               { "active": true,  "accessor": "status" },
-               { "active": true,  "accessor": "author" },
-               { "active": true,  "accessor": "publishedAt" }, ... ] }
-```
+**Content images already worked.** `UploadFeature` and `UploadJSXConverter` are both Payload
+defaults. What was missing is *discoverability*: the default feature set has only an inline
+toolbar that appears on text selection, so the sole entry point was typing `/` and knowing the
+English command name — unusable for an Arabic-language newsroom, worse on touch.
 
-Someone unticked Title in the Columns picker. A saved preference **permanently
-overrides `defaultColumns`**, so no code change can fix this.
+## The architecture decision
 
-**Content images already work.** `lexicalEditor()` with no arguments enables
-`defaultEditorFeatures`, which includes `UploadFeature()`. `defaultJSXConverters`
-includes `UploadJSXConverter`. So insertion and rendering both exist today. What is
-missing is *discoverability*: the default set includes `InlineToolbarFeature` (appears
-only on text selection) but **no fixed toolbar**. The only entry point is typing `/`
-and knowing the English command name — which no Arabic-language journalist will find.
+An earlier version of this design stored the journalist's **pasted embed HTML** and executed it
+client-side, loading each platform's SDK. That was dropped. Three reasons, in order of weight:
 
-## Key enabler: zero DDL
+1. **Performance.** Facebook's `sdk.js` is roughly a megabyte and sets cookies before consent.
+   X's `widgets.js` turns each tweet into an iframe pulling 20+ requests. This site is mid-
+   recovery from an indexing collapse and serves a mostly-mobile Moroccan audience.
+2. **Security.** Storing and executing journalist-pasted HTML is a permanent stored-XSS surface.
+   One instance was already found and fixed on this branch. The class does not close while the
+   design stays the same — and these pages carry AdSense, so an XSS is also a policy incident.
+3. **Durability.** Meta retired automated Facebook page embeds in November 2025, and Instagram
+   oEmbed has required app-token auth since 2020. Pasted embed markup rots silently.
 
-`articles_locales.body` is `jsonb` (verified against production
-`broad-snow-50246164`). Lexical block nodes serialize **inside that JSON column** —
-unlike a top-level `blocks` field, they do not create relational tables.
+**The replacement: store the canonical URL only.** Never store or execute pasted HTML. Render
+each platform natively, server-side where possible.
 
-Every feature in this spec therefore ships as a **pure code change**: no migration, no
-hand-written DDL, no `payload migrate` run. This matters because `src/migrations` is
-gitignored and `payload migrate` warns of data loss on this database (see `CLAUDE.md`
-→ Landmines).
-
-Adding audio mime types to `Media.upload.mimeTypes` is validation-only and likewise
-requires no DDL.
-
-## Goals
-
-1. One obvious, touch-friendly insert affordance covering image, embed, gallery,
-   audio and custom HTML — identical on phone and desktop.
-2. Social embeds accept **either** a pasted embed code **or** a plain link.
-3. Article titles visible in the list view.
-4. No schema migration.
-
-## Non-goals
-
-- **Gallery lightbox.** Responsive grid only. Addable later.
-- **oEmbed API calls** at build or render time — a network dependency, a quota, and
-  latency on every article render, to save the journalist nothing.
-- **HTML sanitization.** See Security below.
-- **A separate audio collection.** `Media` is reused.
-- **A rich caption editor.** The `Media.caption` field already exists.
-- Changing anything in `lib/seo/indexation.ts`, the sitemap, or the SEO tiering. The
-  2024-2026 release is mid-flight and this work must not perturb it.
-
-## Architecture
-
-Six units, each independently testable, communicating through narrow interfaces.
-
-### 1. Editor features — `src/payload.config.ts`
-
-```ts
-editor: lexicalEditor({
-  features: ({ defaultFeatures }) => [
-    ...defaultFeatures,
-    FixedToolbarFeature(),
-    BlocksFeature({ blocks: [EmbedBlock, GalleryBlock, AudioBlock, HtmlBlock] }),
-  ],
-}),
-```
-
-`FixedToolbarFeature()` pins a persistent toolbar above the editor. It carries a
-dropdown group listing every insertable node — the "plus menu" — and works on touch,
-so phone and desktop get the same affordance. `defaultFeatures` is spread first so
-`UploadFeature` (content images) and everything else already in use is preserved.
-
-This is a config-level editor change, so it applies to the `Pages` collection's `body`
-too. That is acceptable and mildly useful; it is not a goal.
-
-### 2. Block definitions — `src/blocks/` (new)
-
-Plain Payload `Block` objects, one file each. All labels localized `en`/`fr`/`ar`
-following the existing convention in `src/collections/`.
-
-| File | slug | Fields |
+| Platform | Transport | Client JS |
 |---|---|---|
-| `Embed.ts` | `embed` | `source`: `textarea`, required |
-| `Gallery.ts` | `gallery` | `images`: `upload` → `media`, `hasMany: true`, required; `caption`: `text`, localized, optional |
-| `Audio.ts` | `audio` | `file`: `upload` → `media`, required; `title`: `text`, localized, optional |
-| `Html.ts` | `html` | `code`: `textarea`, required |
+| X / Twitter | `react-tweet` (RSC — renders real HTML, so tweet text becomes indexable article content) | none |
+| Facebook | `<iframe src="…/plugins/video.php?href=…">` | none |
+| Instagram | `<iframe src="https://www.instagram.com/{p\|reel}/{shortcode}/embed">` | none |
+| YouTube | lite facade, not a live iframe | facade only |
 
-Arabic labels: `تضمين (فيسبوك، إكس، إنستغرام)`, `معرض صور`, `ملف صوتي`,
-`HTML مخصص`.
+This deleted an entire module of client-side script execution along with the double-execution
+defect and the global jsdom weakening it had required.
 
-`embed` and `html` remain **separate blocks** despite sharing machinery. "تضمين" and
-"HTML مخصص" are two different mental models for a journalist; one block that silently
-does both is harder to explain than two that each do one thing.
+## Zero DDL
 
-### 3. Embed parser — `src/lib/embeds/parseEmbed.ts` (new)
+`articles_locales.body` is `jsonb` and Lexical block nodes serialize **inside that column** —
+unlike a top-level `blocks` field, they create no relational tables. Every part of this design
+ships as a pure code change: no migration, no hand-written DDL, no `payload migrate` run. That
+matters because `src/migrations` is gitignored and `payload migrate` warns of data loss on this
+database.
 
-A pure, synchronous, dependency-free function. This is where the testable logic lives.
+## Instagram transport — verified, not assumed
 
-```ts
-export type ParsedEmbed =
-  | { kind: 'iframe'; src: string; title: string; aspect: number }
-  | { kind: 'script'; html: string; platform: 'twitter' }
-  | { kind: 'html'; html: string; platforms: EmbedPlatform[] }
-  | { kind: 'invalid'; reason: string };
+`instagram.com/{p|reel}/{shortcode}/embed` is an **undocumented** path, and all Instagram
+rendering rests on it. It was verified by rendering in a real browser (the cached Playwright
+chromium, driven directly — no dependency added), not by fetching:
 
-export function parseEmbed(input: string): ParsedEmbed;
-```
+- `/p/{code}/embed` → 200, renders real post content and live CDN images.
+- `/reel/{code}/embed` → 200, renders a genuine `<video>` with a poster, not a thumbnail card.
+- **A nonexistent shortcode also returns 200 — and paints zero images.** A status-code check
+  would have certified a broken endpoint as working.
+- No login redirect, no `challenge_required`, no cookies required.
+- No `X-Frame-Options`; the CSP carries no `frame-ancestors` directive, so framing is permitted.
+  Residual gap: framing was confirmed at header level and by absence of any browser refusal,
+  **not** by observing pixels inside our own iframe. Task 9 closes that on a deployed page.
 
-Dispatch:
+## Parser
 
-- **Contains `<`** → treat as pasted markup. Return `kind: 'html'` with `platforms`
-  listing which SDKs the markup needs, detected by marker:
-  `blockquote.twitter-tweet` → twitter, `blockquote.instagram-media` → instagram,
-  `.fb-post` / `.fb-video` → facebook, `blockquote.tiktok-embed` → tiktok. A bare
-  `<iframe>` needs none.
-- **Starts with `http`** → match against known URL patterns and return an **iframe**,
-  so no third-party SDK is loaded:
-
-  | Platform | Iframe endpoint |
-  |---|---|
-  | YouTube | `youtube-nocookie.com/embed/<id>` |
-  | Facebook | `facebook.com/plugins/post.php?href=<encoded>` |
-  | Instagram | `instagram.com/p/<id>/embed` |
-  | TikTok | `tiktok.com/embed/v2/<id>` |
-  | X / Twitter | *no iframe endpoint* → `kind: 'script'`, platform `twitter` |
-
-- **Neither** → `kind: 'invalid'`.
-
-Preferring iframes over SDKs is a deliberate performance decision. Loading the
-Facebook and Instagram JS SDKs on article pages would undo the Core Web Vitals work
-(`project_perf_speed_insights`). X/Twitter is the sole exception — it has no supported
-iframe endpoint, so `platform.twitter.com/widgets.js` is loaded, once, only on pages
-that actually contain a tweet.
-
-### 4. Block renderers — `src/components/articles/blocks/` (new)
-
-| Component | Notes |
-|---|---|
-| `EmbedRenderer.tsx` (client) | Calls `parseEmbed`. Renders an iframe, or injects HTML and lazily loads + re-parses the needed SDK. `kind: 'invalid'` renders nothing in production. |
-| `GalleryRenderer.tsx` (server) | Responsive CSS grid of `next/image`, optional `<figcaption>`. |
-| `AudioRenderer.tsx` (server) | `<audio controls preload="metadata">` plus optional title. |
-| `HtmlRenderer.tsx` (client) | `dangerouslySetInnerHTML`, no SDK detection. |
-
-Every iframe gets `loading="lazy"` and a reserved aspect-ratio box so embeds do not
-cause cumulative layout shift. The SDK path reserves a `min-height` for the same
-reason.
-
-### 5. Shared converters — `src/components/articles/richTextConverters.tsx` (new)
+`src/lib/embeds/parseEmbed.ts` is the single chokepoint deciding what an embed *is*. Pure and
+synchronous — no DOM, no network, no oEmbed round trip. It must never throw: a throw becomes an
+HTTP 500 on an article page, and the staged indexation release depends on 200s.
 
 ```ts
-export const articleConverters: JSXConvertersFunction = ({ defaultConverters }) => ({
-  ...defaultConverters,
-  blocks: { embed, gallery, audio, html },
-  upload: /* <figure> + <figcaption> from media.caption */,
-});
+type ParsedEmbed = { platform: "x" | "facebook" | "instagram" | "youtube"; id: string; canonicalUrl: string };
+type EmbedFailure = "empty" | "unsupported" | "short-link" | "multiple";
+function parseEmbed(input: unknown): { ok: true; embed: ParsedEmbed } | { ok: false; reason: EmbedFailure };
 ```
 
-The custom `upload` converter replaces the default bare `<img>` with a `<figure>`
-carrying the `Media.caption` as a `<figcaption>`, and uses `next/image`.
+It accepts a bare URL **or** pasted markup, extracts candidate URLs from markup and **discards
+the markup**. Nothing HTML-shaped is ever returned or stored.
 
-### 6. Wiring the three call sites
+Load-bearing details, each closing a bug found in review:
 
-Blocks render as **nothing** unless converters are passed. There are three
-`RichText` call sites and all three must receive `articleConverters`:
+- Hostnames match by **exact equality**, never `endsWith` — so `notfacebook.com` and
+  `l.facebook.com` both fail.
+- The X handle is restricted to `[A-Za-z0-9_]{1,15}`, which closed an attribute-injection bug
+  reachable from a URL-shaped input containing no `<`.
+- Entity decoding happens **before** host validation. Do not reorder.
+- `<script>` blocks and HTML comments are stripped before extraction.
+- More than one **distinct** `{platform, id}` pair returns `"multiple"`. Repeats of the same
+  post resolve normally — real embed markup carries the same URL several times.
+- `fb.watch` returns `"short-link"`. It is what mobile Facebook's share sheet produces, and it
+  cannot be resolved without a network round trip; guessing the content type gets it wrong.
 
-- `src/components/articles/ArticleBody.tsx` — one call, used by
-  about / contact / privacy / legal
-- `src/components/articles/InArticleAdInjector.tsx` — **two** calls, the `before` and
-  `after` halves either side of the mid-article ad
+**A correction worth preserving:** an earlier premise held that a quoted tweet's blockquote
+contains two `status/` URLs. It does not — X's oEmbed keeps the quoted link `t.co`-shortened,
+confirmed against the live syndication API. The `"multiple"` guard still earns its place for
+the "two embeds pasted together" pattern and for Instagram and YouTube.
 
-`InArticleAdInjector` splits the root children at the first `paragraph` node. New
-block types do not change that logic: an article opening with an embed still places
-the ad after the first real paragraph.
+## Blocks
 
-### 7. Media accepts audio — `src/collections/Media.ts`
+Registered via `BlocksFeature`. All labels Arabic-first.
 
-Append `audio/mpeg`, `audio/mp4`, `audio/ogg`, `audio/wav` to `upload.mimeTypes`.
-Payload skips `imageSizes` generation for non-image files; no DDL.
+- **`socialEmbed`** — `source` (the canonical URL, normalised at input), optional `caption`.
+  `validate()` runs the parser and rejects with the Arabic message for the returned reason.
+- **Images** — the existing `UploadFeature`, extended with per-collection `caption` and
+  `credit`. Not a new block; it always worked, it was only undiscoverable.
+- **`gallery`** — images with per-image captions, and a `layout` select (grid | carousel).
+- **`audio`** — an uploaded file plus a title.
+- **`embedFrame`** — `src` validated against a hostname allowlist (Datawrapper, Google Maps,
+  SoundCloud, Spotify), plus `height` and a required `title` for accessibility.
+  **SoundCloud is load-bearing, not decorative** — MFM is a radio brand.
 
-Two consequences worth stating rather than discovering later:
+**No free-form HTML block.** It buys nothing the above doesn't cover and reopens exactly the
+surface this design closes. If a genuine need appears it returns as an admin-role-gated block
+with its own review.
 
-- `Media.alt` is `required: true`, so uploading an MP3 forces the journalist to type a
-  name. Left as-is — making `alt` optional would weaken image SEO across the site.
-- Audio files are far heavier than photos in the Vercel Blob store, which has been
-  blocked on billing before (`project_blob_store_blocked`). Worth watching.
+The four `EmbedFailure` reasons map to Arabic journalist-facing strings in **one** place, not
+inside `validate()` — otherwise they get duplicated the moment anything else needs them.
 
-### 8. List preference repair — data, not code
+## Renderers
 
-One statement against production:
+**X** — `react-tweet`'s `<Tweet id>` in a Server Component, inside `<Suspense>` with a skeleton
+and a `<TweetNotFound>` fallback. Cache the syndication fetch. Set `dir="ltr"` on the container:
+tweets are usually LTR content inside an RTL page and will otherwise render wrong.
 
-```sql
-UPDATE payload_preferences
-SET value = jsonb_set(value, '{columns}',
-      (SELECT jsonb_agg(CASE WHEN c->>'accessor' = 'title'
-                             THEN jsonb_set(c, '{active}', 'true')
-                             ELSE c END)
-       FROM jsonb_array_elements(value->'columns') c))
-WHERE key = 'collection-articles';
-```
+**Facebook / Instagram** — plain `<iframe>`, `loading="lazy"`, explicit aspect-ratio wrapper,
+`referrerPolicy="no-referrer-when-downgrade"`, `allowFullScreen`.
 
-A targeted patch rather than deleting the row, so the journalist keeps their
-`-publishedAt` sort and page size of 10.
+**Unconditional visible fallback (A1).** A deleted post, a privated account and a suspended one
+all return 200 and paint nothing, and cross-origin we cannot detect it. Over years this site
+will accumulate articles containing blank rectangles. So the caption plus a
+"شاهد على إنستغرام" link renders **beneath the iframe, always** — not as an error state, because
+there is no error to catch. If the frame paints, it reads as a normal attribution line; if it
+doesn't, the reader still gets the caption and a working link. **Same treatment for Facebook.**
 
-## Security
+**Aspect ratio comes from the path type (A2).** The spike showed `/p/{reel-shortcode}/embed`
+also works, so path form does not matter for *transport*. It matters for *layout*: reels are
+9:16, posts roughly 1:1 to 4:5. One fixed ratio across both gives either heavy letterboxing or a
+container that resizes after load — which is CLS, on a site whose Core Web Vitals are actively
+being protected. **The parser's `/p/` vs `/reel/` distinction drives the aspect-ratio box. Do
+not delete it as redundant just because transport no longer needs it.**
 
-The `html` block, and the pasted-markup path of `embed`, inject author-supplied HTML
-via `dangerouslySetInnerHTML`. **This is stored XSS by design.** It is the same trust
-model WordPress ships with, and it is the point of the feature.
+**Images** — the default `UploadJSXConverter` emits a bare `<img>`: unsized, unoptimised,
+CLS-generating. Override it to emit `next/image` with explicit width and height from the media
+doc and a `sizes` matching the article column. No `priority` — that belongs to the hero.
 
-The mitigation is authorization, not sanitization: only authenticated users can write
-articles. Sanitizing would defeat the feature — every social embed *is* a script tag or
-an iframe.
+**Gallery** — one client component, `loading="lazy"` on everything but the first image, fixed
+aspect ratios. **Audio** — native `<audio preload="none">`, no player library.
 
-Stated explicitly so a future reader treats it as a known, accepted decision rather
-than an oversight.
+Check for a CSP in `next.config` or middleware. If one exists, `frame-src` needs
+`www.facebook.com`, `www.instagram.com`, `www.youtube-nocookie.com`, `platform.twitter.com`. A
+local render that a production CSP blocks is exactly the proxy-versus-artefact failure this
+project keeps hitting.
 
-## Error handling
+## Converters and text extraction
 
-| Case | Behaviour |
-|---|---|
-| `parseEmbed` returns `invalid` | Render nothing on the public page. Never a broken box. |
-| Embed field empty | Render nothing. |
-| Gallery with zero images | Render nothing. |
-| Audio upload deleted from Media | Render nothing. |
-| Unknown block type in stored JSON | Default converter behaviour: skipped, page still renders. |
+One shared converter module, imported by every `RichText` call site — find them, do not trust a
+stale list. Alongside it, a **text-only extractor** for meta descriptions, excerpts, RSS and
+search indexing, degrading blocks gracefully rather than emitting `[object Object]`:
+`socialEmbed` → its caption; image → alt and caption; `gallery` → concatenated captions;
+`audio` → title.
 
-No case throws. A malformed block must never take down an article page, and must never
-turn a `200` into a `500` — the indexation work depends on article pages returning
-`200`.
+## Tiering must become block-aware
 
-## Testing
+**The highest-consequence item in this design.** Body length drives article tiering, and
+`archive-brief` is `noindex`. Blocks contribute zero characters to a naive text walk, so a match
+report built from a video embed, a gallery and 300 words of Arabic gets tiered down and silently
+dropped from the index — the same failure mode as the multi-line ACF blocks the hard gate in
+`CLAUDE.md` exists to prevent.
 
-**Unit (vitest, matching `src/components/articles/__tests__/`):**
+Requirements: make the tier function and `pnpm audit:body-length` block-aware via the extractor;
+count captions and alt text toward length; make **any article containing at least one media
+block ineligible for `archive-brief`** regardless of text length; and prove no regression by
+re-running the audit across imported years and showing a **byte-identical** diff — existing
+articles contain no blocks, so any change is a bug.
 
-- `parseEmbed` — one case per platform URL, one per pasted-markup marker, plus empty,
-  garbage, and a bare `<iframe>`.
-- Converters — each block type renders its expected element; unknown block does not
-  throw.
-- `InArticleAdInjector` — existing tests still pass with an embed as the first child.
+## Performance budget
 
-**Verification on production, per `docs/verification-principles.md`:**
+An article with one tweet, one Facebook video and one gallery must add **< 50 KB** of JavaScript
+over the same page with none, and must issue **zero** requests to `connect.facebook.net` or
+`platform.twitter.com/widgets.js`.
 
-A green build is not a behavioural assertion. After deploy, publish one test article
-containing all five inserts, then assert **on the served bytes**:
+## Known gaps, carried until closed
 
-- `curl` the article URL → HTTP **200**
-- `grep -o '<iframe' | wc -l` → matches the number of embeds inserted
-  (`grep -c` counts lines; minified HTML is one line)
-- `grep -o '<audio' | wc -l` → 1
-- content `<img>` count matches images inserted
-- the articles list in `/admin` shows Arabic titles
-
-## Rollback
-
-Every unit is additive. Removing `FixedToolbarFeature()` and `BlocksFeature()` from
-`payload.config.ts` restores today's behaviour exactly; already-authored block JSON
-sits inert in the `body` column and is skipped by the default converters. No data is
-lost and no schema is stranded — a direct consequence of the zero-DDL design.
+- The committed Instagram test fixture is **documented-format, not fetched** — both oEmbed
+  endpoints returned an app-token wall. Extraction may fail on what a journalist actually
+  copies. Task 9 must include "paste a real Instagram embed copied from the app".
+- Framing confirmed at header level only; no pixels observed inside our own iframe yet.
+- Task 1's rendered-page check was done on production and passed; the DELETE and the check hit
+  the same Neon branch (`br-royal-wildflower-a21skzaw`, primary and default).
