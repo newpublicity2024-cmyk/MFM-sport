@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { render } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, fireEvent } from "@testing-library/react";
 import { Gallery } from "./Gallery";
 
 const image = (n: number, caption?: string) => ({
@@ -75,5 +75,55 @@ describe("Gallery", () => {
     expect(nextButton.textContent).toBe("");
     expect(container.textContent).not.toContain("‹");
     expect(container.textContent).not.toContain("›");
+  });
+
+  // Fix round 2: LeagueCarousel.tsx's scroll() flips the scrollBy sign in RTL
+  // (evergreen browsers use the negative-scrollLeft RTL model: 0 is the start
+  // /right/ edge, and moving toward later content needs a NEGATIVE delta).
+  // Gallery's scrollBy had no such flip, so under this site's only served
+  // locale (Arabic, dir="rtl" -- see [locale]/layout.tsx) "التالي" (next) sent
+  // a POSITIVE delta, which moves toward PREVIOUS, and "السابق" (previous)
+  // sent negative, which moves toward NEXT: the two buttons were physically
+  // swapped for every reader. A test asserting only "scrollBy fired" would
+  // have passed against that broken code -- this pins the SIGN of the delta,
+  // which is the only thing that actually distinguishes correct from swapped.
+  it("flips the scrollBy delta sign between LTR and RTL for the same (next) button", () => {
+    const images = [image(1), image(2)];
+
+    function captureNextDelta(dir: "ltr" | "rtl"): number {
+      // Each call renders its own instance -- unmount before returning so the
+      // next call's getByLabelText doesn't see two mounted copies (render()
+      // only auto-cleans up BETWEEN separate `it()` blocks, not between two
+      // calls within the same test).
+      const { container, getByLabelText, unmount } = render(
+        <div dir={dir}>
+          <Gallery images={images} layout="carousel" />
+        </div>,
+      );
+      const scroller = container.querySelector("[data-gallery-scroller]") as HTMLElement;
+      // jsdom never computes real layout, so clientWidth is always 0 -- and
+      // 0 * either sign is 0, which would make this test pass trivially
+      // whether or not the sign flip exists. Stub a real width so the two
+      // deltas are actually distinguishable non-zero numbers.
+      Object.defineProperty(scroller, "clientWidth", { value: 400, configurable: true });
+      const scrollBySpy = vi.fn();
+      scroller.scrollBy = scrollBySpy;
+
+      fireEvent.click(getByLabelText("التالي")); // "next" -- toward later content
+
+      expect(scrollBySpy).toHaveBeenCalledTimes(1);
+      const delta = (scrollBySpy.mock.calls[0][0] as { left: number }).left;
+      unmount();
+      return delta;
+    }
+
+    const ltrDelta = captureNextDelta("ltr");
+    const rtlDelta = captureNextDelta("rtl");
+
+    // The direction of travel for the SAME button must flip between the two
+    // writing directions -- not merely "some delta was sent".
+    expect(Math.sign(ltrDelta)).not.toBe(Math.sign(rtlDelta));
+    expect(ltrDelta).toBeGreaterThan(0);
+    expect(rtlDelta).toBeLessThan(0);
   });
 });

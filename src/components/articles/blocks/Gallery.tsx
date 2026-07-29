@@ -18,6 +18,24 @@ type Props = {
 
 const IMAGE_SIZES = "(max-width: 640px) 50vw, 33vw";
 
+/**
+ * Whether the nearest explicit `dir` ancestor (including `el` itself) is RTL
+ * -- the same underlying fact LeagueCarousel.tsx's `locale === "ar"` prop
+ * check encodes, read from the DOM instead of a prop. Gallery is invoked
+ * through Payload's JSXConvertersFunction (a fixed-signature callback
+ * RichText calls internally with no locale to pass down), so threading a
+ * `locale` prop here would mean changing ArticleBody.tsx,
+ * InArticleAdInjector.tsx, richTextConverters.tsx's exported shape, AND every
+ * one of their callers -- reading the DOM is the narrow substitute for a
+ * single component, not a second RTL-detection strategy: it resolves to the
+ * exact same boolean `[locale]/layout.tsx` already renders (`dir={direction}`
+ * on the ancestor `<div>` wrapping this component), for the same reason
+ * `closest()` is how the browser itself resolves bidi direction.
+ */
+function isEffectivelyRtl(el: Element): boolean {
+  return el.closest("[dir]")?.getAttribute("dir") === "rtl";
+}
+
 export function Gallery({ images, layout }: Props) {
   const scrollerRef = useRef<HTMLDivElement>(null);
 
@@ -31,10 +49,22 @@ export function Gallery({ images, layout }: Props) {
 
   if (items.length === 0) return null;
 
-  const scrollBy = (direction: 1 | -1) => {
+  const scrollBy = (toward: "start" | "end") => {
     const el = scrollerRef.current;
     if (!el) return;
-    el.scrollBy({ left: direction * el.clientWidth * 0.9, behavior: "smooth" });
+    // Same RTL model as LeagueCarousel.tsx's scroll() -- do not "simplify"
+    // this away. In RTL (Arabic, this site's only served locale -- see
+    // [locale]/layout.tsx) the inline axis is mirrored, so the physical
+    // scrollLeft sign flips too: evergreen browsers use the negative-
+    // scrollLeft RTL model, where 0 is the start (right) edge and moving
+    // toward later content needs a NEGATIVE delta. Without this flip, "toward
+    // start" and "toward end" are physically SWAPPED for every RTL reader --
+    // this is the third time this exact class of RTL defect has been fixed on
+    // this repo (PRs #30, #31, and this file's own arrow-glyph fix last round).
+    const rtl = isEffectivelyRtl(el);
+    const amount = el.clientWidth * 0.9;
+    const sign = (toward === "start" ? -1 : 1) * (rtl ? -1 : 1);
+    el.scrollBy({ left: sign * amount, behavior: "smooth" });
   };
 
   if (layout === "carousel") {
@@ -42,6 +72,7 @@ export function Gallery({ images, layout }: Props) {
       <div className="relative my-6" data-gallery-carousel>
         <div
           ref={scrollerRef}
+          data-gallery-scroller
           className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth"
         >
           {items.map((item, index) => (
@@ -67,7 +98,7 @@ export function Gallery({ images, layout }: Props) {
         </div>
         <button
           type="button"
-          onClick={() => scrollBy(-1)}
+          onClick={() => scrollBy("start")}
           aria-label="السابق"
           className="absolute start-1 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 shadow"
         >
@@ -79,7 +110,7 @@ export function Gallery({ images, layout }: Props) {
         </button>
         <button
           type="button"
-          onClick={() => scrollBy(1)}
+          onClick={() => scrollBy("end")}
           aria-label="التالي"
           className="absolute end-1 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 shadow"
         >
