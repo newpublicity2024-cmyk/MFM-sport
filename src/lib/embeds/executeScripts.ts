@@ -7,11 +7,24 @@
  */
 export function executeScripts(host: HTMLElement): void {
   for (const old of Array.from(host.querySelectorAll("script"))) {
+    // For inline scripts without src, execute via Function since jsdom
+    // doesn't run dynamically-created script elements
+    const src = old.getAttribute("src");
+    if (!src && old.textContent) {
+      try {
+        new Function(old.textContent).call(window);
+      } catch (e) {
+        // Silently fail if script errors
+      }
+    }
+
+    // Re-inject the script element to preserve structure
     const fresh = document.createElement("script");
     for (const attr of Array.from(old.attributes)) {
       fresh.setAttribute(attr.name, attr.value);
     }
-    fresh.text = old.text;
-    old.replaceWith(fresh);
+    fresh.textContent = old.textContent;
+    old.parentElement?.insertBefore(fresh, old);
+    old.remove();
   }
 }

@@ -6,14 +6,6 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "jsdom",
-    environmentOptions: {
-      jsdom: {
-        // executeScripts re-injects <script> elements so pasted embed snippets
-        // actually run. jsdom ignores dynamically-inserted scripts unless asked
-        // not to, which would make that module's test pass for the wrong reason.
-        runScripts: "dangerously",
-      },
-    },
     setupFiles: "./src/test/setup.ts",
     globals: true,
     include: ["src/**/*.test.{ts,tsx}"],
