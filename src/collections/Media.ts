@@ -15,7 +15,21 @@ export const Media: CollectionConfig = {
     read: () => true,
   },
   upload: {
-    mimeTypes: ["image/jpeg", "image/png", "image/webp", "image/svg+xml"],
+    // Validation-only allowlist — no DDL, no schema change. Audio types added for the
+    // `audio` block (Task 4): a journalist uploads an MP3 the same way as a photo.
+    // Media.alt stays required:true even for audio uploads, so this forces a typed
+    // name rather than a blank — left as-is rather than weakened, since alt text
+    // matters for image SEO on every other upload through this same collection.
+    mimeTypes: [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/svg+xml",
+      "audio/mpeg",
+      "audio/mp4",
+      "audio/ogg",
+      "audio/wav",
+    ],
     imageSizes: [
       {
         name: "thumbnail",

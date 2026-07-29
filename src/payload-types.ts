@@ -996,6 +996,82 @@ export interface CollectionsWidget {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "SocialEmbedBlock".
+ */
+export interface SocialEmbedBlock {
+  /**
+   * Paste the post's link, or the embed code copied from Facebook, X, Instagram or YouTube — either works. It is cleaned up to a plain link automatically when you save.
+   */
+  source: string;
+  /**
+   * Shown beneath the embed to every reader — this is not an internal note. A deleted post, a private account, or a suspended one all still return a normal page and render nothing, and that can't be detected from the server, so this caption (plus a link to the original post) is what a reader sees when the embed itself doesn't load.
+   */
+  caption?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'socialEmbed';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "GalleryBlock".
+ */
+export interface GalleryBlock {
+  /**
+   * Add two or more images. They appear in the order you set here, and each can carry its own caption.
+   */
+  images: {
+    image: number | Media;
+    caption?: string | null;
+    id?: string | null;
+  }[];
+  /**
+   * How the gallery is displayed on the article page.
+   */
+  layout: 'grid' | 'carousel';
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'gallery';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "AudioBlock".
+ */
+export interface AudioBlock {
+  /**
+   * Upload an MP3 the same way you upload a photo. A player appears in the article wherever you place this block.
+   */
+  file: number | Media;
+  /**
+   * Optional — shown above the player, e.g. "Full post-match interview".
+   */
+  title?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'audio';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "EmbedFrameBlock".
+ */
+export interface EmbedFrameBlock {
+  /**
+   * Only links from Datawrapper, Google Maps, SoundCloud or Spotify are accepted.
+   */
+  src: string;
+  /**
+   * Frame height in pixels. 400 suits most maps and charts; a SoundCloud player is usually shorter (around 166).
+   */
+  height: number;
+  /**
+   * Required. Describes the frame's content for screen-reader users — an iframe with no accessible name is unusable with a screen reader. Not shown visually.
+   */
+  title: string;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'embedFrame';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "auth".
  */
 export interface Auth {

@@ -1,5 +1,5 @@
 import { postgresAdapter } from '@payloadcms/db-postgres'
-import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { BlocksFeature, lexicalEditor, UploadFeature } from '@payloadcms/richtext-lexical'
 import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
 import { ar } from '@payloadcms/translations/languages/ar'
 import { en } from '@payloadcms/translations/languages/en'
@@ -24,6 +24,10 @@ import { Videos } from './collections/Videos'
 import { Ads } from './collections/Ads'
 import { Homepage } from './globals/Homepage'
 import { blobBaseUrl, blobFileURL } from './lib/storage/blobUrl'
+import { SocialEmbedBlock } from './blocks/SocialEmbed'
+import { GalleryBlock } from './blocks/Gallery'
+import { AudioBlock } from './blocks/Audio'
+import { EmbedFrameBlock } from './blocks/EmbedFrame'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -75,7 +79,58 @@ export default buildConfig({
   i18n: {
     supportedLanguages: { en, fr, ar },
   },
-  editor: lexicalEditor(),
+  // Journalist authoring blocks (Task 4). FixedToolbarFeature is deliberately NOT added
+  // here — that is Task 8, along with cursor-insertion and Arabic-label verification.
+  editor: lexicalEditor({
+    features: ({ defaultFeatures }) => [
+      // defaultFeatures spreads first so UploadFeature (content images) and everything
+      // else already in use survives. The bare UploadFeature() inside defaultFeatures
+      // and the customised one below share the feature key "upload" — Payload resolves
+      // duplicate keys by last-registered-wins (see loadFeatures() in
+      // @payloadcms/richtext-lexical's lexical/config/server/loader.js), so ours
+      // overrides the bare default rather than running alongside it.
+      ...defaultFeatures,
+      UploadFeature({
+        collections: {
+          media: {
+            // Per-usage fields for THIS placement of the image in THIS article body —
+            // distinct from Media.caption, which is the media doc's own default. Alt
+            // text intentionally stays on the media doc only (brief §3), not repeated
+            // here.
+            fields: [
+              {
+                name: 'caption',
+                type: 'text',
+                label: { en: 'Caption', fr: 'Légende', ar: 'التعليق' },
+                admin: {
+                  description: {
+                    en: 'Shown beneath this image in the article. Leave blank to show none.',
+                    fr: "Affichée sous cette image dans l'article. Laissez vide pour n'en afficher aucune.",
+                    ar: 'تظهر أسفل هذه الصورة داخل المقال. اتركها فارغة لعدم عرض أي تعليق.',
+                  },
+                },
+              },
+              {
+                name: 'credit',
+                type: 'text',
+                label: { en: 'Credit', fr: 'Crédit', ar: 'المصدر' },
+                admin: {
+                  description: {
+                    en: 'Photo credit / source, shown alongside the caption.',
+                    fr: 'Crédit photo / source, affiché avec la légende.',
+                    ar: 'مصدر الصورة، يظهر بجانب التعليق.',
+                  },
+                },
+              },
+            ],
+          },
+        },
+      }),
+      BlocksFeature({
+        blocks: [SocialEmbedBlock, GalleryBlock, AudioBlock, EmbedFrameBlock],
+      }),
+    ],
+  }),
   secret: process.env.PAYLOAD_SECRET,
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
