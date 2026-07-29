@@ -7,8 +7,20 @@
  * the input down to a platform, a platform-native id, and a canonical URL; a
  * later, separate rendering step turns that into native markup per platform
  * (react-tweet for X, plain lazy iframes for Facebook and Instagram) with no
- * platform SDK ever loaded. Anything that cannot be resolved to a known platform
- * is `null`.
+ * platform SDK ever loaded.
+ *
+ * The result is a discriminated union rather than `ParsedEmbed | null`, because a
+ * caller (Task 4's `validate()`) needs to distinguish *why* nothing resolved:
+ *   - "empty": nothing was pasted (or the input wasn't even a string).
+ *   - "unsupported": there was content, but no known platform in it.
+ *   - "short-link": every candidate was a short link we deliberately refuse to
+ *     resolve (fb.watch) — resolving it needs a network round trip, and guessing
+ *     the content type gets it wrong.
+ *   - "multiple": the pasted markup contained more than one genuinely distinct
+ *     embed (e.g. a quoted tweet, or two separate embed snippets pasted
+ *     together), so which one the journalist meant is ambiguous.
+ * `null` cannot carry a reason code, so this module owns the distinction and the
+ * caller only surfaces it — it must never have to re-derive it.
  *
  * Pure and synchronous by design: no DOM, no network, no oEmbed call, and this
  * must never throw regardless of input — a throw here would 500 an article page.
@@ -26,6 +38,20 @@ export type ParsedEmbed = {
   canonicalUrl: string;
 };
 
+export type EmbedFailure =
+  /** Nothing to parse: empty, whitespace-only, or not a string at all. */
+  | "empty"
+  /** Parsed fine, but no supported platform. */
+  | "unsupported"
+  /** A short link we recognise but deliberately refuse — resolving it needs a network
+   *  round trip, and guessing the content type gets it wrong. fb.watch is the case. */
+  | "short-link"
+  /** Pasted markup contained more than one distinct embed, so which one they meant is
+   *  ambiguous. Quoted tweets and multiple embed snippets pasted together both hit this. */
+  | "multiple";
+
+export type ParseEmbedResult = { ok: true; embed: ParsedEmbed } | { ok: false; reason: EmbedFailure };
+
 // Hostname allowlists per platform — exact match, lowercase, never `endsWith` (so
 // "notfacebook.com" and "l.facebook.com" both fail). Record<EmbedPlatform, ...> so a
 // typo'd key is a compile error instead of an `undefined` lookup at runtime.
@@ -39,41 +65,44 @@ const HOSTNAME_ALLOWLISTS: Record<EmbedPlatform, readonly string[]> = {
 // Short links we recognise but deliberately refuse to resolve. Deliberately absent
 // from HOSTNAME_ALLOWLISTS.facebook: resolving fb.watch to a real post needs a
 // network round trip, and guessing (as the old code did, defaulting to the "post"
-// plugin) gets it wrong — fb.watch is always video.
+// plugin) gets it wrong — fb.watch is always video. Checked over every extracted
+// candidate, not just a bare-URL whole input (see resolveCandidates) — mobile
+// Facebook's share sheet produces fb.watch links inside pasted snippets just as
+// often as bare, so a journalist pasting either shape must get the same answer.
 const UNRESOLVABLE_SHORT_LINK_HOSTS: readonly string[] = ["fb.watch"];
 
-export function parseEmbed(input: string | null | undefined): ParsedEmbed | null {
-  const raw = (input ?? "").trim();
-  if (!raw) return null;
+export function parseEmbed(input: unknown): ParseEmbedResult {
+  // B2: the signature is `unknown`, not `string | null | undefined`, because a
+  // caller can hand this anything a form field or a stored value might contain.
+  // Guarding here — before any string method is called — is what keeps the "must
+  // never throw" contract true for arrays, plain objects, numbers, booleans and
+  // symbols, not just for null/undefined.
+  if (typeof input !== "string") return { ok: false, reason: "empty" };
 
-  // Markup wins over direct URL parsing. A pasted snippet is recognisable by its
-  // "<", and it usually *contains* one or more candidate URLs; the snippet itself
-  // is discarded either way — only a successfully resolved URL survives.
-  if (raw.includes("<")) {
-    return parseMarkup(raw);
-  }
+  const raw = input.trim();
+  if (!raw) return { ok: false, reason: "empty" };
 
-  return parseUrl(raw);
+  // Every input — a bare URL, a full embed snippet, or several of either pasted
+  // together — goes through the same candidate-extraction pipeline. Treating a
+  // bare URL as a single-candidate list (rather than parsing the whole trimmed
+  // string as one URL) is what lets "two bare URLs pasted in one box" be
+  // recognised as two candidates instead of one unparseable string.
+  const cleaned = stripScriptsAndComments(raw);
+  const candidates = extractCandidateUrls(cleaned);
+  return resolveCandidates(candidates);
 }
 
-/**
- * True for short links we recognise but deliberately refuse: resolving them needs a
- * network round trip, and guessing the content type gets it wrong. Task 4's validate()
- * uses this to show a more useful Arabic error than the generic one.
- */
-export function isUnresolvableShortLink(input: string | null | undefined): boolean {
-  const raw = (input ?? "").trim();
-  if (!raw) return false;
-
-  const url = tryParseHttpUrl(raw);
-  if (!url) return false;
-
-  return UNRESOLVABLE_SHORT_LINK_HOSTS.includes(url.hostname.toLowerCase());
+// B1: strips <script>…</script> blocks and <!-- … --> comments before any URL is
+// extracted, so a URL that only appears inside either is never a candidate. Real
+// embed snippets carry a <script> tag (the platform's widget loader) alongside
+// the content the journalist actually meant, and a comment is a natural place
+// for a decoy or a previous draft's leftover link to hide.
+function stripScriptsAndComments(markup: string): string {
+  return markup.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "").replace(/<!--[\s\S]*?-->/g, "");
 }
 
-// Parses an absolute http(s) URL, never throwing. Shared by parseUrl and
-// isUnresolvableShortLink so both apply the exact same "is this a URL at all"
-// rule.
+// Parses an absolute http(s) URL, never throwing. Shared by parseUrl and the
+// short-link check so both apply the exact same "is this a URL at all" rule.
 function tryParseHttpUrl(raw: string): URL | null {
   if (!/^https?:\/\//i.test(raw)) return null;
   try {
@@ -137,20 +166,16 @@ const ATTRIBUTE_URL_PATTERN = /(?:href|src|data-href|data-instgrm-permalink)\s*=
 const BARE_URL_PATTERN = /https?:\/\/[^\s"'<>]+/gi;
 
 /**
- * Extracts candidate URLs from pasted embed markup and resolves the first one that
- * matches a known platform. The markup itself is discarded either way.
+ * Extracts every candidate URL from the (script/comment-stripped) input. A bare
+ * URL input produces exactly one candidate; pasted markup usually produces
+ * several — real or decoy, resolvable or not. Resolution and the distinct-pairs
+ * count both happen afterwards, in resolveCandidates.
  */
-function parseMarkup(markup: string): ParsedEmbed | null {
-  for (const candidate of extractCandidateUrls(markup)) {
-    const result = parseUrl(candidate);
-    if (result) return result;
-  }
-  return null;
-}
-
 function extractCandidateUrls(markup: string): string[] {
   // Pasted markup is HTML-escaped (e.g. "&amp;" for "&" in a query string); decode
-  // before parsing so an extracted candidate is a well-formed URL.
+  // before parsing so an extracted candidate is a well-formed URL. This must
+  // happen before any hostname check — an encoded trick must not be able to slip
+  // a disallowed host past the allowlist by decoding into a different string later.
   const decoded = markup.replace(/&amp;/g, "&");
 
   const candidates: string[] = [];
@@ -161,6 +186,46 @@ function extractCandidateUrls(markup: string): string[] {
     candidates.push(match[0]);
   }
   return candidates;
+}
+
+/**
+ * Resolves a list of candidate URL strings to a single result, per B1 and B3:
+ *
+ * - Candidates are resolved with the exact same per-platform logic as a bare URL
+ *   (parseUrl), then deduplicated by {platform, id} — not by raw URL string, so
+ *   "twitter.com/a/status/1" and "x.com/a/status/1" count as one pair and a
+ *   platform's own markup repeating its own link (e.g. once in the body, once in
+ *   the attribution line) does not manufacture a second pair.
+ * - More than one *distinct* pair means the paste was ambiguous: "multiple".
+ * - Exactly one distinct pair resolves normally, even if it occurred several times.
+ * - A resolvable embed always wins over a short link, even when both are present.
+ *   Only when nothing resolves at all, and at least one candidate was a
+ *   recognised-but-refused short link, does "short-link" apply.
+ * - Otherwise: "unsupported".
+ */
+function resolveCandidates(candidates: readonly string[]): ParseEmbedResult {
+  const resolved = new Map<string, ParsedEmbed>();
+  let sawShortLink = false;
+
+  for (const candidate of candidates) {
+    const embed = parseUrl(candidate);
+    if (embed) {
+      const key = `${embed.platform}:${embed.id}`;
+      if (!resolved.has(key)) resolved.set(key, embed);
+      continue;
+    }
+
+    const url = tryParseHttpUrl(candidate);
+    if (url && UNRESOLVABLE_SHORT_LINK_HOSTS.includes(url.hostname.toLowerCase())) {
+      sawShortLink = true;
+    }
+  }
+
+  const embeds = [...resolved.values()];
+  if (embeds.length > 1) return { ok: false, reason: "multiple" };
+  if (embeds.length === 1) return { ok: true, embed: embeds[0] };
+  if (sawShortLink) return { ok: false, reason: "short-link" };
+  return { ok: false, reason: "unsupported" };
 }
 
 /**
