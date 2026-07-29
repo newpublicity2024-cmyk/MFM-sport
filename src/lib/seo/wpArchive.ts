@@ -42,6 +42,17 @@ export function bodyTextLength(raw: string): number {
   return stripToText(raw).length;
 }
 
+/**
+ * Naive text-length tiering. This is the raw-HTML WordPress import path's entry point
+ * ONLY (scripts/import-wp-archive.ts) — it has no notion of a block, so a Lexical body
+ * built mostly from a gallery/audio/embed block scores near zero here and would land in
+ * `archive-brief`, which is `noindex` permanently.
+ *
+ * Any future re-tier of admin-authored articles must go through the block-aware path —
+ * `tierForLexicalBody()` in `src/lib/seo/blockAwareTiering.ts` — never this function. The
+ * naive text walk scores media blocks at zero and will silently noindex media-heavy
+ * articles. See CLAUDE.md's Landmines section for the same warning.
+ */
 export function tierFor(textLength: number): "archive-full" | "archive-brief" {
   return textLength >= BRIEF_THRESHOLD ? "archive-full" : "archive-brief";
 }
