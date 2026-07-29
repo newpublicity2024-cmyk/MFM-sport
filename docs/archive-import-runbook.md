@@ -160,3 +160,13 @@ The feed has two independent guards: a 48-hour rolling window, and a hard publis
 - **Legacy images are gone.** All 43,584 attachment URLs 404, and the WordPress REST API no longer responds. Bodies import with `<img>`/`<figure>` stripped. If a `wp-content/uploads` backup is ever located, images can be backfilled against `legacySlug` without re-importing text.
 - **Import ordering is not link-prioritised.** Ideally the URLs with the most referring domains import first, so equity starts flowing soonest. That needs an Ahrefs export; without it the order is simply chronological.
 - **Category consolidation is still pending.** The archive references the old taxonomy, which includes the duplicate and trailing-space slugs documented in `seo-recon-findings.md` §8. Consolidating after import means fewer, larger merges — but it must happen before those category hubs are worth linking to.
+
+## Admin panel
+
+### Articles list lost its title column (2026-07-29)
+
+`payload_preferences` key `collection-articles` had `{"active": false, "accessor": "title"}`.
+A saved column preference permanently overrides `admin.defaultColumns`, so this is a data
+fix, not a code fix. Repaired by flipping that one entry to `true`; see
+`docs/superpowers/plans/2026-07-29-journalist-authoring-blocks.md` Task 1 for the SQL.
+If it recurs, someone unticked Title in the list's Columns picker.
