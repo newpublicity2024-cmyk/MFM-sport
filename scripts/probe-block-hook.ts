@@ -21,12 +21,62 @@
  * can never touch production:
  *
  *   DATABASE_URL="<throwaway-branch-connection-string>" pnpm tsx scripts/probe-block-hook.ts
+ *
+ * GUARD (fix round 1, Finding 2): this script calls payload.create() — a real write.
+ * Without the override above, dotenv falls through to .env's connection string, which
+ * points at PRODUCTION, and this script would write a genuine draft article there.
+ * Disclosing that risk is not the same as closing it, so `assertNotProduction()` below
+ * refuses to run — before Payload or the DB adapter are even loaded — unless the
+ * resolved DATABASE_URL demonstrably does NOT resolve to the production endpoint.
  */
 
 // Must precede the @payload-config import — see normalize-redirects.ts.
 import "dotenv/config";
-import { getPayload } from "payload";
-import config from "@payload-config";
+
+// Production's Neon compute endpoint id (project broad-snow-50246164, branch
+// br-royal-wildflower-a21skzaw — "production", primary + default; see CLAUDE.md and
+// scripts/backfill-wp-post-id.ts's own note on this branch). Stable identifying part of
+// the host Neon assigns to the compute; the pooler suffix / region around it is not
+// what's checked, so this doesn't rot if either of those changes.
+const PRODUCTION_ENDPOINT_ID = "ep-rough-moon-a2j3hgj8";
+
+/**
+ * Refuses to proceed unless DATABASE_URL is set and demonstrably not production.
+ * Runs before ANYTHING else in this script — before `payload` or `@payload-config` are
+ * even imported (both are dynamic imports below, specifically so nothing Payload- or
+ * DB-related loads before this check has already passed). Checked as a plain substring
+ * on the raw connection string, not only on a `new URL()`-parsed hostname, so the guard
+ * still holds even if DATABASE_URL is shaped in a way the URL parser doesn't like — a
+ * guard that only works when parsing succeeds is not a guard.
+ */
+function assertNotProduction(rawDatabaseUrl: string | undefined): void {
+  if (!rawDatabaseUrl) {
+    console.error("DATABASE_URL is not set. Refusing to run without an explicit connection string.");
+    process.exit(1);
+  }
+
+  let displayHost = "(could not parse DATABASE_URL as a URL)";
+  try {
+    displayHost = new URL(rawDatabaseUrl).host;
+  } catch {
+    // Parsing is only for the printout below; the safety check itself does not depend
+    // on it succeeding (see the substring check further down).
+  }
+  console.log(`This script is about to write to: ${displayHost}`);
+
+  if (rawDatabaseUrl.includes(PRODUCTION_ENDPOINT_ID)) {
+    console.error(
+      `\nREFUSING TO RUN: DATABASE_URL resolves to production (endpoint id ` +
+        `${PRODUCTION_ENDPOINT_ID}, branch br-royal-wildflower-a21skzaw). This script ` +
+        `calls payload.create() and must only ever run against a throwaway Neon branch.\n\n` +
+        `Pass an explicit override:\n` +
+        `  DATABASE_URL="<throwaway-branch-connection-string>" pnpm tsx scripts/probe-block-hook.ts\n`,
+    );
+    process.exit(1);
+  }
+}
+
+assertNotProduction(process.env.DATABASE_URL);
 
 // Deliberately messy: tracking params (?s=20&t=abc) AND the twitter.com host, which
 // parseEmbed resolves but does not treat as canonical — the canonical form uses x.com
@@ -37,6 +87,11 @@ const CANONICAL_SOURCE = "https://x.com/MFMSport/status/1234567890123456789";
 const PROBE_BLOCK_ID = "probe4b1e0ck00000000000001";
 
 async function main() {
+  // Dynamic imports, not static ones: this guarantees nothing Payload- or DB-related is
+  // even loaded until after assertNotProduction() above has already run and passed.
+  const { getPayload } = await import("payload");
+  const { default: config } = await import("@payload-config");
+
   const payload = await getPayload({ config });
 
   const body = {

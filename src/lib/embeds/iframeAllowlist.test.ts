@@ -59,6 +59,48 @@ describe("isAllowedIframeSrc — rejects everything outside the allowlist (exact
   });
 });
 
+describe("isAllowedIframeSrc — path scoping (fix round 1, Finding 1)", () => {
+  // www.google.com is Google's general web frontend, not a dedicated embed subdomain
+  // like the other three hosts — so without a path constraint, any Google page would
+  // validate as a "Google Maps embed". These two are the exact bypasses the reviewer
+  // verified live against the pre-fix code (both returned true).
+  it("rejects a Google search results page — hostname alone is not enough", () => {
+    expect(isAllowedIframeSrc("https://www.google.com/search?q=test")).toBe(false);
+  });
+
+  it("rejects the bare Google homepage", () => {
+    expect(isAllowedIframeSrc("https://www.google.com/")).toBe(false);
+  });
+
+  it("accepts a real Google Maps embed", () => {
+    expect(isAllowedIframeSrc("https://www.google.com/maps/embed?pb=...")).toBe(true);
+  });
+
+  it("rejects /maps/embedxyz — segment boundary, not a bare startsWith", () => {
+    expect(isAllowedIframeSrc("https://www.google.com/maps/embedxyz")).toBe(false);
+  });
+
+  it("accepts a SoundCloud player path", () => {
+    expect(isAllowedIframeSrc("https://w.soundcloud.com/player/?url=...")).toBe(true);
+  });
+
+  it("rejects a non-player SoundCloud path", () => {
+    expect(isAllowedIframeSrc("https://w.soundcloud.com/anything-else")).toBe(false);
+  });
+
+  it("accepts a Spotify track embed", () => {
+    expect(isAllowedIframeSrc("https://open.spotify.com/embed/track/abc")).toBe(true);
+  });
+
+  it("rejects a non-embed Spotify path", () => {
+    expect(isAllowedIframeSrc("https://open.spotify.com/track/abc")).toBe(false);
+  });
+
+  it("accepts a Datawrapper chart at any path — no prefix constraint for this host", () => {
+    expect(isAllowedIframeSrc("https://datawrapper.dwcdn.net/AbCdE/1/")).toBe(true);
+  });
+});
+
 describe("isAllowedIframeHostname — exact equality, case-insensitive", () => {
   it("matches every host in the allowlist", () => {
     for (const host of IFRAME_HOSTNAME_ALLOWLIST) {
