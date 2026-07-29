@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef } from "react";
 import type { Media } from "@/payload-types";
 
@@ -70,7 +71,11 @@ export function Gallery({ images, layout }: Props) {
           aria-label="السابق"
           className="absolute start-1 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 shadow"
         >
-          ‹
+          {/* Logical start/end positioning + rtl:rotate-180 on the chevron itself,
+              matching LeagueCarousel.tsx / HeroSlider.tsx -- a bare "‹" text glyph
+              is bidi-mirrored by the browser in RTL, which is the exact defect PRs
+              #30 and #31 fixed elsewhere on this repo. */}
+          <ChevronLeft aria-hidden className="h-4 w-4 rtl:rotate-180" />
         </button>
         <button
           type="button"
@@ -78,7 +83,7 @@ export function Gallery({ images, layout }: Props) {
           aria-label="التالي"
           className="absolute end-1 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 shadow"
         >
-          ›
+          <ChevronRight aria-hidden className="h-4 w-4 rtl:rotate-180" />
         </button>
       </div>
     );

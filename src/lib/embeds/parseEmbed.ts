@@ -151,6 +151,22 @@ function parseUrl(raw: string): ParsedEmbed | null {
   }
 
   if (HOSTNAME_ALLOWLISTS.facebook.includes(hostname)) {
+    // /watch/?v=<id> is Facebook's own video-share form -- its mobile "Share"
+    // sheet produces exactly this -- and the video id lives ONLY in the `v`
+    // query param. The generic "strip the query" rule just below would
+    // silently resolve every /watch link to https://www.facebook.com/watch/,
+    // Facebook's Watch HOMEPAGE, not the video that was actually shared. This
+    // is the one deliberate exception: /watch keeps `v` and drops every other
+    // query key (and the fragment) exactly as before. Fix round 1, Finding 2.
+    if (/^\/watch\/?$/.test(url.pathname)) {
+      const videoId = url.searchParams.get("v");
+      if (!videoId) return null; // no id to resolve to -- not the Watch homepage
+      const watchUrl = new URL(`${url.origin}/watch/`);
+      watchUrl.searchParams.set("v", videoId);
+      const canonicalUrl = watchUrl.toString();
+      return { platform: "facebook", id: canonicalUrl, canonicalUrl };
+    }
+
     const canonicalUrl = `${url.origin}${url.pathname}`;
     return { platform: "facebook", id: canonicalUrl, canonicalUrl };
   }

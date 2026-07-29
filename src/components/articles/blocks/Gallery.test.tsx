@@ -61,4 +61,19 @@ describe("Gallery", () => {
     const { container } = render(<Gallery images={images as never} layout="grid" />);
     expect(container.querySelectorAll("img").length).toBe(1);
   });
+
+  // Fix round 1, Finding 3: bare "‹"/"›" text glyphs are bidi-mirrored by the
+  // browser in RTL (this exact defect was fixed twice before on this repo, PRs
+  // #30 and #31) -- the nav buttons must use icon components, not text glyphs,
+  // while keeping their (already-correct) Arabic aria-labels.
+  it("carousel nav buttons carry Arabic aria-labels and no bidi-mirrored text glyphs", () => {
+    const images = [image(1), image(2)];
+    const { container, getByLabelText } = render(<Gallery images={images} layout="carousel" />);
+    const prevButton = getByLabelText("السابق");
+    const nextButton = getByLabelText("التالي");
+    expect(prevButton.textContent).toBe("");
+    expect(nextButton.textContent).toBe("");
+    expect(container.textContent).not.toContain("‹");
+    expect(container.textContent).not.toContain("›");
+  });
 });

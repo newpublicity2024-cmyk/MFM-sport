@@ -102,4 +102,48 @@ describe("articleJSXConverters", () => {
       "https://w.soundcloud.com/player/?url=1",
     );
   });
+
+  // Fix round 1, Finding 1: every block converter did `node.fields.X` unguarded.
+  // Probed by review: a `{type: "block"}` node (no `fields` key at all) and a
+  // `{type: "block", fields: null}` node both threw a TypeError -- in a Server
+  // Component, that's an HTTP 500 on an article page, which is exactly what the
+  // staged indexation release depends on NOT happening. Every block type gets
+  // both malformed shapes here; each must render nothing and must not throw.
+  describe("malformed block nodes (no fields key, or fields: null) never throw", () => {
+    const blockTypes = ["socialEmbed", "gallery", "audio", "embedFrame"] as const;
+
+    it.each(blockTypes)("%s: a node with no fields key at all renders nothing, not a throw", async (blockType) => {
+      const { articleJSXConverters } = await import("./richTextConverters");
+      const { defaultJSXConverters } = await import("@payloadcms/richtext-lexical/react");
+      const converters = articleJSXConverters({ defaultConverters: defaultJSXConverters });
+
+      const node = { type: "block" as const };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const converter = converters.blocks![blockType] as any;
+
+      let jsx: React.ReactNode;
+      expect(() => {
+        jsx = converter({ node });
+      }).not.toThrow();
+      const { container } = render(<>{jsx}</>);
+      expect(container.firstChild).toBeNull();
+    });
+
+    it.each(blockTypes)("%s: a node with fields: null renders nothing, not a throw", async (blockType) => {
+      const { articleJSXConverters } = await import("./richTextConverters");
+      const { defaultJSXConverters } = await import("@payloadcms/richtext-lexical/react");
+      const converters = articleJSXConverters({ defaultConverters: defaultJSXConverters });
+
+      const node = { type: "block" as const, fields: null };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const converter = converters.blocks![blockType] as any;
+
+      let jsx: React.ReactNode;
+      expect(() => {
+        jsx = converter({ node });
+      }).not.toThrow();
+      const { container } = render(<>{jsx}</>);
+      expect(container.firstChild).toBeNull();
+    });
+  });
 });

@@ -238,6 +238,47 @@ describe("parseEmbed — Facebook keeps the whole URL as its id", () => {
   });
 });
 
+// Fix round 1, Finding 2: /watch/?v=<id> is Facebook's own video-share form (its
+// mobile "Share" sheet produces exactly this), and the video id lives ONLY in
+// the `v` query param. The general "strip the query string" rule above would
+// silently resolve every /watch link to https://www.facebook.com/watch/ --
+// Facebook's Watch HOMEPAGE, not the video that was shared. This is the one
+// deliberate exception to that rule: /watch keeps `v` and drops everything else.
+describe("parseEmbed — facebook.com/watch preserves the v= video id", () => {
+  it("keeps exactly ?v=<id> for /watch/?v=<id>", () => {
+    const result = parseEmbed("https://www.facebook.com/watch/?v=1234567890");
+    expect(result).toEqual({
+      ok: true,
+      embed: {
+        platform: "facebook",
+        id: "https://www.facebook.com/watch/?v=1234567890",
+        canonicalUrl: "https://www.facebook.com/watch/?v=1234567890",
+      },
+    });
+  });
+
+  it("keeps exactly ?v=<id> for /watch?v=<id>&extra=junk, dropping every other key", () => {
+    const result = parseEmbed("https://www.facebook.com/watch?v=1234567890&extra=junk");
+    expect(result).toEqual({
+      ok: true,
+      embed: {
+        platform: "facebook",
+        id: "https://www.facebook.com/watch/?v=1234567890",
+        canonicalUrl: "https://www.facebook.com/watch/?v=1234567890",
+      },
+    });
+  });
+
+  it("returns reason: 'unsupported' for /watch with no v param, rather than the Watch homepage", () => {
+    expect(parseEmbed("https://www.facebook.com/watch/")).toEqual({ ok: false, reason: "unsupported" });
+    expect(parseEmbed("https://www.facebook.com/watch")).toEqual({ ok: false, reason: "unsupported" });
+    expect(parseEmbed("https://www.facebook.com/watch?ref=share")).toEqual({
+      ok: false,
+      reason: "unsupported",
+    });
+  });
+});
+
 describe("parseEmbed — fb.watch is a recognised short link, not guessed and not unsupported (B3)", () => {
   it("returns reason: 'short-link' for a bare fb.watch URL instead of guessing post vs. video", () => {
     expect(parseEmbed("https://fb.watch/abc123/")).toEqual({ ok: false, reason: "short-link" });
