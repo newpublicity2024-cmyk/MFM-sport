@@ -108,6 +108,8 @@ See **Resume here** at the top for the next command.
 
 - **`<html>` carries no `lang` and no `dir`.** Production serves `<html data-dpl-id="…">` on every page type including the 404. `dir="rtl"` / `lang="ar"` are set on an inner `<div>` in `[locale]/layout.tsx:44` instead. `<html lang>` is the language signal Google and screen readers read first, and the missing `dir` means anything rendered outside that div — the 404 page among them — lays out left-to-right on an Arabic site. The `<html>` element lives in `(frontend)/layout.tsx`, above `[locale]`, which is why it never got the locale; now that the site is Arabic-only it can simply be hardcoded. Small fix, real signal.
 
+- **A real mouse click computed from a paragraph's bounding box can collapse the caret to the paragraph's END instead of the click point, in the admin's RTL Lexical editor.** Observed while building Task 8's browser verification (`scripts/verify-toolbar-admin-ux.ts`): clicking at a `<p>` element's horizontal midpoint — the natural way to target "the middle of a paragraph" from outside the editor — landed the caret after the last character instead, because the box spans the full editor column width while short, right-aligned Arabic text only occupies part of it, leaving the midpoint in empty margin. Unresolved rather than benign: this is ordinary CSS box-model hit-testing, not headless-specific and not a Lexical bug, so it would reproduce in any real browser a journalist uses — and it was only worked around (placing the caret via the native Selection API at an exact text-node offset), never re-tested against a coordinate actually known to sit on a rendered glyph. Whether a real click on visible Arabic characters (as opposed to a paragraph's empty margin) behaves correctly is still open. Would be settled by clicking at the centre of a rect from `Range.getClientRects()` on the text node and checking where the caret lands. Block insertion at a programmatically-placed caret is verified correct (Task 8); this is about click targeting only, not insertion.
+
 ### Open blockers
 
 - **Ahrefs connector not authorised** — blocks referring-domain data, which would set import *order* (highest-value URLs first). Does not block the import itself.
@@ -179,6 +181,10 @@ Measured per year so far:
 
 **Percent-decode before stripping tags.** `<![CDATA[` opens with `<` and `]]>` closes with `>`, so `/<[^>]+>/` swallows an entire CDATA section as one "tag". This produced a fake "6% of the archive is empty" statistic.
 
+**Any future re-tier of admin-authored articles must go through the block-aware path.** `tierFor()` in `src/lib/seo/wpArchive.ts` has no caller today except the raw-HTML WordPress import (`scripts/import-wp-archive.ts`) — it has no notion of a block, so the naive text walk scores media blocks (`socialEmbed`, `gallery`, `audio`, `embedFrame`, or a bare inline image) at zero and will silently noindex media-heavy articles. Use `tierForLexicalBody()` in `src/lib/seo/blockAwareTiering.ts` instead. This exposure is currently *latent* — nothing calls `tierForLexicalBody` yet either, since admin-authored articles default to `seoTier: "editorial"` and nothing recomputes it — but a guard nobody calls is a guard that does not exist, so this is written down before the first bulk re-tier tool gets built, not after.
+
+**If a CSP is ever introduced,** `frame-src` must include `www.facebook.com`, `www.instagram.com`, `www.youtube-nocookie.com`, `platform.twitter.com`. There is no Content-Security-Policy anywhere in this codebase today (confirmed by reading `next.config.ts` and `src/middleware.ts`), so nothing enforces this yet — but the day someone adds one without these four hosts, every social/video embed on the site dies **in production only**, the worst possible failure timing and this project's signature failure mode.
+
 ---
 
 ## Key documents
@@ -200,3 +206,4 @@ Measured per year so far:
 - `SITE_URL` (`src/lib/seo/siteUrl.ts`) normalises to the `www` origin regardless of the env var. Don't build URLs from `process.env.NEXT_PUBLIC_SITE_URL` directly.
 - Archive articles are released into the index in batches via `src/lib/seo/indexation.ts`. Releasing a batch is a config edit and a deploy — never a re-import or a bulk DB write.
 - The sitemap and the `robots` meta tag must always agree. Listing a `noindex` URL in a sitemap is a contradictory signal.
+- Any component with directional behaviour — carousels, scroll math, chevrons, slide transitions, swipe — carries an RTL assertion in its test file as a matter of course. A missing one is a review finding. On an Arabic-only site this class of bug is guaranteed to recur and is invisible to anyone reading the code in English. (Third occurrence: the Gallery carousel button swap, after PRs #30 and #31 — see `docs/superpowers/review-checklist.md`.)
