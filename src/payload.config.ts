@@ -1,5 +1,5 @@
 import { postgresAdapter } from '@payloadcms/db-postgres'
-import { BlocksFeature, lexicalEditor, UploadFeature } from '@payloadcms/richtext-lexical'
+import { BlocksFeature, FixedToolbarFeature, lexicalEditor, UploadFeature } from '@payloadcms/richtext-lexical'
 import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
 import { ar } from '@payloadcms/translations/languages/ar'
 import { en } from '@payloadcms/translations/languages/en'
@@ -79,8 +79,7 @@ export default buildConfig({
   i18n: {
     supportedLanguages: { en, fr, ar },
   },
-  // Journalist authoring blocks (Task 4). FixedToolbarFeature is deliberately NOT added
-  // here — that is Task 8, along with cursor-insertion and Arabic-label verification.
+  // Journalist authoring blocks (Task 4), now reachable from the toolbar (Task 8).
   editor: lexicalEditor({
     features: ({ defaultFeatures }) => [
       // defaultFeatures spreads first so UploadFeature (content images) and everything
@@ -90,6 +89,13 @@ export default buildConfig({
       // @payloadcms/richtext-lexical's lexical/config/server/loader.js), so ours
       // overrides the bare default rather than running alongside it.
       ...defaultFeatures,
+      // The default feature set carries only InlineToolbarFeature, which appears when
+      // text is selected. Without a fixed toolbar, the only way to insert a block is
+      // typing "/" and knowing the English command name — unusable for an Arabic-
+      // language newsroom, and worse on touch. FixedToolbarFeature adds the persistent
+      // toolbar row (with its own "+" blocks dropdown, Arabic-labelled per block below)
+      // that a journalist can tap without knowing any command syntax.
+      FixedToolbarFeature(),
       UploadFeature({
         collections: {
           media: {
