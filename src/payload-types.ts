@@ -358,6 +358,10 @@ export interface Competition {
    */
   season: number;
   /**
+   * Lower sorts first. Controls the homepage leagues carousel, the news-filter pills, and which competition is used by default wherever none is chosen explicitly (hero matches panel, article sidebar). Put the league currently in season at 0.
+   */
+  displayOrder?: number | null;
+  /**
    * Links this competition to a news category for article filtering
    */
   category?: (number | null) | Category;
@@ -790,6 +794,7 @@ export interface CompetitionsSelect<T extends boolean = true> {
   country?: T;
   apiFootballId?: T;
   season?: T;
+  displayOrder?: T;
   category?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -918,7 +923,7 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   createdAt?: T;
 }
 /**
- * Control the homepage news filter and which matches show in the hero and lower match sections.
+ * Control the homepage news filter, which matches show in the hero and lower match sections, and the matches calendar on article pages.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "homepage".
@@ -943,7 +948,7 @@ export interface Homepage {
     | null;
   heroMatches?: {
     /**
-     * Its fixtures (finished, live, upcoming) fill the hero matches panel. Leave empty for the World Cup.
+     * Its fixtures (finished, live, upcoming) fill the hero matches panel. Leave empty to use the competition with the lowest display order.
      */
     competition?: (number | null) | Competition;
   };
@@ -951,6 +956,16 @@ export interface Homepage {
     mode: 'today' | 'competition';
     /**
      * Shown when Source is 'A specific competition'.
+     */
+    competition?: (number | null) | Competition;
+  };
+  /**
+   * The matches calendar in the right rail of every article page.
+   */
+  articleMatches?: {
+    enabled?: boolean | null;
+    /**
+     * Its upcoming fixtures fill the calendar, and its name is the card's heading. Leave empty to use the competition with the lowest display order.
      */
     competition?: (number | null) | Competition;
   };
@@ -978,6 +993,12 @@ export interface HomepageSelect<T extends boolean = true> {
     | T
     | {
         mode?: T;
+        competition?: T;
+      };
+  articleMatches?:
+    | T
+    | {
+        enabled?: T;
         competition?: T;
       };
   updatedAt?: T;

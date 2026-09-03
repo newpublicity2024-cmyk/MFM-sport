@@ -9,7 +9,8 @@ import { MatchesPanel } from "@/components/home/MatchesPanel";
 
 const statusLabels = { finished: "FT", live: "LIVE", scheduled: "SCH" };
 
-// Botola (id 200, country Morocco => priority 0, previously auto-open) + another league.
+// Botola (id 200) + another league. Which group auto-opens is now the caller's
+// choice (the featured competition), not a league id baked into the component.
 function fixture(id: number, leagueId: number, leagueName: string, country: string) {
   return {
     fixture: {
@@ -41,7 +42,7 @@ const fixtures = [
 ];
 
 describe("MatchesPanel", () => {
-  it("starts with ALL league groups collapsed (no auto-open)", () => {
+  it("starts with ALL league groups collapsed when no featured league is given", () => {
     const { container } = render(
       <MatchesPanel fixtures={fixtures} locale="en" statusLabels={statusLabels} />,
     );
@@ -65,5 +66,83 @@ describe("MatchesPanel", () => {
     const rows = slider.querySelectorAll(":scope > div");
     expect(rows.length).toBeGreaterThan(0);
     rows.forEach((r) => expect((r as HTMLElement).className).toContain("shrink-0"));
+  });
+
+  it("auto-opens only the featured competition's group", () => {
+    const { container } = render(
+      <MatchesPanel
+        fixtures={fixtures}
+        locale="en"
+        statusLabels={statusLabels}
+        openLeagueId={39}
+      />,
+    );
+    const toggles = Array.from(container.querySelectorAll("button[aria-expanded]"));
+    const expanded = toggles.filter((t) => t.getAttribute("aria-expanded") === "true");
+    expect(expanded).toHaveLength(1);
+    expect(expanded[0].textContent).toContain("Premier League");
+  });
+
+  it("opens nothing when the featured league has no fixtures in the panel", () => {
+    const { container } = render(
+      <MatchesPanel
+        fixtures={fixtures}
+        locale="en"
+        statusLabels={statusLabels}
+        openLeagueId={999}
+      />,
+    );
+    const toggles = container.querySelectorAll("button[aria-expanded]");
+    toggles.forEach((t) => expect(t.getAttribute("aria-expanded")).toBe("false"));
+  });
+
+  it("orders league groups by the CMS display order, overriding the name heuristic", () => {
+    // Without leagueOrder the heuristic puts Morocco first. An editor who ranks
+    // the Premier League above Botola must win — that is the whole point of
+    // making the featured league a CMS field.
+    const { container } = render(
+      <MatchesPanel
+        fixtures={fixtures}
+        locale="en"
+        statusLabels={statusLabels}
+        leagueOrder={{ 39: 0, 200: 5 }}
+      />,
+    );
+    const headings = Array.from(container.querySelectorAll("button[aria-expanded]")).map(
+      (t) => t.textContent ?? "",
+    );
+    expect(headings[0]).toContain("Premier League");
+    expect(headings[1]).toContain("Botola");
+  });
+
+  it("ranks leagues the CMS does not list below every league it does", () => {
+    const { container } = render(
+      <MatchesPanel
+        fixtures={fixtures}
+        locale="en"
+        statusLabels={statusLabels}
+        leagueOrder={{ 39: 50 }}
+      />,
+    );
+    const headings = Array.from(container.querySelectorAll("button[aria-expanded]")).map(
+      (t) => t.textContent ?? "",
+    );
+    expect(headings[0]).toContain("Premier League");
+    expect(headings[1]).toContain("Botola");
+  });
+
+  it("uses the CMS crest for a league when one is configured", () => {
+    const { container } = render(
+      <MatchesPanel
+        fixtures={fixtures}
+        locale="en"
+        statusLabels={statusLabels}
+        logoOverrides={{ 200: "/images/botola.png" }}
+      />,
+    );
+    const srcs = Array.from(container.querySelectorAll("img")).map((i) =>
+      i.getAttribute("src"),
+    );
+    expect(srcs.some((src) => src?.includes("botola.png"))).toBe(true);
   });
 });

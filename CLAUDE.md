@@ -183,6 +183,19 @@ Measured per year so far:
 
 **Any future re-tier of admin-authored articles must go through the block-aware path.** `tierFor()` in `src/lib/seo/wpArchive.ts` has no caller today except the raw-HTML WordPress import (`scripts/import-wp-archive.ts`) — it has no notion of a block, so the naive text walk scores media blocks (`socialEmbed`, `gallery`, `audio`, `embedFrame`, or a bare inline image) at zero and will silently noindex media-heavy articles. Use `tierForLexicalBody()` in `src/lib/seo/blockAwareTiering.ts` instead. This exposure is currently *latent* — nothing calls `tierForLexicalBody` yet either, since admin-authored articles default to `seoTier: "editorial"` and nothing recomputes it — but a guard nobody calls is a guard that does not exist, so this is written down before the first bulk re-tier tool gets built, not after.
 
+**The featured league is CMS data, never a constant.** `worldcup.ts` pinned
+league 1 / season 2026 in code, so the World Cup reappeared anywhere config was
+empty and outlived the tournament. Which competition every matches surface shows
+now comes from the Competitions collection (`displayOrder`, plus explicit
+overrides in Homepage Settings), and the season comes from API-Football's
+`current` flag via `getCurrentSeason`. The "chosen, else default" rule has one
+implementation, `resolveFeaturedCompetition()` in
+`src/lib/home/competitionOrder.ts` — reuse it rather than re-deriving a fallback,
+or the homepage and the article sidebar will drift apart. See
+`docs/featured-competition.md`; note that its two new columns are **hand-applied
+DDL** and must land before the code deploys, or every read of the Homepage global
+errors.
+
 **If a CSP is ever introduced,** `frame-src` must include `www.facebook.com`, `www.instagram.com`, `www.youtube-nocookie.com`, `platform.twitter.com`. There is no Content-Security-Policy anywhere in this codebase today (confirmed by reading `next.config.ts` and `src/middleware.ts`), so nothing enforces this yet — but the day someone adds one without these four hosts, every social/video embed on the site dies **in production only**, the worst possible failure timing and this project's signature failure mode.
 
 ---
@@ -196,6 +209,7 @@ Measured per year so far:
 | `docs/traffic-integrity-findings.md` | GA4 analysis: >50% of page views were error pages |
 | `docs/wp-corpus-analysis.md` | The 36,992-post WordPress export: tiering and the decision behind it |
 | `docs/archive-import-runbook.md` | DDL, batched import, staged indexation release |
+| `docs/featured-competition.md` | Changing which league the site shows — CMS steps + the DDL it needs |
 
 ---
 

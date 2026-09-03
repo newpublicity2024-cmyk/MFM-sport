@@ -1,4 +1,8 @@
 import type { CollectionConfig } from "payload";
+import {
+  revalidateCompetitionChange,
+  revalidateCompetitionDelete,
+} from "@/lib/payload/revalidate";
 
 export const Competitions: CollectionConfig = {
   slug: "competitions",
@@ -8,7 +12,12 @@ export const Competitions: CollectionConfig = {
   },
   admin: {
     useAsTitle: "name",
-    defaultColumns: ["name", "type", "country", "apiFootballId"],
+    defaultColumns: ["name", "type", "country", "apiFootballId", "displayOrder"],
+  },
+  defaultSort: "displayOrder",
+  hooks: {
+    afterChange: [revalidateCompetitionChange],
+    afterDelete: [revalidateCompetitionDelete],
   },
   fields: [
     {
@@ -83,6 +92,19 @@ export const Competitions: CollectionConfig = {
           en: "Current season year (e.g., 2025 for 2025-26)",
           fr: "Année de la saison en cours (ex. : 2025 pour 2025-26)",
           ar: "سنة الموسم الحالي (مثال: 2025 لموسم 2025-26)",
+        },
+      },
+    },
+    {
+      name: "displayOrder",
+      type: "number",
+      defaultValue: 100,
+      label: { en: "Display order", fr: "Ordre d'affichage", ar: "ترتيب العرض" },
+      admin: {
+        description: {
+          en: "Lower sorts first. Controls the homepage leagues carousel, the news-filter pills, and which competition is used by default wherever none is chosen explicitly (hero matches panel, article sidebar). Put the league currently in season at 0.",
+          fr: "Le plus petit passe en premier. Contrôle le carrousel des compétitions, les pastilles du filtre d'actualités, et la compétition utilisée par défaut lorsqu'aucune n'est choisie (panneau des matchs, colonne de l'article). Mettez 0 pour la compétition en cours.",
+          ar: "الأصغر يظهر أولًا. يتحكّم في شريط البطولات بالصفحة الرئيسية وأزرار فلتر الأخبار وفي البطولة الافتراضية عندما لا تُختار بطولة صراحةً (لوحة المباريات، عمود المقال). ضع 0 للبطولة الجارية حاليًا.",
         },
       },
     },

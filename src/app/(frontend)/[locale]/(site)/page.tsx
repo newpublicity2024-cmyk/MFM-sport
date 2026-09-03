@@ -11,13 +11,16 @@ import {
   findHomepageSettings,
 } from "@/lib/payload/queries";
 import { getVideos } from "@/lib/videos";
-import { getFixturesByDateForLeagues, getFixturesByLeague } from "@/lib/api-football/fixtures";
+import { getFixturesByDateForLeagues } from "@/lib/api-football/fixtures";
+import { getCompetitionFixtures } from "@/lib/api-football/competition";
 import {
-  getAllWorldCupFixtures,
-  WORLD_CUP_LEAGUE_ID,
-  WORLD_CUP_SEASON,
-  WORLD_CUP_LOGO,
-} from "@/lib/api-football/worldcup";
+  buildLeagueOrder,
+  buildLogoOverrides,
+  competitionLogoUrl,
+  resolveFeaturedCompetition,
+  sortByDisplayOrder,
+  toCompetitionRef,
+} from "@/lib/home/competitionOrder";
 import type { ApiFixture } from "@/lib/api-football/types";
 import { HeroSection } from "@/components/home/HeroSection";
 import { LeagueNewsSection } from "@/components/home/LeagueNewsSection";
@@ -36,13 +39,6 @@ import {
 // Articles fetched per news-filter tab. The desktop carousel pages through these
 // 4 at a time (up to 5 pages of 20); the mobile slider swipes through them all.
 const HOME_ARTICLES_PER_TAB = 20;
-
-// Season to query fixtures for a competition: the World Cup pins its own season;
-// others use the competition's configured season (falls back to the WC season).
-function seasonForCompetition(comp: { apiFootballId?: number | null; season?: number | null }): number {
-  if (comp.apiFootballId === WORLD_CUP_LEAGUE_ID) return WORLD_CUP_SEASON;
-  return comp.season ?? WORLD_CUP_SEASON;
-}
 
 // ISR: render once and serve from the edge cache for 5 min instead of running a
 // function on every visit. Live scores still refresh client-side (HomeMatchesSection
@@ -91,31 +87,23 @@ export default async function HomePage({ params }: Props) {
   const homepage = await findHomepageSettings(localeTyped);
   const competitions = await getCompetitions(localeTyped);
 
-  // League carousel mirrors every competition the site has, ordered:
-  // Botola (id 200) first, World Cup (id 1) second, everything else after.
-  const carouselRank = (apiFootballId?: number | null) =>
-    apiFootballId === 200 ? 0 : apiFootballId === WORLD_CUP_LEAGUE_ID ? 1 : 2;
-  const carouselLeagues = competitions.docs
-    .slice()
-    .sort((a, b) => carouselRank(a.apiFootballId) - carouselRank(b.apiFootballId))
-    .map((c) => ({
-      slug: c.slug,
-      name: c.name,
-      logoUrl:
-        c.apiFootballId === WORLD_CUP_LEAGUE_ID
-          ? WORLD_CUP_LOGO
-          : c.logoUrl || `https://media.api-sports.io/football/leagues/${c.apiFootballId}.png`,
-    }));
+  // League carousel mirrors every competition the site has, in the collection's
+  // own displayOrder — so promoting the league currently in season is an edit,
+  // not a deploy. Same ordering and crest rules as the news-filter pills.
+  const carouselLeagues = sortByDisplayOrder(competitions.docs).map((c) => ({
+    slug: c.slug,
+    name: c.name,
+    logoUrl: competitionLogoUrl(c.apiFootballId, c.logoUrl),
+  }));
 
   // News-by-league filter: admin-configured via Homepage Settings. Each pill is a
   // competition (crest + name) whose tab lists articles carrying the chosen Tag,
   // falling back to the competition's linked category. If the global has no filter
-  // yet, fall back to the domestic leagues (Botola first) so the section persists.
-  const fallbackRows = competitions.docs
-    .filter((c) => c.type === "league")
-    .slice()
-    .sort((a, b) => (a.apiFootballId === 200 ? -1 : b.apiFootballId === 200 ? 1 : 0))
-    .map((competition) => ({ competition }));
+  // yet, fall back to every league-type competition in display order so the
+  // section persists.
+  const fallbackRows = sortByDisplayOrder(
+    competitions.docs.filter((c) => c.type === "league"),
+  ).map((competition) => ({ competition }));
   const resolvedFilters = resolveNewsFilters(
     homepage?.newsFilters?.length ? homepage.newsFilters : fallbackRows,
   );
@@ -141,18 +129,29 @@ export default async function HomePage({ params }: Props) {
   const latest = await getArticles({ locale: localeTyped, page: 1, limit: 6 });
   const heroSlides = latest.docs.slice(0, 5).map(toHeroSlide);
 
-  // Match panels: hero = configured competition (all statuses), default World Cup.
-  // Lower = a specific competition or today's fixtures across all our leagues.
-  const heroComp = homepage?.heroMatches?.competition;
-  const lowerComp = homepage?.homeMatches?.competition;
-  const [worldCupFixtures, todayFixtures]: [ApiFixture[], ApiFixture[]] = await Promise.all([
-    heroComp && typeof heroComp === "object"
-      ? getFixturesByLeague(heroComp.apiFootballId, seasonForCompetition(heroComp))
-      : getAllWorldCupFixtures(),
-    homepage?.homeMatches?.mode === "competition" && lowerComp && typeof lowerComp === "object"
-      ? getFixturesByLeague(lowerComp.apiFootballId, seasonForCompetition(lowerComp))
+  // Match panels: hero = the configured competition's current season across all
+  // statuses, falling back to the default competition. Lower = a specific
+  // competition or today's fixtures across all our leagues. Seasons are resolved
+  // from API-Football's `current` flag, so neither pins a year.
+  const heroCompetition = resolveFeaturedCompetition(
+    homepage?.heroMatches?.competition,
+    competitions.docs,
+  );
+  const lowerCompetition =
+    homepage?.homeMatches?.mode === "competition"
+      ? toCompetitionRef(homepage?.homeMatches?.competition)
+      : null;
+  const [heroFixtures, todayFixtures]: [ApiFixture[], ApiFixture[]] = await Promise.all([
+    heroCompetition ? getCompetitionFixtures(heroCompetition) : Promise.resolve([]),
+    lowerCompetition
+      ? getCompetitionFixtures(lowerCompetition)
       : getFixturesByDateForLeagues(today, ourLeagueIds),
   ]);
+
+  // Upstream fixture data carries API-Football's own crests and no ordering, so
+  // hand the panel the CMS's view of both, keyed by league id.
+  const logoOverrides = buildLogoOverrides(competitions.docs);
+  const leagueOrder = buildLeagueOrder(competitions.docs);
 
   const ads = await getAds(locale as Config["locale"]);
 
@@ -190,11 +189,14 @@ export default async function HomePage({ params }: Props) {
       <div className="container space-y-6">
         <HeroSection
           slides={heroSlides}
-          fixtures={worldCupFixtures}
+          fixtures={heroFixtures}
           locale={locale}
           leaguesLabel={t("leaguesNav")}
           leagues={carouselLeagues}
           statusLabels={statusLabels}
+          openLeagueId={heroCompetition?.apiFootballId}
+          logoOverrides={logoOverrides}
+          leagueOrder={leagueOrder}
         />
       </div>
 

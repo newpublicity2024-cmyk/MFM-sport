@@ -6,7 +6,12 @@ import { revalidateHomepageChange } from "@/lib/payload/revalidate";
  *  - the news-by-league filter (which pills appear, in what order, and which
  *    Tag sources each pill's articles), and
  *  - which competition's matches show in the hero panel and the lower matches
- *    section.
+ *    section, and
+ *  - which competition fills the matches calendar in the article-page sidebar.
+ *
+ * Every one of those is a Competitions relationship, never a league id in code.
+ * Where one is left empty the site falls back to the competition with the
+ * lowest `displayOrder`, so "the league currently playing" is always an edit.
  *
  * Read is public so the homepage (and its ISR prerender) can load it without auth.
  */
@@ -25,9 +30,9 @@ export const Homepage: GlobalConfig = {
   },
   admin: {
     description: {
-      en: "Control the homepage news filter and which matches show in the hero and lower match sections.",
-      fr: "Gérez le filtre d'actualités de l'accueil et les matchs affichés dans le hero et la section des matchs.",
-      ar: "تحكّم في فلتر أخبار الصفحة الرئيسية وفي المباريات المعروضة في القسم الرئيسي وقسم المباريات السفلي.",
+      en: "Control the homepage news filter, which matches show in the hero and lower match sections, and the matches calendar on article pages.",
+      fr: "Gérez le filtre d'actualités de l'accueil, les matchs affichés dans le hero et la section des matchs, et le calendrier des matchs des pages article.",
+      ar: "تحكّم في فلتر أخبار الصفحة الرئيسية، وفي المباريات المعروضة في القسم الرئيسي وقسم المباريات السفلي، وفي روزنامة المباريات بصفحات المقالات.",
     },
   },
   fields: [
@@ -88,9 +93,9 @@ export const Homepage: GlobalConfig = {
           label: { en: "Competition", fr: "Compétition", ar: "البطولة" },
           admin: {
             description: {
-              en: "Its fixtures (finished, live, upcoming) fill the hero matches panel. Leave empty for the World Cup.",
-              fr: "Ses matchs (terminés, en direct, à venir) remplissent le panneau du hero. Laissez vide pour la Coupe du monde.",
-              ar: "تملأ مبارياتها (المنتهية والمباشرة والقادمة) لوحة المباريات في القسم الرئيسي. اتركه فارغًا لكأس العالم.",
+              en: "Its fixtures (finished, live, upcoming) fill the hero matches panel. Leave empty to use the competition with the lowest display order.",
+              fr: "Ses matchs (terminés, en direct, à venir) remplissent le panneau du hero. Laissez vide pour utiliser la compétition dont l'ordre d'affichage est le plus petit.",
+              ar: "تملأ مبارياتها (المنتهية والمباشرة والقادمة) لوحة المباريات في القسم الرئيسي. اتركه فارغًا لاستخدام البطولة ذات أصغر ترتيب عرض.",
             },
           },
         },
@@ -137,6 +142,44 @@ export const Homepage: GlobalConfig = {
               en: "Shown when Source is 'A specific competition'.",
               fr: "Affiché quand la source est « Une compétition précise ».",
               ar: "يظهر عندما يكون المصدر «بطولة محدّدة».",
+            },
+          },
+        },
+      ],
+    },
+    {
+      name: "articleMatches",
+      type: "group",
+      label: {
+        en: "Article page — matches sidebar",
+        fr: "Page article — colonne des matchs",
+        ar: "صفحة المقال — عمود المباريات",
+      },
+      admin: {
+        description: {
+          en: "The matches calendar in the right rail of every article page.",
+          fr: "Le calendrier des matchs dans la colonne de droite de chaque page article.",
+          ar: "روزنامة المباريات في العمود الأيمن لكل صفحة مقال.",
+        },
+      },
+      fields: [
+        {
+          name: "enabled",
+          type: "checkbox",
+          defaultValue: true,
+          label: { en: "Show the calendar", fr: "Afficher le calendrier", ar: "إظهار الروزنامة" },
+        },
+        {
+          name: "competition",
+          type: "relationship",
+          relationTo: "competitions",
+          label: { en: "Competition", fr: "Compétition", ar: "البطولة" },
+          admin: {
+            condition: (_, siblingData) => siblingData?.enabled !== false,
+            description: {
+              en: "Its upcoming fixtures fill the calendar, and its name is the card's heading. Leave empty to use the competition with the lowest display order.",
+              fr: "Ses prochains matchs remplissent le calendrier et son nom sert de titre. Laissez vide pour utiliser la compétition dont l'ordre d'affichage est le plus petit.",
+              ar: "تملأ مبارياتها القادمة الروزنامة، ويكون اسمها عنوان البطاقة. اتركه فارغًا لاستخدام البطولة ذات أصغر ترتيب عرض.",
             },
           },
         },

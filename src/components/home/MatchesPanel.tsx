@@ -7,7 +7,6 @@ import { MatchCard } from "@/components/football/MatchCard";
 import { useLiveFixtures } from "@/hooks/useLiveFixtures";
 import { getMatchStatus, type ApiFixture, type MatchStatus } from "@/lib/api-football/types";
 import { localizeLeague } from "@/lib/api-football/localize";
-import { WORLD_CUP_LEAGUE_ID, WORLD_CUP_LOGO } from "@/lib/api-football/worldcup";
 
 type FilterStatus = Exclude<MatchStatus, "other">;
 
@@ -17,18 +16,33 @@ type LeagueGroup = {
   priority: number;
 };
 
-function getLeaguePriority(league: ApiFixture["league"]): number {
+/**
+ * Group ordering. `leagueOrder` is the Competitions collection's displayOrder,
+ * keyed by API-Football league id — an editor's ranking, so it wins. Fixtures
+ * from leagues the CMS does not list (upstream returns whatever is playing)
+ * fall back to the name/country heuristic, offset past the CMS range so a
+ * listed competition always outranks an unlisted one.
+ */
+const UNLISTED_PRIORITY_BASE = 1_000_000;
+
+function getLeaguePriority(
+  league: ApiFixture["league"],
+  leagueOrder?: Record<number, number>,
+): number {
+  const configured = leagueOrder?.[league.id];
+  if (typeof configured === "number") return configured;
+
   const name = league.name.toLowerCase();
   const country = league.country.toLowerCase();
-  if (name.includes("botola") || country === "morocco") return 0;
+  if (name.includes("botola") || country === "morocco") return UNLISTED_PRIORITY_BASE;
   if (
     country === "europe" ||
     name.includes("champions league") ||
     name.includes("europa league") ||
     name.includes("conference league")
   )
-    return 1;
-  return 2;
+    return UNLISTED_PRIORITY_BASE + 1;
+  return UNLISTED_PRIORITY_BASE + 2;
 }
 
 // Order fixtures within a league group: finished games first, newest played on
@@ -42,7 +56,10 @@ function sortFixtures(a: ApiFixture, b: ApiFixture): number {
   return aFinished ? tb - ta : ta - tb;
 }
 
-function groupAndSort(fixtures: ApiFixture[]): LeagueGroup[] {
+function groupAndSort(
+  fixtures: ApiFixture[],
+  leagueOrder?: Record<number, number>,
+): LeagueGroup[] {
   const map = new Map<number, LeagueGroup>();
   for (const f of fixtures) {
     const id = f.league.id;
@@ -50,7 +67,7 @@ function groupAndSort(fixtures: ApiFixture[]): LeagueGroup[] {
       map.set(id, {
         league: f.league,
         fixtures: [],
-        priority: getLeaguePriority(f.league),
+        priority: getLeaguePriority(f.league, leagueOrder),
       });
     }
     map.get(id)!.fixtures.push(f);
@@ -73,9 +90,26 @@ type Props = {
   fixtures: ApiFixture[];
   locale: string;
   statusLabels: StatusLabels;
+  /**
+   * The league group to start expanded — the featured competition chosen in
+   * Homepage Settings. Omitted (or absent from the fixtures) means every group
+   * starts collapsed, which is what happens on the lower matches section.
+   */
+  openLeagueId?: number | null;
+  /** API-Football league id → CMS crest, overriding the upstream logo. */
+  logoOverrides?: Record<number, string>;
+  /** API-Football league id → Competitions displayOrder. */
+  leagueOrder?: Record<number, number>;
 };
 
-export function MatchesPanel({ fixtures, locale, statusLabels }: Props) {
+export function MatchesPanel({
+  fixtures,
+  locale,
+  statusLabels,
+  openLeagueId,
+  logoOverrides,
+  leagueOrder,
+}: Props) {
   const [activeFilter, setActiveFilter] = useState<FilterStatus | null>(null);
 
   const { fixtures: liveFixtures } = useLiveFixtures({
@@ -97,11 +131,15 @@ export function MatchesPanel({ fixtures, locale, statusLabels }: Props) {
     );
   }, [merged, activeFilter]);
 
-  const groups = useMemo(() => groupAndSort(filtered), [filtered]);
+  const groups = useMemo(
+    () => groupAndSort(filtered, leagueOrder),
+    [filtered, leagueOrder],
+  );
 
-  // The World Cup group starts open; any other groups start collapsed.
+  // The featured competition's group starts open; every other group starts
+  // collapsed. With no featured competition, nothing auto-opens.
   const [openIds, setOpenIds] = useState<Set<number>>(
-    () => new Set([WORLD_CUP_LEAGUE_ID]),
+    () => new Set(typeof openLeagueId === "number" ? [openLeagueId] : []),
   );
 
   function toggleLeague(id: number) {
@@ -154,10 +192,7 @@ export function MatchesPanel({ fixtures, locale, statusLabels }: Props) {
         groups.map((group) => {
           const isOpen = openIds.has(group.league.id);
           const panelId = `matches-panel-${group.league.id}`;
-          const leagueLogo =
-            group.league.id === WORLD_CUP_LEAGUE_ID
-              ? WORLD_CUP_LOGO
-              : group.league.logo;
+          const leagueLogo = logoOverrides?.[group.league.id] ?? group.league.logo;
           return (
             <div
               key={group.league.id}

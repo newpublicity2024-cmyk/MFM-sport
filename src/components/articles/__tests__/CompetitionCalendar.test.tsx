@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
-import { WorldCupCalendar } from "@/components/articles/WorldCupCalendar";
+import { CompetitionCalendar } from "@/components/articles/CompetitionCalendar";
 import type { ApiFixture } from "@/lib/api-football/types";
 
 function fixture(id: number): ApiFixture {
@@ -13,7 +13,7 @@ function fixture(id: number): ApiFixture {
       status: { long: "Not Started", short: "NS", elapsed: null },
       referee: null,
     },
-    league: { id: 1, name: "World Cup", country: "World", logo: "", flag: null, season: 2026, round: "Group Stage" },
+    league: { id: 200, name: "Botola Pro", country: "Morocco", logo: "", flag: null, season: 2026, round: "Regular Season - 3" },
     teams: {
       home: { id: 1, name: "Morocco", logo: "https://logo/h.png", winner: null },
       away: { id: 2, name: "Spain", logo: "https://logo/a.png", winner: null },
@@ -23,10 +23,10 @@ function fixture(id: number): ApiFixture {
   } as unknown as ApiFixture;
 }
 
-describe("WorldCupCalendar", () => {
+describe("CompetitionCalendar", () => {
   it("renders nothing when there are no fixtures", () => {
     const { container } = render(
-      <WorldCupCalendar fixtures={[]} locale="ar" title="مونديال 2026" />,
+      <CompetitionCalendar fixtures={[]} locale="ar" title="البطولة الاحترافية" />,
     );
     expect(container.firstChild).toBeNull();
   });
@@ -34,15 +34,25 @@ describe("WorldCupCalendar", () => {
   it("renders the title and a capped scroll slider of match rows", () => {
     const fixtures = [1, 2, 3, 4, 5, 6, 7].map(fixture);
     const { container, getByText } = render(
-      <WorldCupCalendar fixtures={fixtures} locale="ar" title="مونديال 2026" />,
+      <CompetitionCalendar fixtures={fixtures} locale="ar" title="البطولة الاحترافية" />,
     );
-    expect(getByText("مونديال 2026")).toBeTruthy();
-    const slider = container.querySelector("[data-worldcup-slider]") as HTMLElement;
+    expect(getByText("البطولة الاحترافية")).toBeTruthy();
+    const slider = container.querySelector("[data-competition-slider]") as HTMLElement;
     expect(slider).toBeTruthy();
     expect(slider.className).toContain("overflow-y-auto");
     expect(slider.className).toContain("no-scrollbar");
     expect(slider.className).toContain("max-h-[19rem]");
     // One link per fixture (MatchCard renders an <a>).
     expect(slider.querySelectorAll("a").length).toBe(7);
+  });
+
+  it("titles the card from the caller (the CMS competition name), not a constant", () => {
+    // Regression: the heading used to be a hardcoded "مونديال 2026" in the
+    // article page, which outlived the tournament. It is now the competition's
+    // localized name, so any competition can fill this card.
+    const { getByText } = render(
+      <CompetitionCalendar fixtures={[fixture(1)]} locale="ar" title="دوري أبطال أوروبا" />,
+    );
+    expect(getByText("دوري أبطال أوروبا")).toBeTruthy();
   });
 });
