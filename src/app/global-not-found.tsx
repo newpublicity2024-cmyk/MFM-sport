@@ -48,13 +48,31 @@ export default function GlobalNotFound() {
             ربما تم حذف الصفحة أو تغيير عنوانها. يمكنك العودة إلى الصفحة الرئيسية أو تصفح آخر الأخبار.
           </p>
 
+          {/*
+            Plain <a>, not next/link, and deliberately so.
+
+            This document renders outside the App Router tree — see the note at
+            the top of the file: there is no root layout above it and it emits
+            its own <html>/<body>. next/link exists to navigate *within* a
+            mounted router; from here there is no router to navigate within, so
+            leaving this page has to be a full document load. That is also what
+            we want behaviourally: the visitor should exit the error document
+            and enter the real app shell, not soft-navigate inside a 404.
+
+            @next/next/no-html-link-for-pages cannot see any of that — it only
+            matches an href against the route manifest — so it reports these two
+            as errors. Silenced per-line rather than per-file so a genuinely
+            wrong <a> added here later still gets caught.
+          */}
           <div className="flex flex-col sm:flex-row gap-3 mt-2">
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/ar"
               className="inline-flex items-center justify-center px-5 py-2.5 rounded-md bg-neutral-900 text-white hover:bg-neutral-700 transition-colors font-medium"
             >
               الصفحة الرئيسية
             </a>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/ar/articles"
               className="inline-flex items-center justify-center px-5 py-2.5 rounded-md border border-neutral-300 hover:border-neutral-500 transition-colors font-medium"
