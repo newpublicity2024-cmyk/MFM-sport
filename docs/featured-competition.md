@@ -13,6 +13,21 @@ must be applied before the code goes live.
 
 ## 1. DDL — apply BEFORE deploying
 
+> **Status: applied to production on 3 September 2026** (`broad-snow-50246164` /
+> `br-royal-wildflower-a21skzaw`), via the Neon MCP server's
+> `prepare_database_migration` → verify → `complete_database_migration`. The
+> statements below are the ones that actually ran. Re-running them is a no-op.
+>
+> The index name in the first draft of this document was **wrong**, which is
+> exactly why the "confirm the naming convention" step below is not optional.
+> Payload's index names repeat the group segment — live proof:
+> `homepage_hero_matches_hero_matches_competition_idx`, not
+> `homepage_hero_matches_competition_idx`. Column and FK names *did* follow the
+> guessed pattern. Verified on the temporary branch before merging: all three
+> columns present with the right types, the FK rejecting a non-existent
+> competition id, all 12 competition rows backfilled to `display_order = 100`,
+> and the `homepage` global row backfilled to `article_matches_enabled = true`.
+
 `src/migrations` is gitignored and `payload migrate` warns of data loss on this
 database (it detects dev-push drift), so these statements are applied by hand,
 same as the archive-import DDL.
@@ -30,6 +45,10 @@ SELECT column_name, data_type
 SELECT conname
   FROM pg_constraint
  WHERE conrelid = 'homepage'::regclass AND contype = 'f';
+
+SELECT indexname
+  FROM pg_indexes
+ WHERE tablename = 'homepage';
 ```
 
 You should see `hero_matches_competition_id` and its FK constraint. If the real
@@ -48,12 +67,16 @@ ALTER TABLE "homepage"
 ALTER TABLE "homepage"
   ADD COLUMN IF NOT EXISTS "article_matches_competition_id" integer;
 
+-- ADD CONSTRAINT has no IF NOT EXISTS, so drop first to stay re-runnable.
+ALTER TABLE "homepage"
+  DROP CONSTRAINT IF EXISTS "homepage_article_matches_competition_id_competitions_id_fk";
+
 ALTER TABLE "homepage"
   ADD CONSTRAINT "homepage_article_matches_competition_id_competitions_id_fk"
   FOREIGN KEY ("article_matches_competition_id")
   REFERENCES "competitions"("id") ON DELETE SET NULL ON UPDATE NO ACTION;
 
-CREATE INDEX IF NOT EXISTS "homepage_article_matches_competition_idx"
+CREATE INDEX IF NOT EXISTS "homepage_article_matches_article_matches_competition_idx"
   ON "homepage" USING btree ("article_matches_competition_id");
 ```
 

@@ -228,9 +228,26 @@ overrides in Homepage Settings), and the season comes from API-Football's
 implementation, `resolveFeaturedCompetition()` in
 `src/lib/home/competitionOrder.ts` — reuse it rather than re-deriving a fallback,
 or the homepage and the article sidebar will drift apart. See
-`docs/featured-competition.md`; note that its two new columns are **hand-applied
-DDL** and must land before the code deploys, or every read of the Homepage global
-errors.
+`docs/featured-competition.md`. Its **hand-applied DDL is now on production**
+(3 September 2026: `competitions.display_order`, plus
+`homepage.article_matches_enabled` / `article_matches_competition_id` — three
+columns, not two). Applied via the Neon MCP `prepare_database_migration` →
+verify → `complete_database_migration` path and verified on production, so the
+code in `feat/cms-driven-featured-competition` is now safe to deploy.
+
+**Payload index names repeat the group segment, and the runbook guessed wrong.**
+The live name is `homepage_hero_matches_hero_matches_competition_idx`, not
+`homepage_hero_matches_competition_idx`. Column and FK names did follow the
+guessed pattern, so the mismatch was in exactly one of the four names — read
+`pg_indexes` before writing a `CREATE INDEX`, not just
+`information_schema.columns`.
+
+**Ranking the competitions is a separate step from the DDL, and skipping it
+regresses the site.** The new column defaults to `100`, so all 12 rows start
+tied, and `byDisplayOrder` breaks ties by `slug.localeCompare()` — which silently
+makes `africa-cup-of-nations` the site-wide default competition. Set the
+in-season league to `0` (admin, or one `UPDATE`); "the DDL is applied" does not
+mean "the right league is featured".
 
 **If a CSP is ever introduced,** `frame-src` must include `www.facebook.com`, `www.instagram.com`, `www.youtube-nocookie.com`, `platform.twitter.com`. There is no Content-Security-Policy anywhere in this codebase today (confirmed by reading `next.config.ts` and `src/middleware.ts`), so nothing enforces this yet — but the day someone adds one without these four hosts, every social/video embed on the site dies **in production only**, the worst possible failure timing and this project's signature failure mode.
 
