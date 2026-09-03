@@ -36,7 +36,7 @@ curl -s https://www.mfmsport.ma/sitemap.xml | grep -o '<loc>' | wc -l
 # then STOP. Do not import 2023 or earlier — see Hard gates.
 ```
 
-**Still unfixed:** `<html>` carries no `lang`/`dir` (see open defects).
+**Featured competition released.** PR #58 is merged and deployed; the World Cup is off the site and Botola Pro 1 is the featured league. Verified on the served bytes — see *Featured competition* below.
 
 ### Merged and deployed
 
@@ -46,6 +46,8 @@ curl -s https://www.mfmsport.ma/sitemap.xml | grep -o '<loc>' | wc -l
 | #53 | Reverted sitemap sharding (it served zero URLs and 404'd `/sitemap.xml`) |
 | #54 | hreflang → Arabic only, canonicals on all page types, `docs/verification-principles.md`, this file |
 | #55 | Upstream API failure no longer serves 404 for fixtures that exist |
+| #56 | Archive import 2024–2026, redirect repair, **`<html lang`/`dir`** |
+| #58 | Featured league is CMS data, not a hardcoded World Cup; unblocked CI's lint gate |
 
 All four are **live on production and verified against the served bytes** (deployment `dpl_9mR6QBDznjofSoHUSSn9xbafdG1i`):
 
@@ -55,6 +57,28 @@ All four are **live on production and verified against the served bytes** (deplo
 - `/news-sitemap.xml` → 200 with **13 `<loc>`** — the 48h window is holding, not leaking the archive
 - article page → exactly **2** hreflang alternates, `ar-MA` + `x-default`, both `/ar`; canonical on `www`; no `robots` meta (indexable)
 - 404 page → **0** real `adsbygoogle.js` script tags
+
+### Featured competition — released 3 September 2026
+
+PR #58 merged (`948925b7`) and deployed as `dpl_FfHN9A8wp3kh7QLQbXiJKUyXg7z3`.
+Verified against the served bytes, not the build:
+
+| Check | Result |
+|---|---|
+| `مونديال 2026` on `/ar` | **9 → 0** |
+| `البطولة الاحترافية` on `/ar` | 6 |
+| `مونديال 2026` on an article page | **0** |
+| `البطولة الاحترافية` on an article page | 12 (sidebar calendar) |
+| Homepage status | 200 |
+| Missing article slug | **404** (not a soft 200) |
+| Unmatched legacy path | 308 → **404** |
+| `adsbygoogle` script tags on that 404 | **0** |
+
+The three supporting columns went in **before** the deploy, so the Homepage
+global never had a read against a missing column. Botola Pro 1 is
+`display_order 0`; the World Cup is demoted to 900 and its 2022 season left
+alone. Switching leagues from here is admin-only — see
+`docs/featured-competition.md`.
 
 ### Redirect map — repaired and verified end-to-end
 
@@ -106,7 +130,14 @@ See **Resume here** at the top for the next command.
 
 ### Open defects — found, not yet fixed
 
-- **`<html>` carries no `lang` and no `dir`.** Production serves `<html data-dpl-id="…">` on every page type including the 404. `dir="rtl"` / `lang="ar"` are set on an inner `<div>` in `[locale]/layout.tsx:44` instead. `<html lang>` is the language signal Google and screen readers read first, and the missing `dir` means anything rendered outside that div — the 404 page among them — lays out left-to-right on an Arabic site. The `<html>` element lives in `(frontend)/layout.tsx`, above `[locale]`, which is why it never got the locale; now that the site is Arabic-only it can simply be hardcoded. Small fix, real signal.
+- ~~**`<html>` carries no `lang` and no `dir`.**~~ **RESOLVED** in `034e766`
+  (PR #56, 28 July 2026) — `(frontend)/layout.tsx:61` now renders
+  `<html lang="ar" dir="rtl">`. Re-verified on production 3 September 2026
+  against the served bytes of three page types (homepage, article, 404), all
+  three carrying `lang="ar" dir="rtl"`. This entry sat here as "not yet fixed"
+  for five weeks after it was fixed, which is the failure mode
+  `docs/verification-principles.md` names directly: a stale note becomes the
+  next person's premise. Check the bytes before trusting this section.
 
 - **A real mouse click computed from a paragraph's bounding box can collapse the caret to the paragraph's END instead of the click point, in the admin's RTL Lexical editor.** Observed while building Task 8's browser verification (`scripts/verify-toolbar-admin-ux.ts`): clicking at a `<p>` element's horizontal midpoint — the natural way to target "the middle of a paragraph" from outside the editor — landed the caret after the last character instead, because the box spans the full editor column width while short, right-aligned Arabic text only occupies part of it, leaving the midpoint in empty margin. Unresolved rather than benign: this is ordinary CSS box-model hit-testing, not headless-specific and not a Lexical bug, so it would reproduce in any real browser a journalist uses — and it was only worked around (placing the caret via the native Selection API at an exact text-node offset), never re-tested against a coordinate actually known to sit on a rendered glyph. Whether a real click on visible Arabic characters (as opposed to a paragraph's empty margin) behaves correctly is still open. Would be settled by clicking at the centre of a rect from `Range.getClientRects()` on the text node and checking where the caret lands. Block insertion at a programmatically-placed caret is verified correct (Task 8); this is about click targeting only, not insertion.
 
@@ -204,6 +235,32 @@ Measured per year so far:
 2023, 2020, 2019 and 2010 are unmeasured. Run the audit before each.
 
 ## Landmines
+
+**`pnpm lint` and `pnpm test:run` exit 0 locally WITHOUT RUNNING ANYTHING.**
+Corepack resolves pnpm 11.23.0 here, its dependency pre-check fails, and the
+script never starts — but the exit code is 0, so both commands look like they
+passed. CI pins pnpm **8** (`.github/workflows/ci.yml`) with
+`--frozen-lockfile`, and the local install is incomplete as a result
+(`@next/eslint-plugin-next` is absent, so eslint cannot run at all). Run the
+binaries directly — `./node_modules/.bin/vitest run --config vitest.config.ts`,
+`./node_modules/.bin/tsc --noEmit` — and read the output rather than the exit
+code. There is no `packageManager` field pinning the version; adding one is the
+real fix.
+
+**Never commit `pnpm-lock.yaml` after a local pnpm has touched it.** The local
+pnpm rewrites it from `lockfileVersion 6.0` to `9.0`, which pnpm 8 in CI cannot
+read — committing it fails `pnpm install --frozen-lockfile` on every PR.
+
+**CI's lint gate had been red since 28 July and nobody noticed for five weeks.**
+Because `pnpm lint` runs *before* `pnpm test:run`, the test suite did not
+execute in CI at all during that window — a green-looking repo with no test
+coverage running. All 26 errors were two `<a>` tags in
+`src/app/global-not-found.tsx`, silenced per-line in #58 with the reasoning
+recorded in the file (that document renders outside the App Router tree, so
+`next/link` has no router to navigate within and a full document load is
+correct). If lint goes red again, fix it immediately rather than living with
+it: it takes the tests down with it.
+
 
 **Never add a `loading.tsx` to a route segment that has 404-capable children.** Its Suspense boundary flushes the response shell before the page body runs, committing HTTP 200 — so `notFound()` renders its page inside an already-successful response and every 404 on the site silently becomes a soft 200. This happened; see the principles doc. `/search` has the only `loading.tsx`, and it has no child routes and never calls `notFound()`.
 
