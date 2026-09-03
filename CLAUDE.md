@@ -123,6 +123,42 @@ Tiering at 500 characters of body text: **26,982** `archive-full`, **10,006** `a
 
 ---
 
+## Local tooling — Neon MCP
+
+`.mcp.json` provides a **`neon`** MCP server alongside the GitHub one, giving
+direct access to the production Postgres (`broad-snow-50246164`): `run_sql`,
+`run_sql_transaction`, `describe_table_schema`, branch management, and
+`prepare_database_migration` / `complete_database_migration`.
+
+It is Neon's **remote, hosted** server (`type: http`,
+`https://mcp.neon.tech/mcp`), authenticated by OAuth through `/mcp` — there is
+no API key to create, store or rotate, and no credential in `.mcp.json`. The
+local npm package (`@neondatabase/mcp-server-neon`) was evaluated and rejected:
+npm marks it deprecated in favour of this endpoint, and it takes its API key as
+a positional CLI argument, which puts the secret in `ps` output. Don't
+reintroduce it. `.mcp.json` and `.claude/` are gitignored.
+
+**Rules for using it — this is a live database with ~8,940 articles:**
+
+- **Schema changes go through `prepare_database_migration` first.** It applies
+  the DDL to a temporary Neon branch so it can be tested before
+  `complete_database_migration` touches `main`. This is the same discipline the
+  archive import used, and the reason `br-gentle-hat-a2bzeay0` still exists.
+- **Never run `payload migrate`.** It detects dev-push drift on this database
+  and would reconcile against a stale snapshot. DDL is applied by hand — that
+  has not changed, the MCP server is just a better hand.
+- **Read the table before you write it.** `describe_table_schema` first;
+  Payload's column naming is derived, not declared, and a guessed column name
+  fails silently inside an `ADD COLUMN IF NOT EXISTS`.
+- **`delete_project` / `delete_branch` are in this toolset.** Do not call them
+  on `broad-snow-50246164` or any of its branches without being asked, by name,
+  for that specific branch.
+- Verification still means fetching the served bytes. A successful `run_sql` is
+  a row count, and `docs/verification-principles.md` exists because row counts
+  have already lied here.
+
+---
+
 ## Verification
 
 **Read [`docs/verification-principles.md`](docs/verification-principles.md) before claiming that anything works.**
