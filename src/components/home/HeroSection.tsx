@@ -16,9 +16,24 @@ type Props = {
     live: string;
     scheduled: string;
   };
+  /** Featured competition's API-Football league id — its group starts expanded. */
+  openLeagueId?: number | null;
+  /** API-Football league id → CMS crest / display order (see competitionOrder). */
+  logoOverrides?: Record<number, string>;
+  leagueOrder?: Record<number, number>;
 };
 
-export function HeroSection({ slides, fixtures, locale, leaguesLabel, leagues, statusLabels }: Props) {
+export function HeroSection({
+  slides,
+  fixtures,
+  locale,
+  leaguesLabel,
+  leagues,
+  statusLabels,
+  openLeagueId,
+  logoOverrides,
+  leagueOrder,
+}: Props) {
   return (
     <SectionShell>
       <LeagueCarousel leagues={leagues} locale={locale} label={leaguesLabel} />
@@ -30,7 +45,14 @@ export function HeroSection({ slides, fixtures, locale, leaguesLabel, leagues, s
 
         {/* Matches panel — same height as hero, scrollable */}
         <div className="lg:h-full overflow-y-auto">
-          <MatchesPanel fixtures={fixtures} locale={locale} statusLabels={statusLabels} />
+          <MatchesPanel
+            fixtures={fixtures}
+            locale={locale}
+            statusLabels={statusLabels}
+            openLeagueId={openLeagueId}
+            logoOverrides={logoOverrides}
+            leagueOrder={leagueOrder}
+          />
         </div>
       </div>
     </SectionShell>

@@ -123,6 +123,42 @@ Tiering at 500 characters of body text: **26,982** `archive-full`, **10,006** `a
 
 ---
 
+## Local tooling — Neon MCP
+
+`.mcp.json` provides a **`neon`** MCP server alongside the GitHub one, giving
+direct access to the production Postgres (`broad-snow-50246164`): `run_sql`,
+`run_sql_transaction`, `describe_table_schema`, branch management, and
+`prepare_database_migration` / `complete_database_migration`.
+
+It is Neon's **remote, hosted** server (`type: http`,
+`https://mcp.neon.tech/mcp`), authenticated by OAuth through `/mcp` — there is
+no API key to create, store or rotate, and no credential in `.mcp.json`. The
+local npm package (`@neondatabase/mcp-server-neon`) was evaluated and rejected:
+npm marks it deprecated in favour of this endpoint, and it takes its API key as
+a positional CLI argument, which puts the secret in `ps` output. Don't
+reintroduce it. `.mcp.json` and `.claude/` are gitignored.
+
+**Rules for using it — this is a live database with ~8,940 articles:**
+
+- **Schema changes go through `prepare_database_migration` first.** It applies
+  the DDL to a temporary Neon branch so it can be tested before
+  `complete_database_migration` touches `main`. This is the same discipline the
+  archive import used, and the reason `br-gentle-hat-a2bzeay0` still exists.
+- **Never run `payload migrate`.** It detects dev-push drift on this database
+  and would reconcile against a stale snapshot. DDL is applied by hand — that
+  has not changed, the MCP server is just a better hand.
+- **Read the table before you write it.** `describe_table_schema` first;
+  Payload's column naming is derived, not declared, and a guessed column name
+  fails silently inside an `ADD COLUMN IF NOT EXISTS`.
+- **`delete_project` / `delete_branch` are in this toolset.** Do not call them
+  on `broad-snow-50246164` or any of its branches without being asked, by name,
+  for that specific branch.
+- Verification still means fetching the served bytes. A successful `run_sql` is
+  a row count, and `docs/verification-principles.md` exists because row counts
+  have already lied here.
+
+---
+
 ## Verification
 
 **Read [`docs/verification-principles.md`](docs/verification-principles.md) before claiming that anything works.**
@@ -183,6 +219,36 @@ Measured per year so far:
 
 **Any future re-tier of admin-authored articles must go through the block-aware path.** `tierFor()` in `src/lib/seo/wpArchive.ts` has no caller today except the raw-HTML WordPress import (`scripts/import-wp-archive.ts`) — it has no notion of a block, so the naive text walk scores media blocks (`socialEmbed`, `gallery`, `audio`, `embedFrame`, or a bare inline image) at zero and will silently noindex media-heavy articles. Use `tierForLexicalBody()` in `src/lib/seo/blockAwareTiering.ts` instead. This exposure is currently *latent* — nothing calls `tierForLexicalBody` yet either, since admin-authored articles default to `seoTier: "editorial"` and nothing recomputes it — but a guard nobody calls is a guard that does not exist, so this is written down before the first bulk re-tier tool gets built, not after.
 
+**The featured league is CMS data, never a constant.** `worldcup.ts` pinned
+league 1 / season 2026 in code, so the World Cup reappeared anywhere config was
+empty and outlived the tournament. Which competition every matches surface shows
+now comes from the Competitions collection (`displayOrder`, plus explicit
+overrides in Homepage Settings), and the season comes from API-Football's
+`current` flag via `getCurrentSeason`. The "chosen, else default" rule has one
+implementation, `resolveFeaturedCompetition()` in
+`src/lib/home/competitionOrder.ts` — reuse it rather than re-deriving a fallback,
+or the homepage and the article sidebar will drift apart. See
+`docs/featured-competition.md`. Its **hand-applied DDL is now on production**
+(3 September 2026: `competitions.display_order`, plus
+`homepage.article_matches_enabled` / `article_matches_competition_id` — three
+columns, not two). Applied via the Neon MCP `prepare_database_migration` →
+verify → `complete_database_migration` path and verified on production, so the
+code in `feat/cms-driven-featured-competition` is now safe to deploy.
+
+**Payload index names repeat the group segment, and the runbook guessed wrong.**
+The live name is `homepage_hero_matches_hero_matches_competition_idx`, not
+`homepage_hero_matches_competition_idx`. Column and FK names did follow the
+guessed pattern, so the mismatch was in exactly one of the four names — read
+`pg_indexes` before writing a `CREATE INDEX`, not just
+`information_schema.columns`.
+
+**Ranking the competitions is a separate step from the DDL, and skipping it
+regresses the site.** The new column defaults to `100`, so all 12 rows start
+tied, and `byDisplayOrder` breaks ties by `slug.localeCompare()` — which silently
+makes `africa-cup-of-nations` the site-wide default competition. Set the
+in-season league to `0` (admin, or one `UPDATE`); "the DDL is applied" does not
+mean "the right league is featured".
+
 **If a CSP is ever introduced,** `frame-src` must include `www.facebook.com`, `www.instagram.com`, `www.youtube-nocookie.com`, `platform.twitter.com`. There is no Content-Security-Policy anywhere in this codebase today (confirmed by reading `next.config.ts` and `src/middleware.ts`), so nothing enforces this yet — but the day someone adds one without these four hosts, every social/video embed on the site dies **in production only**, the worst possible failure timing and this project's signature failure mode.
 
 ---
@@ -196,6 +262,7 @@ Measured per year so far:
 | `docs/traffic-integrity-findings.md` | GA4 analysis: >50% of page views were error pages |
 | `docs/wp-corpus-analysis.md` | The 36,992-post WordPress export: tiering and the decision behind it |
 | `docs/archive-import-runbook.md` | DDL, batched import, staged indexation release |
+| `docs/featured-competition.md` | Changing which league the site shows — CMS steps + the DDL it needs |
 
 ---
 

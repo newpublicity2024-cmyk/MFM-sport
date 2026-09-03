@@ -12,6 +12,8 @@ import {
   cachedGetRelatedArticles,
   cachedGetArticles,
   cachedGetAds,
+  cachedFindHomepageSettings,
+  cachedGetCompetitions,
 } from "@/lib/payload/cached-queries";
 import { decodeSlug } from "@/lib/payload/slug";
 import { robotsFor } from "@/lib/seo/indexation";
@@ -27,8 +29,9 @@ import { InArticleAdInjector } from "@/components/articles/InArticleAdInjector";
 import { AdSlot } from "@/components/ads/AdSlot";
 import { RelatedArticles } from "@/components/articles/RelatedArticles";
 import { Badge } from "@/components/ui/badge";
-import { getWorldCupFixtures } from "@/lib/api-football/worldcup";
-import { WorldCupCalendar } from "@/components/articles/WorldCupCalendar";
+import { getCompetitionFixtures } from "@/lib/api-football/competition";
+import { resolveFeaturedCompetition } from "@/lib/home/competitionOrder";
+import { CompetitionCalendar } from "@/components/articles/CompetitionCalendar";
 import { SidebarNewsList } from "@/components/articles/SidebarNewsList";
 import { AdCarousel } from "@/components/ads/AdCarousel";
 import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";
@@ -36,6 +39,52 @@ import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
 };
+
+/**
+ * Which competition fills the article-page matches sidebar: the one chosen in
+ * Homepage Settings, else the site default (the lowest `displayOrder` in the
+ * Competitions collection).
+ *
+ * Returns null when an editor has switched the card off, or when the settings
+ * read fails. Both reads go through the data cache — this route is dynamic, so
+ * an uncached read would mean two extra Neon round-trips per article view — and
+ * both are tagged SETTINGS_TAG, so changing the featured league takes effect at
+ * once rather than after the TTL. The sidebar is decoration: it must never take
+ * an article page down with it.
+ */
+async function resolveSidebarCompetition(locale: Config["locale"]) {
+  try {
+    const [homepage, competitions] = await Promise.all([
+      cachedFindHomepageSettings(locale),
+      cachedGetCompetitions(locale),
+    ]);
+    if (homepage?.articleMatches?.enabled === false) return null;
+    return resolveFeaturedCompetition(
+      homepage?.articleMatches?.competition,
+      competitions.docs,
+    );
+  } catch (error) {
+    console.error("[article] sidebar competition lookup failed:", error);
+    return null;
+  }
+}
+
+/**
+ * The sidebar calendar's competition and its next 50 matches, as one awaitable
+ * so the whole chain still runs alongside the article's other reads rather than
+ * after them. Fail-open at both steps: a settings or fixtures outage drops the
+ * card, it must never 500 an article page.
+ */
+async function loadSidebarMatches(locale: Config["locale"]) {
+  const competition = await resolveSidebarCompetition(locale);
+  const fixtures = competition
+    ? await getCompetitionFixtures(competition, { next: 50 }).catch((error) => {
+        console.error("[article] sidebar fixtures failed:", error);
+        return [];
+      })
+    : [];
+  return { competition, fixtures };
+}
 
 // IMPORTANT: this route is intentionally DYNAMIC (no `revalidate` / no
 // `generateStaticParams`). Article slugs are non-ASCII (Arabic), and on Vercel
@@ -147,8 +196,8 @@ export default async function ArticlePage({ params }: Props) {
   const loc = locale as Config["locale"];
   const dir = locale === "ar" ? "rtl" : "ltr";
 
-  const [worldCupFixtures, latestNews, ads] = await Promise.all([
-    getWorldCupFixtures(),
+  const [sidebarMatches, latestNews, ads] = await Promise.all([
+    loadSidebarMatches(loc),
     cachedGetArticles({ locale: loc, limit: 13 }),
     cachedGetAds(loc),
   ]);
@@ -159,7 +208,6 @@ export default async function ArticlePage({ params }: Props) {
     .slice(0, 12)
     .map((a) => ({ ...a, publishedAt: a.publishedAt ?? undefined }));
 
-  const tWorldCup = locale === "ar" ? "مونديال 2026" : locale === "fr" ? "Coupe du monde 2026" : "World Cup 2026";
   const tLatest = locale === "ar" ? "آخر الأخبار" : locale === "fr" ? "Dernières actualités" : "Latest news";
 
   return (
@@ -300,12 +348,18 @@ export default async function ArticlePage({ params }: Props) {
         </div>
       </article>
 
-      {/* RIGHT rail — World Cup 2026 calendar + latest news. Sticky; lg+ only. */}
+      {/* RIGHT rail — featured competition's calendar + latest news. Sticky; lg+ only. */}
       <aside
         dir={dir}
         className="hidden shrink-0 space-y-4 lg:sticky lg:top-24 lg:block lg:w-[260px] xl:w-[300px]"
       >
-        <WorldCupCalendar fixtures={worldCupFixtures} locale={locale} title={tWorldCup} />
+        {sidebarMatches.competition?.name && (
+          <CompetitionCalendar
+            fixtures={sidebarMatches.fixtures}
+            locale={locale}
+            title={sidebarMatches.competition.name}
+          />
+        )}
         <SidebarNewsList articles={sidebarNews} locale={locale} title={tLatest} />
       </aside>
     </div>

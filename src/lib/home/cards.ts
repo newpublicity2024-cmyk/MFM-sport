@@ -1,5 +1,5 @@
 import { getArticleHeroUrl, getImageAlt } from "@/lib/utils";
-import { WORLD_CUP_LEAGUE_ID, WORLD_CUP_LOGO } from "@/lib/api-football/worldcup";
+import { competitionLogoUrl, sortByDisplayOrder } from "@/lib/home/competitionOrder";
 
 // A league tab/pill with an ALREADY-LOCALIZED name (derived from the
 // Competitions collection via getCompetitions(locale)), so the UI renders it
@@ -11,14 +11,7 @@ export type LeagueLite = {
   apiFootballId: number;
 };
 
-// Crest URL for a competition: the World Cup uses its 2026 emblem; everything
-// else uses its uploaded logo, then API-Football's CDN as a last resort.
-function competitionLogoUrl(apiFootballId: number, logoUrl?: string | null): string {
-  if (apiFootballId === WORLD_CUP_LEAGUE_ID) return WORLD_CUP_LOGO;
-  return logoUrl || `https://media.api-sports.io/football/leagues/${apiFootballId}.png`;
-}
-
-// A single (already-localized) competition doc → a filter pill, World Cup logo
+// A single (already-localized) competition doc → a filter pill, its CMS crest
 // applied. Used for the admin-configured news filter (order preserved).
 function competitionToLeague(c: CompetitionLike): LeagueLite {
   return {
@@ -69,22 +62,20 @@ type CompetitionLike = {
   name: string;
   logoUrl?: string | null;
   apiFootballId: number;
+  displayOrder?: number | null;
 };
 
 // Single source of truth for the homepage league lists: maps Competitions docs
-// (already localized) into LeagueLite, Botola (200) first to match the carousel.
-// Replicates the carousel's logoUrl fallback so tabs and carousel show identical crests.
+// (already localized) into LeagueLite, ordered by the collection's displayOrder
+// so the tabs and the carousel agree. Shares competitionLogoUrl with the
+// carousel so both show identical crests.
 export function competitionsToLeagues(docs: CompetitionLike[]): LeagueLite[] {
-  return docs
-    .slice()
-    .sort((a, b) => (a.apiFootballId === 200 ? -1 : b.apiFootballId === 200 ? 1 : 0))
-    .map((c) => ({
-      id: c.slug,
-      name: c.name,
-      logoUrl:
-        c.logoUrl || `https://media.api-sports.io/football/leagues/${c.apiFootballId}.png`,
-      apiFootballId: c.apiFootballId,
-    }));
+  return sortByDisplayOrder(docs).map((c) => ({
+    id: c.slug,
+    name: c.name,
+    logoUrl: competitionLogoUrl(c.apiFootballId, c.logoUrl),
+    apiFootballId: c.apiFootballId,
+  }));
 }
 
 /**

@@ -4,7 +4,7 @@ import type {
   CollectionAfterDeleteHook,
   GlobalAfterChangeHook,
 } from "payload";
-import { ARTICLES_TAG, ADS_TAG } from "./cache-tags";
+import { ARTICLES_TAG, ADS_TAG, SETTINGS_TAG } from "./cache-tags";
 
 const LOCALES = ["ar", "fr", "en"] as const;
 
@@ -141,14 +141,40 @@ export const revalidateAdDelete: CollectionAfterDeleteHook = async ({ doc, req }
   return doc;
 };
 
-/** Homepage Settings drive the homepage news filter + match panels; bust the
- *  homepage (and listings, since the article data cache feeds the tabs) on change. */
+/** Homepage Settings drive the homepage news filter + match panels AND the
+ *  article-page matches sidebar; bust the homepage (and listings, since the
+ *  article data cache feeds the tabs) plus every article page on change. */
 export const revalidateHomepageChange: GlobalAfterChangeHook = async ({ doc, req }) => {
   try {
     revalidateTag(ARTICLES_TAG, "max");
+    revalidateTag(SETTINGS_TAG, "max");
     for (const locale of LOCALES) revalidatePath(`/${locale}`);
   } catch (err) {
     req.payload.logger.error({ err }, "[revalidate] homepage global afterChange failed");
+  }
+  return doc;
+};
+
+/** A competition's display order, crest or season decides which league every
+ *  matches surface shows — including the article-page sidebar, which is a
+ *  dynamic route reading through the data cache. Bust that cache on any
+ *  competition write, or the site keeps featuring last season's league. */
+export const revalidateCompetitionChange: CollectionAfterChangeHook = async ({ doc, req }) => {
+  try {
+    revalidateTag(SETTINGS_TAG, "max");
+    for (const locale of LOCALES) revalidatePath(`/${locale}`);
+  } catch (err) {
+    req.payload.logger.error({ err }, "[revalidate] competition afterChange failed");
+  }
+  return doc;
+};
+
+export const revalidateCompetitionDelete: CollectionAfterDeleteHook = async ({ doc, req }) => {
+  try {
+    revalidateTag(SETTINGS_TAG, "max");
+    for (const locale of LOCALES) revalidatePath(`/${locale}`);
+  } catch (err) {
+    req.payload.logger.error({ err }, "[revalidate] competition afterDelete failed");
   }
   return doc;
 };

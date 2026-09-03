@@ -10,11 +10,17 @@
  * - Ensures a "World Cup" tag (ar/fr/en) exists.
  * - Ensures a World Cup competition (API-Football league id 1) exists.
  * - Seeds the Homepage Settings global: news filter = [World Cup, …domestic
- *   leagues (Botola first) with the last one dropped], hero matches = World Cup,
- *   lower matches = today's fixtures across all leagues.
+ *   leagues (Botola first) with the last one dropped], lower matches = today's
+ *   fixtures across all leagues.
  *
- * Idempotent: re-running re-derives and overwrites the global; tag/competition
- * are created only if missing.
+ * Deliberately does NOT set `heroMatches`. Which league the site features is an
+ * editor's choice now (Competitions → Display order, or an explicit pick in
+ * Homepage Settings — see docs/featured-competition.md). This script used to
+ * pin the hero panel to the World Cup, so a re-run would silently undo that
+ * choice and put a finished tournament back on the homepage.
+ *
+ * Idempotent: re-running re-derives and overwrites the news filter and lower
+ * matches; tag/competition are created only if missing.
  */
 
 import "dotenv/config";
@@ -62,6 +68,9 @@ async function main() {
         apiFootballId: WORLD_CUP_API_ID,
         season: WORLD_CUP_SEASON,
         logoUrl: "/images/world-cup-2026.png",
+        // Ranked behind the domestic leagues so a cup that runs once every four
+        // years never becomes the site-wide default competition.
+        displayOrder: 90,
       },
     });
     await payload.update({ collection: "competitions", id: wc.id, locale: "fr", data: { name: "Coupe du monde" } });
@@ -92,11 +101,12 @@ async function main() {
     slug: "homepage",
     data: {
       newsFilters,
-      heroMatches: { competition: wc.id },
       homeMatches: { mode: "today" },
     },
   });
-  console.log(`seeded homepage global: ${newsFilters.length} filter rows, hero = World Cup, lower = today`);
+  console.log(
+    `seeded homepage global: ${newsFilters.length} filter rows, lower = today; hero left to the editor's choice`,
+  );
 
   console.log("done.");
   process.exit(0);

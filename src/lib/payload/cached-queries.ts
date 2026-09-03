@@ -6,9 +6,11 @@ import {
   getArticleLocalizedSlugs,
   getRelatedArticles,
   getArticles,
+  findHomepageSettings,
+  getCompetitions,
 } from "./queries";
 import { getAds } from "./ads";
-import { ARTICLES_TAG, ADS_TAG } from "./cache-tags";
+import { ARTICLES_TAG, ADS_TAG, SETTINGS_TAG } from "./cache-tags";
 
 type Locale = Config["locale"];
 
@@ -90,6 +92,30 @@ export function cachedGetArticles(options: {
 export function cachedGetAds(locale: Locale) {
   return unstable_cache((l: Locale) => getAds(l), ["get-ads"], {
     tags: [ADS_TAG],
+    revalidate: REVALIDATE_SECONDS,
+  })(locale);
+}
+
+/**
+ * Homepage Settings + Competitions, for the article route's matches sidebar.
+ *
+ * The article page is dynamic, so without this every article view would hit the
+ * Neon DB twice more just to learn which competition to show. Both are tagged
+ * SETTINGS_TAG, which the Homepage global and the Competitions collection bust
+ * on write — so changing the featured league shows up immediately rather than
+ * after the TTL.
+ */
+export function cachedFindHomepageSettings(locale: Locale) {
+  return unstable_cache(
+    (l: Locale) => findHomepageSettings(l),
+    ["find-homepage-settings"],
+    { tags: [SETTINGS_TAG], revalidate: REVALIDATE_SECONDS },
+  )(locale);
+}
+
+export function cachedGetCompetitions(locale: Locale) {
+  return unstable_cache((l: Locale) => getCompetitions(l), ["get-competitions"], {
+    tags: [SETTINGS_TAG],
     revalidate: REVALIDATE_SECONDS,
   })(locale);
 }
