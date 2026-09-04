@@ -236,20 +236,25 @@ Measured per year so far:
 
 ## Landmines
 
-**`pnpm lint` and `pnpm test:run` exit 0 locally WITHOUT RUNNING ANYTHING.**
-Corepack resolves pnpm 11.23.0 here, its dependency pre-check fails, and the
-script never starts — but the exit code is 0, so both commands look like they
-passed. CI pins pnpm **8** (`.github/workflows/ci.yml`) with
-`--frozen-lockfile`, and the local install is incomplete as a result
-(`@next/eslint-plugin-next` is absent, so eslint cannot run at all). Run the
-binaries directly — `./node_modules/.bin/vitest run --config vitest.config.ts`,
-`./node_modules/.bin/tsc --noEmit` — and read the output rather than the exit
-code. There is no `packageManager` field pinning the version; adding one is the
-real fix.
+**The pnpm version is pinned by `packageManager` in `package.json`
+(`pnpm@8.15.9`) — do not remove it, and do not add a `version:` to
+`pnpm/action-setup` in CI.** That field is the single source of truth: the CI
+action reads it, and corepack reads it locally, so the two cannot drift.
 
-**Never commit `pnpm-lock.yaml` after a local pnpm has touched it.** The local
-pnpm rewrites it from `lockfileVersion 6.0` to `9.0`, which pnpm 8 in CI cannot
-read — committing it fails `pnpm install --frozen-lockfile` on every PR.
+This is not stylistic. Before it existed, corepack resolved pnpm 11 locally
+while CI pinned 8, and the consequence was that **`pnpm lint` and
+`pnpm test:run` exited 0 locally without running anything** — pnpm 11's
+dependency pre-check failed before the script started, and the failure surfaced
+as exit code 0. Both commands looked like they passed. That is how a red lint
+gate survived a month unnoticed. If you ever see those scripts finish
+suspiciously fast, read the output rather than the exit code, and check
+`pnpm --version` against `packageManager`.
+
+**Never commit `pnpm-lock.yaml` after a pnpm newer than 8 has touched it.** It
+gets rewritten from `lockfileVersion 6.0` to `9.0`, which pnpm 8 cannot read —
+committing it fails `pnpm install --frozen-lockfile` on every PR. With the pin
+in place this should no longer happen; if the lockfile shows up modified with a
+changed `lockfileVersion` header, something bypassed corepack.
 
 **CI's lint gate had been red since 28 July and nobody noticed for five weeks.**
 Because `pnpm lint` runs *before* `pnpm test:run`, the test suite did not

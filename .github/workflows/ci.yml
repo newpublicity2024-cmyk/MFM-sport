@@ -14,9 +14,11 @@ jobs:
       HAS_DB: ${{ secrets.CI_DATABASE_URL != '' }}
     steps:
       - uses: actions/checkout@v4
+      # No `version:` here on purpose — the action reads `packageManager` from
+      # package.json, so the pnpm version has exactly one source of truth and
+      # CI cannot drift from what developers run locally. Specifying both risks
+      # a conflict between them.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 8
       - uses: actions/setup-node@v4
         with:
           node-version: 20

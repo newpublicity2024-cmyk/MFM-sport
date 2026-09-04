@@ -4,6 +4,7 @@
   "description": "MFM Sport - Arabic football news portal",
   "license": "MIT",
   "type": "module",
+  "packageManager": "pnpm@8.15.9",
   "scripts": {
     "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
