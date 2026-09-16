@@ -6,7 +6,7 @@ Arabic-language Moroccan football news site. Next.js 16 (App Router) + Payload C
 
 ## Session state — SEO remediation
 
-**Updated: 28 July 2026, phase boundary — 2024 import batch in flight.** Update this at every phase boundary. It is deliberately ground truth on disk rather than in a conversation summary.
+**Updated: 16 September 2026 — sitemap release verified, legacy Yoast sitemap identified.** Update this at every phase boundary. It is deliberately ground truth on disk rather than in a conversation summary.
 
 ### Resume here
 
@@ -25,13 +25,52 @@ Database after the release: **8,940 articles** (8,542 imported + 398 `editorial`
 
 Spot-checked 10 evenly-spaced articles per batch against the XML — **30/30 at ratio 1.00**, dates and redirects correct (`pnpm spotcheck --year=<Y>`).
 
-**BLOCKED on a deploy:** `/sitemap.xml` still serves the pre-import 906 URLs / 398 articles, byte-identical to before. It caches for 24h and the route that busts it is in this branch, undeployed. Once deployed, POST `{"collection":"sitemap"}` to `/api/revalidate` — or the importer now does it automatically at the end of a run. Expect the sitemap to go to roughly **7,850** article URLs (398 editorial + 7,452 released `archive-full`); `archive-brief` must stay out.
+**Sitemap release — UNBLOCKED and verified (16 September 2026).** The
+"blocked on a deploy" note that sat here was stale from the day it was written:
+PR #56 reached production the same afternoon (28 July,
+`dpl_2x5JJec3b8Q7RGZNJdvHh66Mx5be`), and a commit on that branch (`d0c0026`)
+even recorded the after-numbers. Nobody updated this section. Verified today
+on the served bytes:
 
-`/news-sitemap.xml` is verified still at **13 URLs** — the archive did not leak into the 48h feed.
+| | 28 July (pre-deploy) | 16 September |
+|---|---|---|
+| `/sitemap.xml` status / size | 200 | 200 / 3.1 MB |
+| total `<loc>` | 906 | **9,268** |
+| article URLs (`/ar/articles/…`) | 398 | **8,167** |
+| tag / category / author / competition / club | — | 1,000 / 64 / 13 / 12 / 4 |
+| `/news-sitemap.xml` | 13 | 23 — still a 48h window |
+
+8,167 is 317 above the 7,850 estimate (398 editorial + 7,452 `archive-full`);
+the plausible explanation is seven weeks of editorial publishing (~6/day).
+**Not verified:** that the 8,167 equals `editorial + archive-full` exactly, i.e.
+that no `archive-brief` leaked. Every route to the production DB was closed at
+the time — see *Open blockers*. One query settles it once the Neon connector
+is back on the right org:
+`SELECT seo_tier, count(*) FROM articles WHERE _status='published' GROUP BY 1`.
+
+**The old site's sitemap was Yoast, and every one of its URLs was a bare 404
+until `fix/legacy-sitemap-redirects`.** Wayback CDX shows `sitemap_index.xml`
+→ `post-sitemap1.xml … post-sitemap144.xml` (200 URLs per shard, date-ascending;
+shard 144 = Feb–Apr 2020, so higher shards exist) plus category / club / page /
+images / audio / poll shards. Middleware's matcher skips dotted paths, so none
+of them ever reached the redirect lookup. `next.config.ts` now 308s the whole
+family to `/sitemap.xml`, and maps the hub shapes (`/category/{parent}/{child}/`,
+`/club/`, `/tag/`, `/articles/page/N/`, `/tournaments`, `/matchs`,
+`/most-viewed`) to their flat `/ar/…` equivalents. Category slugs were carried
+over from WordPress unchanged, so the last path segment is the new slug.
+Details and the Search Console checklist: `docs/seo-recon-findings.md` §
+*Old sitemap structure* and `docs/archive-import-runbook.md` § *Search Console*.
+
+Four real article URLs sampled from that archived 2020 shard end in **404**.
+That is the *expected* staged state — 2023-and-earlier is not imported, see
+*Hard gates* — but it is also ~28,000 URLs Google learned from the old sitemap.
+The redirect map is 8,742 of ~37,000. The remaining import is what fixes it,
+not more redirect rules.
 
 ```bash
-# after this branch deploys, confirm the release is advertised:
-curl -s https://www.mfmsport.ma/sitemap.xml | grep -o '<loc>' | wc -l
+# confirm the old-sitemap family follows to the live sitemap in one hop:
+curl -sL -o /dev/null -w '%{http_code} %{num_redirects} %{url_effective}\n' https://www.mfmsport.ma/sitemap_index.xml
+# expect: 200 1 https://www.mfmsport.ma/sitemap.xml
 
 # then STOP. Do not import 2023 or earlier — see Hard gates.
 ```
@@ -143,8 +182,10 @@ See **Resume here** at the top for the next command.
 
 ### Open blockers
 
-- **Ahrefs connector not authorised** — blocks referring-domain data, which would set import *order* (highest-value URLs first). Does not block the import itself.
-- **Vercel connector scoped to the wrong account** (`lallafatimamagazine-4500s-projects`, not `newpublicitys-projects`) — blocks the ASN/user-agent breakdown behind the WAF rules. GA4 says >50% of traffic is datacenter-region bots.
+- **Google Search Console — nobody on this repo has ever had access.** The one data source that would show the old Yoast sitemap's status, the "Not found (404)" bucket, and the before/after cutover traffic. Likely trap: the old site was non-www, the new canonical is www; if only the old URL-prefix property exists, the new site is invisible there. Checklist for whoever holds it: `docs/archive-import-runbook.md` § *Search Console*.
+- **Ahrefs connector not authorised** — blocks referring-domain data, which would set import *order* (highest-value URLs first). Does not block the import itself. Note `robots.txt` also disallows `AhrefsBot`, so a fresh Ahrefs crawl of the new site would be blind regardless.
+- ~~**Vercel connector scoped to the wrong account**~~ **RESOLVED** 16 September 2026 — now scoped to `mfm-sport-s-projects` (`team_fTocfmy9K34vLfmtwxTkCzIb`, project `prj_yLFKRNjsrMdH31Kc2or1W5VVAcKL`, linked to this repo). Deploy history is readable. The WAF/ASN breakdown is still to do.
+- **Neon MCP scoped to the wrong org** (16 September 2026) — lists only `icy-union-71150532` (Lalla Fatima), not `broad-snow-50246164`. There is no `.env` on this machine and `/api/articles` is 403 (correctly), so there is currently **no route to the production DB** from a session. Re-authorise the connector against the MFM Sport org before any DB verification.
 - **API-Football daily quota exhausted** — match pages return null upstream. Blocks verifying that a *whitelisted* fixture is indexable; the non-whitelisted `noindex` case is verified.
 - **`wp-content/uploads` backup** — owner is checking. All 43,584 legacy images already 404; the WordPress REST API is gone. Bodies import with `<img>` stripped. Images can be backfilled later against `legacy_slug` without re-importing text.
 

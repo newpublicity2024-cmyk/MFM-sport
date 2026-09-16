@@ -138,6 +138,36 @@ Between stages, wait 2–3 weeks and check Search Console:
 
 `archive-brief` stays held via `RELEASE_ARCHIVE_BRIEF = false`. Promote it only if Search Console shows those pages earning impressions on their own.
 
+### Search Console — checklist for whoever holds access
+
+As of 16 September 2026 nobody working on this repo has ever opened Search
+Console for this domain. Every "check Search Console" step above depends on
+someone doing this once. The old site ran Yoast (`sitemap_index.xml`, see
+`docs/seo-recon-findings.md` §6.1); the old host was non-www, the new canonical
+is `www`.
+
+1. **Which properties exist?** Look for `mfmsport.ma` (Domain property),
+   `https://mfmsport.ma/`, `https://www.mfmsport.ma/`, and any `http://` ones.
+   If only the old URL-prefix property exists, the new site's data is invisible
+   there. Add a **Domain property** for `mfmsport.ma` — it covers every host and
+   protocol. Do **not** delete the old properties: their 16-month history is the
+   only "before" baseline.
+2. **Sitemaps report, per property.** Expect `sitemap_index.xml` with status
+   "Couldn't fetch" since the rebuild. Once `fix/legacy-sitemap-redirects` is on
+   production, resubmit it once — it follows the redirect and goes green. Confirm
+   `/sitemap.xml` and `/news-sitemap.xml` are submitted on the `www` property.
+   Do not remove the old entry.
+3. **Export** — these numbers exist nowhere else:
+   - Pages report, all rows: Indexed, and Not indexed by reason — especially
+     "Not found (404)", "Crawled – currently not indexed", "Page with redirect".
+   - Performance, 16 months: the three months before the cutover (June–July
+     2026) against the three after.
+   - Sitemaps: per-sitemap discovered / indexed counts.
+4. **Do not use the Change of Address tool.** It is for domain moves; this is
+   the same domain.
+5. Send the exports back. The "Not found (404)" list ranked by impressions sets
+   the import *order* for 2023-and-earlier: highest-impression dead URLs first.
+
 ---
 
 ## Step 5 — Google Publisher Center
