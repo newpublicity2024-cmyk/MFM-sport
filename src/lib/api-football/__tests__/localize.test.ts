@@ -42,6 +42,33 @@ describe("localizeLeague / localizeTeam / localizePerson", () => {
   });
 });
 
+describe("localizeTeam — Botola Pro 1 (2026/27)", () => {
+  // Every club in the home league must resolve to its curated Arabic name, not
+  // the transliteration fallback — which is what shipped for six of them
+  // ("كاوكاب ماراكيتش", "كودم ميكنيس", "أوتس رابات", …) before the entries
+  // existed. Spellings follow Kooora's standings table; ids are api-football's,
+  // read from the crest URLs on /ar/competition/botola-pro-1.
+  it.each([
+    [962, "Renaissance Berkane", "نهضة بركان"],
+    [964, "Difaa El Jadida", "الدفاع الحسني الجديدي"],
+    [965, "Moghreb Tetouan", "المغرب التطواني"],
+    [968, "Wydad AC", "الوداد الرياضي"],
+    [969, "FAR Rabat", "الجيش الملكي"],
+    [971, "Kawkab Marrakech", "الكوكب الرياضي المراكشي"],
+    [973, "Hassania Agadir", "حسنية أغادير"],
+    [974, "Ittihad Tanger", "إتحاد طنجة"],
+    [976, "Raja Casablanca", "الرجاء البيضاوي"],
+    [977, "FUS Rabat", "الفتح الرباطي"],
+    [3449, "KR Khemis Zemamra", "نهضة الزمامرة"],
+    [3453, "Maghreb Fes", "المغرب الفاسي"],
+    [3458, "Wydad Temara", "وداد تمارة"],
+    [14806, "UTS Rabat", "إتحاد تواركة"],
+    [18753, "US Amal Tiznit", "أمل تيزنيت"],
+    [22218, "CODM Meknes", "النادي المكناسي"],
+  ])("id %i (%s) → %s", (id, latin, expected) =>
+    expect(localizeTeam(id, latin, "ar")).toBe(expected));
+});
+
 describe("localizeRound", () => {
   it("passes through for non-ar", () =>
     expect(localizeRound("Round of 16", "en")).toBe("Round of 16"));
