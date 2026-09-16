@@ -61,3 +61,10 @@ qa-*.png
 # i18n translation work files (large, transient)
 /translations/
 .import-logs/
+
+# unlazy skill (local state)
+.unlazy/
+.unlazy-hook-state.json
+
+# Local scraping workspace (Kooora team-name harvest); never committed
+/scrape/
