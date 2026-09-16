@@ -84,6 +84,68 @@ const nextConfig: NextConfig = {
         destination: "/ar/feed.xml",
         permanent: true,
       },
+      // --- Legacy WordPress sitemaps -----------------------------------------
+      // The old site ran Yoast SEO: /sitemap_index.xml fanning out to
+      // /post-sitemap1.xml ... /post-sitemap144.xml (200 URLs each), plus
+      // category/club/page/images/audio/poll shards (Wayback CDX, 2022-2024).
+      // Google still requests those URLs, and until now every one was a bare
+      // 404: middleware's matcher skips dotted paths, so they never reached the
+      // redirect lookup. A permanent redirect to the live sitemap is how Google
+      // discovers the replacement without anyone touching Search Console.
+      // /news-sitemap.xml keeps its old path and is served directly - no rule.
+      {
+        source: "/sitemap_index.xml",
+        destination: "/sitemap.xml",
+        permanent: true,
+      },
+      {
+        source:
+          "/:type(post|category|club|page|images|audio|poll|post_tag|author|video|attachment|local)-sitemap:n(\\d*).xml",
+        destination: "/sitemap.xml",
+        permanent: true,
+      },
+      {
+        // WordPress core's own sitemap shape, in case it was ever exposed.
+        source: "/wp-sitemap:rest(.*).xml",
+        destination: "/sitemap.xml",
+        permanent: true,
+      },
+      {
+        source: "/sitemap.xml.gz",
+        destination: "/sitemap.xml",
+        permanent: true,
+      },
+      // --- Legacy WordPress archive paths ------------------------------------
+      // Article URLs are handled per-row by middleware + the redirects
+      // collection. These are the hub/archive shapes, which have no rows.
+      // WP nested categories to the flat category route: the slugs were carried
+      // over unchanged, so the last segment is the new slug; a slug that no
+      // longer exists lands on the real 404, never the homepage.
+      {
+        source: "/category/:parents*/:slug",
+        destination: "/ar/category/:slug",
+        permanent: true,
+      },
+      { source: "/club/:slug", destination: "/ar/club/:slug", permanent: true },
+      { source: "/tag/:slug", destination: "/ar/tag/:slug", permanent: true },
+      {
+        source: "/articles/page/:n(\\d+)",
+        destination: "/ar/articles/page/:n",
+        permanent: true,
+      },
+      { source: "/articles", destination: "/ar/articles", permanent: true },
+      {
+        // Old match programme / standings pages.
+        source: "/:old(tournaments|matchs)",
+        destination: "/ar/matches",
+        permanent: true,
+      },
+      {
+        // Old "most viewed" archive (Google still holds /most-viewed/page/440/).
+        source: "/most-viewed/:rest*",
+        destination: "/ar/articles",
+        permanent: true,
+      },
       {
         source: "/:locale/articles",
         // Only redirect page>=2; ?page=1 (and ?page=0) just render the base listing.

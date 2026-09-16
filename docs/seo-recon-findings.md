@@ -160,6 +160,48 @@ Both exist and return 200. `app/sitemap.ts` correctly emits `/ar` only, skips un
 
 Both inherit the **apex-vs-www** problem from §3.1. **No news sitemap exists.**
 
+### 6.1 Old sitemap structure (Yoast) — added 16 September 2026
+
+Nothing in this repo had ever named the old site's sitemap. The Wayback Machine
+CDX index has it (query: `url=mfmsport.ma&matchType=prefix&filter=urlkey:.*sitemap.*`):
+
+- **Yoast SEO.** `sitemap_index.xml` → `post-sitemap1.xml … post-sitemap144.xml`
+  (snapshots 2022-07, 2022-12, 2024-01, 2024-04), plus `category-sitemap.xml`,
+  `club-sitemap1-3.xml`, `page-sitemap.xml`, `images-sitemap.xml`,
+  `audio-sitemap.xml`, `poll-sitemap.xml`, `news-sitemap.xml`.
+- **200 URLs per shard**, date-ascending. A fetched copy of `post-sitemap144.xml`
+  (2024-04-24 snapshot) holds `lastmod` 2020-02-16 → 2020-04-11, so shards
+  above 144 existed for 2020-04 → 2026 and the CDX listing (capped at 60 rows)
+  simply did not show them. 144 × 200 ≈ 28,800 posts through early 2020 is
+  consistent with the 36,992 published posts in the April 2026 export.
+- **Host drift:** 2022 snapshots are `https://www.mfmsport.ma/`, 2024 snapshots
+  are `https://mfmsport.ma/`. The new canonical is `www`. Whichever Search
+  Console property the old sitemaps were submitted to may not be the one the new
+  site reports under — see the runbook's Search Console checklist.
+
+**Every one of those URLs was a bare 404 on the rebuilt site** until
+`fix/legacy-sitemap-redirects`. `src/middleware.ts`'s matcher excludes any path
+containing a dot, so `.xml` requests never reached the redirect lookup, and
+`next.config.ts` had no rule. Probed live on 16 September, all 404:
+`/sitemap_index.xml`, `/post-sitemap.xml`, `/post-sitemap2.xml`,
+`/page-sitemap.xml`, `/category-sitemap.xml`, `/post_tag-sitemap.xml`,
+`/wp-sitemap.xml`, `/sitemap.xml.gz`. Only `/news-sitemap.xml` survived, by
+coincidence of the same path.
+
+The fix is a `next.config.ts` redirect family → `/sitemap.xml` (permanent), which
+is the mechanism by which Google discovers the replacement without a Search
+Console submission. The same change maps the hub shapes the old site had and
+this one does not — `/category/{parent}/{child}/` (the new category route is
+flat; slugs were carried over from WordPress unchanged, so the last segment is
+the new slug), `/club/`, `/tag/`, `/articles/page/N/`, `/tournaments`,
+`/matchs`, `/most-viewed` — to their `/ar/…` equivalents. A slug that no longer
+exists lands on the real 404, never the homepage.
+
+**What this does not fix:** four real article URLs sampled from the 2020 shard
+chain `308 → 308 → 404`. That is the staged import (2023-and-earlier not yet
+imported), and it is most of what the old sitemap advertised — 8,742 of ~37,000
+legacy article URLs have redirects today.
+
 ---
 
 ## 7. i18n — audit claim not reproducible
