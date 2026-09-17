@@ -29,10 +29,27 @@ export interface CacheRedis {
   del(key: string): Promise<unknown>;
 }
 
+/**
+ * One Redis command may not hold a request longer than this. Upstash normally
+ * answers in tens of milliseconds; the point is the failure mode. The client's
+ * defaults are 5 retries with `Math.exp(n) * 50` ms backoff — about 11.7 s per
+ * failing command before any request timeout — and `cachedJson` issues two to
+ * four commands per call, so one Upstash blip held a page for 35–95 s
+ * (measured on production, 17 September 2026). Every path below already treats
+ * a Redis error as a miss, so failing fast costs one upstream call, not a page.
+ */
+export const REDIS_COMMAND_TIMEOUT_MS = 1500;
+
 let _redis: CacheRedis | null | undefined;
 function defaultRedis(): CacheRedis | null {
   if (_redis !== undefined) return _redis;
-  _redis = hasUpstash() ? (Redis.fromEnv() as unknown as CacheRedis) : null;
+  _redis = hasUpstash()
+    ? (Redis.fromEnv({
+        retry: { retries: 1, backoff: () => 200 },
+        // A factory, so each command gets its own fresh timer.
+        signal: () => AbortSignal.timeout(REDIS_COMMAND_TIMEOUT_MS),
+      }) as unknown as CacheRedis)
+    : null;
   return _redis;
 }
 

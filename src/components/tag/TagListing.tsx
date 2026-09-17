@@ -1,7 +1,7 @@
 import type { Config } from "@/payload-types";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { getTagBySlug, getArticlesByTag } from "@/lib/payload/queries";
+import { cachedGetTagBySlug, cachedGetArticlesByTag } from "@/lib/payload/cached-queries";
 import { ArticleGrid } from "@/components/articles/ArticleGrid";
 import { Pagination } from "@/components/shared/Pagination";
 
@@ -16,10 +16,10 @@ export async function TagListing({
   page: number;
 }) {
   const loc = locale as Config["locale"];
-  const tag = await getTagBySlug(slug, loc);
+  const tag = await cachedGetTagBySlug(slug, loc);
   if (!tag) notFound();
 
-  const result = await getArticlesByTag(tag.id, loc, page);
+  const result = await cachedGetArticlesByTag(tag.id, loc, page);
   const t = await getTranslations({ locale, namespace: "article" });
 
   return (

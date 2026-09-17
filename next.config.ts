@@ -126,6 +126,14 @@ const nextConfig: NextConfig = {
         destination: "/ar/category/:slug",
         permanent: true,
       },
+      // The old site's /club/{cc} pages were league hubs by country, not clubs
+      // (Speed Insights recorded /ar/club/ma, /sa, /dz, /es, /qa, /ae, /world —
+      // all landing on the 404, RES 35). Send the two countries whose league
+      // this site covers to that competition, the rest to the clubs listing.
+      // These must precede the generic /club/:slug rule below.
+      { source: "/club/ma", destination: "/ar/competition/botola-pro-1", permanent: true },
+      { source: "/club/es", destination: "/ar/competition/la-liga", permanent: true },
+      { source: "/club/:cc(sa|dz|qa|ae|world)", destination: "/ar/club", permanent: true },
       { source: "/club/:slug", destination: "/ar/club/:slug", permanent: true },
       { source: "/tag/:slug", destination: "/ar/tag/:slug", permanent: true },
       {

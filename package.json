@@ -42,6 +42,8 @@
     "redirects:normalize": "tsx scripts/normalize-redirects.ts",
     "redirects:normalize:dry": "tsx scripts/normalize-redirects.ts --dry-run",
     "redirects:verify": "tsx scripts/verify-redirects.ts",
+    "slugs:normalize": "tsx scripts/normalize-taxonomy-slugs.ts",
+    "slugs:normalize:dry": "tsx scripts/normalize-taxonomy-slugs.ts --dry-run",
     "backfill:wp-ids": "tsx scripts/backfill-wp-post-id.ts",
     "audit:body-length": "tsx scripts/audit-body-length.ts",
     "spotcheck": "tsx scripts/spotcheck-import.ts"

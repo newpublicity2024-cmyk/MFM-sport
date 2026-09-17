@@ -2,10 +2,41 @@ import { NextResponse, type NextRequest } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
 import { normalizeLegacyPath } from "./lib/seo/legacyPath";
+import { isUnsafeIsrPath } from "./lib/seo/isr";
 
 const intlMiddleware = createIntlMiddleware(routing);
 
 const KNOWN_PREFIXES = ["/ar", "/fr", "/en", "/admin", "/api", "/_next", "/_vercel"];
+
+// The top-level sections that exist under /ar — the directories of
+// src/app/(frontend)/[locale]/(site). An unprefixed request whose first segment
+// is one of these ("/videos", "/matches") is a real page missing its locale
+// and is 308'd to it below. Anything else that also misses the redirect map is
+// an old WordPress URL with no destination, and gets the 404 directly.
+const SITE_SECTIONS = new Set([
+  "about",
+  "articles",
+  "author",
+  "category",
+  "club",
+  "competition",
+  "contact",
+  "legal",
+  "matches",
+  "newsletter",
+  "privacy",
+  "search",
+  "tag",
+  "unsubscribe",
+  "videos",
+]);
+
+/** Rewrite to a path no route owns, so global-not-found answers with a real 404. */
+function notFoundResponse(request: NextRequest) {
+  const url = request.nextUrl.clone();
+  url.pathname = "/ar/__not-found";
+  return NextResponse.rewrite(url);
+}
 
 function isLegacyCandidate(pathname: string): boolean {
   if (KNOWN_PREFIXES.some((p) => pathname.startsWith(p))) return false;
@@ -24,6 +55,15 @@ export default async function middleware(request: NextRequest) {
 
   if (pathname.startsWith("/admin") || pathname.startsWith("/api")) {
     return NextResponse.next();
+  }
+
+  // A non-ASCII path on an ISR route would be written into the
+  // `x-next-cache-tags` response header and 500 on Vercel (lib/seo/isr.ts).
+  // No real slug on those routes is non-ASCII, so answer with the site's plain
+  // 404 instead: rewriting to a path no route owns renders global-not-found
+  // dynamically — a real 404 status, no ads, nothing in a cache-tags header.
+  if (isUnsafeIsrPath(pathname)) {
+    return notFoundResponse(request);
   }
 
   // /fr, /fr/..., /en, /en/... -> /ar(/...), preserving the query string.
@@ -61,7 +101,18 @@ export default async function middleware(request: NextRequest) {
         }
       }
     } catch {
-      // Silently fall through to normal routing
+      // Lookup failed: treat as a miss and fall through.
+    }
+
+    // No redirect for this legacy path. It used to fall through to next-intl,
+    // which 308'd it to /ar/<same path> — and that 404'd, so every dead
+    // WordPress URL cost a redirect hop before its 404 (308s were 23% of all
+    // requests in the 30 days to 17 September, ~200K of them this chain).
+    // A 308 → 404 also tells Google the page moved, when it is simply gone.
+    // Answer 404 in one response; the archive import restores these URLs by
+    // adding redirect rows, not by anything here.
+    if (!SITE_SECTIONS.has(firstSegment)) {
+      return notFoundResponse(request);
     }
   }
 

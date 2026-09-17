@@ -25,8 +25,11 @@ export async function GET(req: Request) {
     const payload = await getPayloadClient();
     const result = await syncVideos(payload, apiKey, { prune: true });
 
+    // Only the videos page. The homepage's videos section refreshes within its
+    // own 5-minute ISR window; busting it here every three hours meant the
+    // next visitor after each cron run paid a full homepage render for a
+    // section that rarely changed.
     for (const loc of ["ar", "fr", "en"]) {
-      revalidatePath(`/${loc}`);
       revalidatePath(`/${loc}/videos`);
     }
 

@@ -26,7 +26,23 @@ export type FetchOpts =
        * this wherever a missing result would become a 404.
        */
       throwOnFailure?: boolean;
+      /**
+       * Upper bound on one upstream round-trip, in milliseconds. Defaults to
+       * UPSTREAM_TIMEOUT_MS. A timeout is reported exactly like an HTTP error:
+       * `[]`, or ApiFootballUnavailableError under `throwOnFailure`.
+       */
+      timeoutMs?: number;
     };
+
+/**
+ * How long one API-Football call may hold a page open. The API normally answers
+ * in well under a second; without a bound, a stalled upstream held article and
+ * competition pages for 35–95 s (measured on production, 17 September 2026)
+ * until Vercel's own function limit cut them off as 504s. Every caller already
+ * degrades gracefully on `[]`, so a timed-out call costs a missing widget, not
+ * a hung page.
+ */
+export const UPSTREAM_TIMEOUT_MS = 4000;
 
 /** Upstream is unreachable or refusing — distinct from "no results". */
 export class ApiFootballUnavailableError extends Error {
@@ -59,6 +75,7 @@ export async function fetchApi<T>(
   const normalized = typeof opts === "number" ? { revalidate: opts } : opts;
   const init: RequestInit & { next?: { revalidate: number } } = {
     headers: { "x-apisports-key": apiKey },
+    signal: AbortSignal.timeout(normalized.timeoutMs ?? UPSTREAM_TIMEOUT_MS),
   };
   if (normalized.cache) {
     // "no-store" and "next.revalidate" are mutually exclusive in Next.js.
@@ -67,7 +84,17 @@ export async function fetchApi<T>(
     init.next = { revalidate: normalized.revalidate ?? 60 };
   }
 
-  const res = await fetch(url.toString(), init);
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), init);
+  } catch (error) {
+    // AbortSignal.timeout rejects with a DOMException named "TimeoutError";
+    // a DNS/TLS failure lands here too. Both are "upstream unavailable".
+    const reason = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    console.error(`[API-Football] request failed for ${endpoint}: ${reason}`);
+    if (throwOnFailure) throw new ApiFootballUnavailableError(reason);
+    return [] as T[];
+  }
 
   if (!res.ok) {
     console.error(`[API-Football] ${res.status} ${res.statusText} for ${endpoint}`);

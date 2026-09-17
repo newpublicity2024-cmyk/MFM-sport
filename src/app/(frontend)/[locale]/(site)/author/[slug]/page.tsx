@@ -2,12 +2,15 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import type { Config } from "@/payload-types";
 import { setRequestLocale } from "next-intl/server";
+import { onDemandOnly } from "@/lib/seo/isr";
 import { getAuthorBySlug } from "@/lib/payload/queries";
 import { AuthorListing } from "@/components/author/AuthorListing";
 
 // ISR: page 1 is now a path-segment route (pagination lives at /page/[n]), so the
 // base listing no longer reads searchParams and can be edge-cached.
 export const revalidate = 3600;
+// Required for the `revalidate` above to take effect at all — see lib/seo/isr.ts.
+export const generateStaticParams = onDemandOnly;
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;

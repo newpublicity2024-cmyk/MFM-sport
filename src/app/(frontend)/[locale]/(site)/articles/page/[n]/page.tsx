@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { setRequestLocale, getTranslations } from "next-intl/server";
+import { onDemandOnly } from "@/lib/seo/isr";
 import { ArticlesListing } from "@/components/articles/ArticlesListing";
 import { parsePageParam } from "@/lib/pagination";
 
 export const revalidate = 3600;
+// Required for the `revalidate` above to take effect at all — see lib/seo/isr.ts.
+export const generateStaticParams = onDemandOnly;
 
 type Props = {
   params: Promise<{ locale: string; n: string }>;

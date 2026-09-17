@@ -13,6 +13,7 @@ import {
 import { getVideos } from "@/lib/videos";
 import { getFixturesByDateForLeagues } from "@/lib/api-football/fixtures";
 import { getCompetitionFixtures } from "@/lib/api-football/competition";
+import { windowFixtures } from "@/lib/api-football/fixtureWindow";
 import {
   buildLeagueOrder,
   buildLogoOverrides,
@@ -44,6 +45,9 @@ const HOME_ARTICLES_PER_TAB = 20;
 // function on every visit. Live scores still refresh client-side (HomeMatchesSection
 // / hero panel poll the cached /api/fixtures endpoints), and Payload edits bust the
 // cache via /api/revalidate. Big cut to Function Invocations / Fluid CPU / origin transfer.
+/** Live + this many recent results + this many upcoming, per competition panel. */
+const HOME_FIXTURE_WINDOW = { last: 12, next: 12 } as const;
+
 export const revalidate = 300;
 
 type Props = {
@@ -67,9 +71,11 @@ export default async function HomePage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const t = await getTranslations({ locale, namespace: "home" });
-  const tArticle = await getTranslations({ locale, namespace: "article" });
-  const tMatch = await getTranslations({ locale, namespace: "match" });
+  const [t, tArticle, tMatch] = await Promise.all([
+    getTranslations({ locale, namespace: "home" }),
+    getTranslations({ locale, namespace: "article" }),
+    getTranslations({ locale, namespace: "match" }),
+  ]);
   const matchLabels = {
     liveNow: tMatch("liveNow"),
     events: tMatch("events"),
@@ -83,9 +89,15 @@ export default async function HomePage({ params }: Props) {
   const today = new Date().toISOString().split("T")[0];
   const localeTyped = locale as Config["locale"];
 
-  const ourLeagueIds = await getOurLeagueIds();
-  const homepage = await findHomepageSettings(localeTyped);
-  const competitions = await getCompetitions(localeTyped);
+  // Independent reads, so one round rather than three; this render only runs
+  // on ISR regeneration, but a publish or the video cron triggers one and the
+  // next visitor waits for it.
+  const [ourLeagueIds, homepage, competitions, latest] = await Promise.all([
+    getOurLeagueIds(),
+    findHomepageSettings(localeTyped),
+    getCompetitions(localeTyped),
+    getArticles({ locale: localeTyped, page: 1, limit: 6 }),
+  ]);
 
   // League carousel mirrors every competition the site has, in the collection's
   // own displayOrder — so promoting the league currently in season is an edit,
@@ -126,7 +138,6 @@ export default async function HomePage({ params }: Props) {
   );
 
   // Hero slider uses the latest articles regardless of league.
-  const latest = await getArticles({ locale: localeTyped, page: 1, limit: 6 });
   const heroSlides = latest.docs.slice(0, 5).map(toHeroSlide);
 
   // Match panels: hero = the configured competition's current season across all
@@ -141,21 +152,27 @@ export default async function HomePage({ params }: Props) {
     homepage?.homeMatches?.mode === "competition"
       ? toCompetitionRef(homepage?.homeMatches?.competition)
       : null;
-  const [heroFixtures, todayFixtures]: [ApiFixture[], ApiFixture[]] = await Promise.all([
+  // A competition's list is its whole season; the panels get a window of it
+  // (live + recent results + nearest upcoming), not all 240 rows — see
+  // lib/api-football/fixtureWindow. Today's-date mode is small by nature.
+  const [heroSeason, lowerFixtures]: [ApiFixture[], ApiFixture[]] = await Promise.all([
     heroCompetition ? getCompetitionFixtures(heroCompetition) : Promise.resolve([]),
     lowerCompetition
       ? getCompetitionFixtures(lowerCompetition)
       : getFixturesByDateForLeagues(today, ourLeagueIds),
   ]);
+  const heroFixtures = windowFixtures(heroSeason, HOME_FIXTURE_WINDOW);
+  const todayFixtures = lowerCompetition
+    ? windowFixtures(lowerFixtures, HOME_FIXTURE_WINDOW)
+    : lowerFixtures;
 
   // Upstream fixture data carries API-Football's own crests and no ordering, so
   // hand the panel the CMS's view of both, keyed by league id.
   const logoOverrides = buildLogoOverrides(competitions.docs);
   const leagueOrder = buildLeagueOrder(competitions.docs);
 
-  const ads = await getAds(locale as Config["locale"]);
-
-  const [thirdHalfVideos, fromStadiumsVideos] = await Promise.all([
+  const [ads, thirdHalfVideos, fromStadiumsVideos] = await Promise.all([
+    getAds(locale as Config["locale"]),
     getVideos("the-third-half"),
     getVideos("from-the-stadiums"),
   ]);

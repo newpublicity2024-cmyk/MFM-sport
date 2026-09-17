@@ -3,6 +3,7 @@ import { getPayload } from "payload";
 import configPromise from "@payload-config";
 import { SITE_URL } from "@/lib/seo/siteUrl";
 import { isIndexable, type SeoTier } from "@/lib/seo/indexation";
+import { isBrokenTaxonomySlug } from "@/lib/payload/slugFromTitle";
 
 // Arabic-only front end: only advertise /ar URLs (fr/en are 301'd to /ar).
 const LOCALES = ["ar"];
@@ -61,9 +62,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     locale: "all",
     limit: 50000,
     depth: 0,
-    select: { slug: true, updatedAt: true, seoTier: true, publishedAt: true },
+    select: { slug: true, updatedAt: true, seoTier: true, publishedAt: true, categories: true, tags: true },
     sort: "-publishedAt",
   });
+
+  // Which categories and tags have at least one indexable article. A tag or
+  // category page with nothing on it is an empty listing; advertising it is
+  // asking Google to crawl a thin page. Collected from the same query, so it
+  // costs nothing extra.
+  const usedCategoryIds = new Set<string | number>();
+  const usedTagIds = new Set<string | number>();
+  const idsOf = (rel: unknown): (string | number)[] =>
+    Array.isArray(rel)
+      ? rel.map((r) => (r && typeof r === "object" ? (r as { id: string | number }).id : r))
+      : [];
 
   for (const article of articles.docs) {
     // A sitemap must not advertise a URL that serves `noindex` — the two are
@@ -71,6 +83,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // release (lib/seo/indexation) are therefore omitted here, and appear
     // automatically as each batch is released.
     if (!isIndexable(article as { seoTier?: SeoTier; publishedAt?: string })) continue;
+    for (const id of idsOf((article as { categories?: unknown }).categories)) usedCategoryIds.add(id);
+    for (const id of idsOf((article as { tags?: unknown }).tags)) usedTagIds.add(id);
 
     const raw = (article as { slug?: Partial<Record<string, string>> | string }).slug;
     const slugMap: Partial<Record<string, string>> =
@@ -88,34 +102,46 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  // Categories
+  // Categories and tags. Slugs are Arabic and go through encodeURIComponent
+  // like the article slugs above: a raw slug was written straight into <loc>,
+  // and 251 tag + 22 category entries carried a literal space (226 tags a
+  // trailing one) — invalid URLs that 404 in every encoding, a quarter of the
+  // file. Broken slugs are also repaired at the source (lib/payload/
+  // slugFromTitle + scripts/normalize-taxonomy-slugs.ts); this keeps the
+  // sitemap valid regardless. Only taxonomies with indexable articles are
+  // listed. The old `limit: 1000` on tags happened to equal the number
+  // served, i.e. it was silently truncating.
   const categories = await payload.find({
     collection: "categories",
-    limit: 500,
+    limit: 1000,
     select: { slug: true },
   });
 
   for (const category of categories.docs) {
+    if (!usedCategoryIds.has(category.id) || isBrokenTaxonomySlug(category.slug)) continue;
     for (const locale of LOCALES) {
       entries.push({
-        url: `${SITE_URL}/${locale}/category/${category.slug}`,
+        url: `${SITE_URL}/${locale}/category/${encodeURIComponent(category.slug)}`,
         changeFrequency: "daily",
         priority: 0.6,
       });
     }
   }
 
-  // Tags
   const tags = await payload.find({
     collection: "tags",
-    limit: 1000,
+    limit: 20000,
     select: { slug: true },
   });
 
+  // A slug that cannot resolve (whitespace / percent-encoding — the duplicate
+  // WP-import tags awaiting a merge) is skipped rather than advertised as a
+  // 404; repair or merge them and they appear on the next regeneration.
   for (const tag of tags.docs) {
+    if (!usedTagIds.has(tag.id) || isBrokenTaxonomySlug(tag.slug)) continue;
     for (const locale of LOCALES) {
       entries.push({
-        url: `${SITE_URL}/${locale}/tag/${tag.slug}`,
+        url: `${SITE_URL}/${locale}/tag/${encodeURIComponent(tag.slug)}`,
         changeFrequency: "daily",
         priority: 0.5,
       });
@@ -132,7 +158,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   for (const author of authors.docs) {
     for (const locale of LOCALES) {
       entries.push({
-        url: `${SITE_URL}/${locale}/author/${author.slug}`,
+        url: `${SITE_URL}/${locale}/author/${encodeURIComponent(author.slug)}`,
         changeFrequency: "weekly",
         priority: 0.5,
       });
@@ -149,7 +175,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   for (const comp of competitions.docs) {
     for (const locale of LOCALES) {
       entries.push({
-        url: `${SITE_URL}/${locale}/competition/${comp.slug}`,
+        url: `${SITE_URL}/${locale}/competition/${encodeURIComponent(comp.slug)}`,
         changeFrequency: "daily",
         priority: 0.7,
       });
@@ -166,7 +192,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   for (const club of clubs.docs) {
     for (const locale of LOCALES) {
       entries.push({
-        url: `${SITE_URL}/${locale}/club/${club.slug}`,
+        url: `${SITE_URL}/${locale}/club/${encodeURIComponent(club.slug)}`,
         changeFrequency: "weekly",
         priority: 0.6,
       });
