@@ -923,7 +923,7 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   createdAt?: T;
 }
 /**
- * Control which leagues the hero matches panel lists, the tag filters of the latest-news section, the lower matches section, and the matches calendar on article pages.
+ * Control which leagues the hero matches panel lists, the tag filters of the latest-news section, and the matches calendar on article pages.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "homepage".
@@ -949,13 +949,6 @@ export interface Homepage {
           id?: string | null;
         }[]
       | null;
-  };
-  homeMatches: {
-    mode: 'today' | 'competition';
-    /**
-     * Shown when Source is 'A specific competition'.
-     */
-    competition?: (number | null) | Competition;
   };
   /**
    * The matches calendar in the right rail of every article page.
@@ -990,12 +983,6 @@ export interface HomepageSelect<T extends boolean = true> {
               competition?: T;
               id?: T;
             };
-      };
-  homeMatches?:
-    | T
-    | {
-        mode?: T;
-        competition?: T;
       };
   articleMatches?:
     | T

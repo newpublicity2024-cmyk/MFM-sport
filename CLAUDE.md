@@ -22,6 +22,15 @@ channel's uploads; smaller mobile hero titles; where the YouTube key lives.
 | Mobile hero | `HeroSlider` caption: `text-lg line-clamp-2 p-3 pb-7` under `lg`, the old clamp/3 lines/`p-6` restored at `lg:`. |
 | Lint | `reports/` (gitignored Vercel exports) added to eslint ignores — it was the source of 25 local-only "errors". |
 
+### Round two (same day, 21:30 UTC — owner notes after seeing production)
+
+| Note | Change |
+|---|---|
+| Videos section not showing after setting the key | Not a code fault: the 21:00 UTC cron ran on the pre-#67 deployment and 500'd; the next run (00:00 UTC, every 3 h) is the first with the key. Until a sync succeeds there are 0 `channel-uploads` rows and `VideosSection` returns null. Trigger by hand from Vercel → project → Settings → Cron Jobs → *Run*. |
+| Chip row "half empty" — include all the site's tags | Chips are now the site's tags ranked by published-article count (`src/lib/home/tagUsage.ts`, one SQL aggregate over `articles_rels` via `payload.db.drizzle`), capped at `HOME_TAG_CHIP_LIMIT = 80` as a weight budget, broken WP slugs skipped. Admin list still wins; the latest-articles derivation is the fallback if the aggregate fails. A chip's articles load on demand from `GET /api/home/latest-news?tag=<id>&locale=ar` (5-min edge cache) — nothing but the unfiltered list ships in the HTML. The strip is rendered **once** (flex-wrap header: `basis-full` under the title on mobile, `lg:flex-1` beside it). |
+| Carousel dots centred | `lg:col-span-3` on the dots row. |
+| Lower matches section = the matches page, adapted | `HomeMatchesSection` rewritten: `DayCarousel` (15 day pills centred on today, slidable, arrows at lg, native date input, RTL-tested) + league chips (`TagChips` with crests, CMS display order; none selected = every game of the day) + games grouped by league (`groupByLeague`, live → upcoming → finished) as `HomeMatchRow`s. Today is prerendered; other days come from `GET /api/fixtures/date?date=YYYY-MM-DD` (60 s edge cache over the existing 30-min upstream cache). Homepage Settings' *Lower matches section* (`homeMatches`) field is **removed** — nothing to configure; its columns stay in the DB, unread. |
+
 ### YouTube key — findings
 
 - Code reads `process.env.YOUTUBE_API_KEY` only (cron route + CLI). **Not in code.**
