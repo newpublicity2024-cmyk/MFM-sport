@@ -3,6 +3,7 @@ import { getPayload } from "payload";
 import configPromise from "@payload-config";
 import { SITE_URL } from "@/lib/seo/siteUrl";
 import { isIndexable, type SeoTier } from "@/lib/seo/indexation";
+import { isBrokenTaxonomySlug } from "@/lib/payload/slugFromTitle";
 
 // Arabic-only front end: only advertise /ar URLs (fr/en are 301'd to /ar).
 const LOCALES = ["ar"];
@@ -117,7 +118,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   });
 
   for (const category of categories.docs) {
-    if (!usedCategoryIds.has(category.id)) continue;
+    if (!usedCategoryIds.has(category.id) || isBrokenTaxonomySlug(category.slug)) continue;
     for (const locale of LOCALES) {
       entries.push({
         url: `${SITE_URL}/${locale}/category/${encodeURIComponent(category.slug)}`,
@@ -133,8 +134,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     select: { slug: true },
   });
 
+  // A slug that cannot resolve (whitespace / percent-encoding — the duplicate
+  // WP-import tags awaiting a merge) is skipped rather than advertised as a
+  // 404; repair or merge them and they appear on the next regeneration.
   for (const tag of tags.docs) {
-    if (!usedTagIds.has(tag.id)) continue;
+    if (!usedTagIds.has(tag.id) || isBrokenTaxonomySlug(tag.slug)) continue;
     for (const locale of LOCALES) {
       entries.push({
         url: `${SITE_URL}/${locale}/tag/${encodeURIComponent(tag.slug)}`,

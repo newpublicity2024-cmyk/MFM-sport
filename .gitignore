@@ -68,3 +68,6 @@ qa-*.png
 
 # Local scraping workspace (Kooora team-name harvest); never committed
 /scrape/
+
+# Owner's Vercel dashboard exports (screenshots, JSON) — local reference only
+reports/

@@ -87,7 +87,9 @@ export function repairTaxonomySlug(slug: string): string | null {
   } catch {
     // Malformed escape: fall through and clean the raw value.
   }
-  const next = titleToSlug(decoded);
+  // WordPress nicenames sometimes used "_" between words; titleToSlug would
+  // drop it as punctuation and glue the words together.
+  const next = titleToSlug(decoded.replace(/_/g, " "));
   return next && next !== slug ? next : null;
 }
 

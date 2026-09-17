@@ -49,6 +49,10 @@ describe("repairTaxonomySlug", () => {
     expect(repairTaxonomySlug("كأس العالم ")).toBe("كأس-العالم");
   });
 
+  it("treats underscores as word separators, not punctuation to drop", () => {
+    expect(repairTaxonomySlug("%d9%83%d8%a3%d8%b3_%d8%a3%d9%85%d9%85")).toBe("كأس-أمم");
+  });
+
   it("decodes percent-encoding before cleaning", () => {
     expect(repairTaxonomySlug("%D9%85%D8%B2%D8%B1%D8%A7%D9%88%D9%8A")).toBe("مزراوي");
   });
