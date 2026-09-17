@@ -219,7 +219,12 @@ export async function getRelatedArticles(
   });
 }
 
-export async function getCategoryBySlug(slug: string, locale: Locale) {
+// The by-slug lookups below are React-cached: every slug page calls the same
+// lookup from generateMetadata (to raise notFound() before the response
+// streams) and again from the body, and those two run in parallel — without
+// dedupe that was two identical Neon round-trips per view on every club,
+// competition, author, tag and category page.
+export const getCategoryBySlug = cache(async (slug: string, locale: Locale) => {
   const payload = await getPayloadClient();
   const result = await payload.find({
     collection: "categories",
@@ -228,9 +233,9 @@ export async function getCategoryBySlug(slug: string, locale: Locale) {
     limit: 1,
   });
   return result.docs[0] || null;
-}
+});
 
-export async function getTagBySlug(slug: string, locale: Locale) {
+export const getTagBySlug = cache(async (slug: string, locale: Locale) => {
   const payload = await getPayloadClient();
   const result = await payload.find({
     collection: "tags",
@@ -239,9 +244,9 @@ export async function getTagBySlug(slug: string, locale: Locale) {
     limit: 1,
   });
   return result.docs[0] || null;
-}
+});
 
-export async function getAuthorBySlug(slug: string, locale: Locale) {
+export const getAuthorBySlug = cache(async (slug: string, locale: Locale) => {
   const payload = await getPayloadClient();
   const result = await payload.find({
     collection: "authors",
@@ -251,7 +256,7 @@ export async function getAuthorBySlug(slug: string, locale: Locale) {
     depth: 1,
   });
   return result.docs[0] || null;
-}
+});
 
 export async function searchArticles(
   query: string,
@@ -337,7 +342,7 @@ export async function getClubs(locale: Locale) {
   });
 }
 
-export async function getCompetitionBySlug(slug: string, locale: Locale) {
+export const getCompetitionBySlug = cache(async (slug: string, locale: Locale) => {
   const payload = await getPayloadClient();
   const result = await payload.find({
     collection: "competitions",
@@ -347,9 +352,9 @@ export async function getCompetitionBySlug(slug: string, locale: Locale) {
     depth: 1,
   });
   return result.docs[0] || null;
-}
+});
 
-export async function getClubBySlug(slug: string, locale: Locale) {
+export const getClubBySlug = cache(async (slug: string, locale: Locale) => {
   const payload = await getPayloadClient();
   const result = await payload.find({
     collection: "clubs",
@@ -359,7 +364,7 @@ export async function getClubBySlug(slug: string, locale: Locale) {
     depth: 1,
   });
   return result.docs[0] || null;
-}
+});
 
 export async function getArticlesByCompetition(
   competitionCategoryId: string | number,

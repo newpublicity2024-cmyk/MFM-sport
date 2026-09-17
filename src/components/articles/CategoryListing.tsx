@@ -1,7 +1,7 @@
 import type { Config } from "@/payload-types";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { getCategoryBySlug, getArticlesByCategory } from "@/lib/payload/queries";
+import { cachedGetCategoryBySlug, cachedGetArticlesByCategory } from "@/lib/payload/cached-queries";
 import { ArticleGrid } from "@/components/articles/ArticleGrid";
 import { Pagination } from "@/components/shared/Pagination";
 
@@ -15,11 +15,11 @@ export async function CategoryListing({
   page: number;
 }) {
   const loc = locale as Config["locale"];
-  const category = await getCategoryBySlug(slug, loc);
+  const category = await cachedGetCategoryBySlug(slug, loc);
   if (!category) notFound();
 
   const [result, t] = await Promise.all([
-    getArticlesByCategory(category.id, loc, page),
+    cachedGetArticlesByCategory(category.id, loc, page),
     getTranslations({ locale, namespace: "category" }),
   ]);
 

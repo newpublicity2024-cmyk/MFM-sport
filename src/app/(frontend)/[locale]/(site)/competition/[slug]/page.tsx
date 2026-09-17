@@ -3,6 +3,7 @@ import type { Config } from "@/payload-types";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
+import { onDemandOnly } from "@/lib/seo/isr";
 import { getCompetitionBySlug, getArticlesByCompetition } from "@/lib/payload/queries";
 import { getStandings } from "@/lib/api-football/standings";
 import { getFixturesByLeague, getLiveFixturesForLeagues } from "@/lib/api-football/fixtures";
@@ -22,6 +23,8 @@ type Props = {
 // ISR: standings/fixtures rarely change minute-to-minute. The shared cache keeps
 // the underlying API calls low; this caches the rendered HTML too. (2 min)
 export const revalidate = 120;
+// Required for the `revalidate` above to take effect at all — see lib/seo/isr.ts.
+export const generateStaticParams = onDemandOnly;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;

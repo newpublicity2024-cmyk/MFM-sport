@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
 import { normalizeLegacyPath } from "./lib/seo/legacyPath";
+import { isUnsafeIsrPath } from "./lib/seo/isr";
 
 const intlMiddleware = createIntlMiddleware(routing);
 
@@ -24,6 +25,17 @@ export default async function middleware(request: NextRequest) {
 
   if (pathname.startsWith("/admin") || pathname.startsWith("/api")) {
     return NextResponse.next();
+  }
+
+  // A non-ASCII path on an ISR route would be written into the
+  // `x-next-cache-tags` response header and 500 on Vercel (lib/seo/isr.ts).
+  // No real slug on those routes is non-ASCII, so answer with the site's plain
+  // 404 instead: rewriting to a path no route owns renders global-not-found
+  // dynamically — a real 404 status, no ads, nothing in a cache-tags header.
+  if (isUnsafeIsrPath(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/ar/__not-found";
+    return NextResponse.rewrite(url);
   }
 
   // /fr, /fr/..., /en, /en/... -> /ar(/...), preserving the query string.

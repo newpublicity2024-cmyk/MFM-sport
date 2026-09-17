@@ -18,6 +18,19 @@ export function pickCurrentSeason(
   return { season: chosen.year, start: chosen.start ?? null, end: chosen.end ?? null };
 }
 
+/**
+ * The season to assume when nothing better is known — for a club with no
+ * competition attached, say. API-Football labels a season by the year it
+ * starts in, and the leagues this site covers kick off in late summer, so from
+ * July onward the current calendar year is the season; before that it is the
+ * previous one. A guess, deliberately: prefer `getCurrentSeason` wherever a
+ * league id is at hand.
+ */
+export function seasonYearFallback(now: Date = new Date()): number {
+  const year = now.getUTCFullYear();
+  return now.getUTCMonth() >= 6 ? year : year - 1;
+}
+
 export const getCurrentSeason = cache(
   async (leagueId: number, fallback: number): Promise<SeasonInfo> => {
     const params = { id: leagueId };

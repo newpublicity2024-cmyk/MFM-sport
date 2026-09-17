@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
-import type { Config } from "@/payload-types";
+import type { Competition, Config } from "@/payload-types";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
+import { onDemandOnly } from "@/lib/seo/isr";
 import { getClubBySlug } from "@/lib/payload/queries";
 import { getPayloadClient } from "@/lib/payload/queries";
 import { getFixturesByTeam } from "@/lib/api-football/fixtures";
+import { getCurrentSeason, seasonYearFallback } from "@/lib/api-football/season";
 import { getEntityLogoUrl } from "@/lib/utils";
 import { MatchList } from "@/components/football/MatchList";
 import { ArticleGrid } from "@/components/articles/ArticleGrid";
@@ -18,6 +20,8 @@ type Props = {
 
 // ISR: a club's recent/upcoming fixtures change slowly; cache the rendered HTML.
 export const revalidate = 900;
+// Required for the `revalidate` above to take effect at all — see lib/seo/isr.ts.
+export const generateStaticParams = onDemandOnly;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
@@ -33,16 +37,27 @@ export default async function ClubPage({ params }: Props) {
   const club = await getClubBySlug(slug, locale as Config["locale"]);
   if (!club) notFound();
 
-  const tClub = await getTranslations({ locale, namespace: "club" });
-
-  const payload = await getPayloadClient();
+  // The season used to be the literal 2025, which was already the previous
+  // season by the time this was measured (September 2026): every club page
+  // showed last year's "recent" and "upcoming" fixtures. Take it from the
+  // club's first competition, the same way the competition page does.
+  const competition = club.competitions?.find(
+    (c): c is Competition => typeof c === "object" && c !== null,
+  );
+  const [tClub, payload, season] = await Promise.all([
+    getTranslations({ locale, namespace: "club" }),
+    getPayloadClient(),
+    competition
+      ? getCurrentSeason(competition.apiFootballId, competition.season).then((s) => s.season)
+      : Promise.resolve(seasonYearFallback()),
+  ]);
 
   const [recentFixtures, upcomingFixtures, articlesResult] = await Promise.all([
     club.apiFootballId
-      ? getFixturesByTeam(club.apiFootballId, 2025, { last: 5 })
+      ? getFixturesByTeam(club.apiFootballId, season, { last: 5 })
       : Promise.resolve([]),
     club.apiFootballId
-      ? getFixturesByTeam(club.apiFootballId, 2025, { next: 5 })
+      ? getFixturesByTeam(club.apiFootballId, season, { next: 5 })
       : Promise.resolve([]),
     payload.find({
       collection: "articles",

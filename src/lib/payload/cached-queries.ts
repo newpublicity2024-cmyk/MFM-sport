@@ -4,6 +4,10 @@ import {
   resolveArticleBySlug,
   getRelatedArticles,
   getArticles,
+  getTagBySlug,
+  getArticlesByTag,
+  getCategoryBySlug,
+  getArticlesByCategory,
   findHomepageSettings,
   getCompetitions,
 } from "./queries";
@@ -69,6 +73,49 @@ export function cachedGetArticles(options: {
     ["get-articles"],
     { tags: [ARTICLES_TAG], revalidate: REVALIDATE_SECONDS },
   )(options);
+}
+
+/**
+ * Tag and category pages. Their slugs are Arabic, so they cannot go through
+ * ISR (see lib/seo/isr.ts) and render on every request like the article page;
+ * these wrappers give them the same data cache the article page has. Tagged
+ * ARTICLES_TAG: a publish or a category save busts them, so a new article
+ * appears on its tag and category listings at once rather than after the TTL.
+ */
+export function cachedGetTagBySlug(slug: string, locale: Locale) {
+  return unstable_cache(
+    (s: string, l: Locale) => getTagBySlug(s, l),
+    ["get-tag-by-slug"],
+    { tags: [ARTICLES_TAG], revalidate: REVALIDATE_SECONDS },
+  )(slug, locale);
+}
+
+export function cachedGetArticlesByTag(tagId: string | number, locale: Locale, page: number) {
+  return unstable_cache(
+    (id: string | number, l: Locale, p: number) => getArticlesByTag(id, l, p),
+    ["get-articles-by-tag"],
+    { tags: [ARTICLES_TAG], revalidate: REVALIDATE_SECONDS },
+  )(tagId, locale, page);
+}
+
+export function cachedGetCategoryBySlug(slug: string, locale: Locale) {
+  return unstable_cache(
+    (s: string, l: Locale) => getCategoryBySlug(s, l),
+    ["get-category-by-slug"],
+    { tags: [ARTICLES_TAG], revalidate: REVALIDATE_SECONDS },
+  )(slug, locale);
+}
+
+export function cachedGetArticlesByCategory(
+  categoryId: string | number,
+  locale: Locale,
+  page: number,
+) {
+  return unstable_cache(
+    (id: string | number, l: Locale, p: number) => getArticlesByCategory(id, l, p),
+    ["get-articles-by-category"],
+    { tags: [ARTICLES_TAG], revalidate: REVALIDATE_SECONDS },
+  )(categoryId, locale, page);
 }
 
 export function cachedGetAds(locale: Locale) {

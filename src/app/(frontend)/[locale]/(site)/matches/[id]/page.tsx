@@ -3,6 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
+import { onDemandOnly } from "@/lib/seo/isr";
 import { getFixtureById } from "@/lib/api-football/fixtures";
 import { LiveScoreboard } from "@/components/football/LiveScoreboard";
 import { MatchEvents } from "@/components/football/MatchEvents";
@@ -15,6 +16,8 @@ import { isIndexableFixture } from "@/lib/seo/matchIndexing";
 // ISR: regenerate the match shell at most once a minute; live score/events
 // still stream client-side via LiveScoreboard polling the cached fixture API.
 export const revalidate = 60;
+// Required for the `revalidate` above to take effect at all — see lib/seo/isr.ts.
+export const generateStaticParams = onDemandOnly;
 
 type Props = {
   params: Promise<{ locale: string; id: string }>;
