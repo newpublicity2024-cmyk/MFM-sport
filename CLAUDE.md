@@ -4,6 +4,83 @@ Arabic-language Moroccan football news site. Next.js 16 (App Router) + Payload C
 
 ---
 
+## Session state — performance remediation from the Vercel reports
+
+**Updated: 17 September 2026 — branch `perf/vercel-reports-remediation`, seven
+commits, NOT yet deployed.** Source: the owner's Vercel dashboard exports in
+`reports/` (Speed Insights mobile/desktop, RES by path and country,
+Observability routes, status-code and WAF JSON, 18 Aug–17 Sep). Every finding
+was re-checked against the served bytes before anything was changed. The DB is
+in **Frankfurt** (owner-confirmed; a `us-east-1` Neon endpoint from the June
+spec still answers on 5432 and is presumably a leftover project — worth a look
+in the Neon console).
+
+### What the reports said
+
+Good: CLS 0, INP 137 ms, cached pages fast for Morocco (`/ar` FCP 1.56 s),
+Morocco RES 88, 500s at 0.17 %, WAF denying 190 K/month. Desktop RES 58 is
+US/CN/BR/IN headless traffic, not the audience — trust mobile + Morocco.
+
+Wrong, in order of impact, and what the branch does about each:
+
+| # | Finding (verified on production) | Fix on the branch |
+|---|---|---|
+| 1 | Articles (328 K req/30 d) uncached by design and slow: FCP 2.89 s / TTFB 1.66 s mobile p75. ≥5 serial awaits per request incl. an uncached ads query in the root layout, the article resolved twice, API-Football in the render path. | `6a911db`: ads head codes data-cached; one React-cached resolver for metadata + body; post-resolve reads in one `Promise.all`; sidebar calendar streams behind `Suspense`. |
+| 2 | TTFB stalls of **94.6 s** (competition) and **35.7 s** (article). No timeout on API-Football fetch; `@upstash/redis` defaults to 5 retries with `exp(n)·50 ms` backoff ≈ 11.7 s per failing command. | `6a911db`: API-Football capped at 4 s (`UPSTREAM_TIMEOUT_MS`), Redis at 1 retry / 1.5 s per command. |
+| 3 | **ISR silently off on every route with a dynamic segment** — `private, no-store` on tag/category/club/competition/author/`articles/page/N` despite `revalidate` exports. Cause in Next 16's build code: needs `generateStaticParams` on the *last* dynamic segment. | `e6d171d`: `generateStaticParams = onDemandOnly` on the ASCII-slug routes; tag/category stay dynamic (Arabic slugs — see landmine) with a data cache; middleware guard for non-ASCII on ISR routes. See `src/lib/seo/isr.ts`. |
+| 4 | Sitemap: **251/1,000 tag and 22/64 category URLs contain raw spaces** (226 tags a trailing one); all 404. Tag list capped at exactly 1,000 = truncated. | `b8f84d4`: `beforeValidate` slug repair on Tags/Categories; `pnpm slugs:normalize[:dry]` for existing rows; sitemap encodes slugs, lists only used taxonomies, no cap. |
+| 5 | 308s = 23 % of requests; dead legacy URLs went 308 → `/ar/<path>` → 404. `/club/{ma,sa,dz,es,qa,ae,world}` hubs → 404. | `e5d1c10`: middleware answers unmatched legacy paths with the 404 directly; country hubs → competition / clubs listing. |
+| 6 | Homepage HTML **1.25 MB**: 784 of 864 `<img>` are team crests; the hero panel got the whole season (240 fixtures) as props. | `10b6581`: `windowFixtures` — live + 12 recent + 12 upcoming (`HOME_FIXTURE_WINDOW`); independent reads parallelised. |
+| 7 | Ad saves flushed the whole ISR cache (`revalidatePath("/", "layout")`); every publish cleared every article's data cache; video cron busted the homepage 8×/day. | `800ad06`: per-article + taxonomy tags, 1 h article TTL, ads bust tag + homepage only, cron busts `/videos` only. |
+
+Not done, deliberately: `Server-Timing` on the article route (App Router pages
+cannot set response headers); the DB-region move (moot — Frankfurt);
+image optimisation (`images.unoptimized: true` is a billing decision).
+
+### Verified locally
+
+`pnpm test:run` 639 passed (35 new), `tsc --noEmit` clean, `pnpm lint` 0
+errors. **Nothing on this branch is verified on production** — it has not been
+deployed. The claims above about *causes* are verified; the claims about
+*fixes* are not until the checks below pass on the served bytes.
+
+### After deploy — run these, in this order
+
+```bash
+# 1. ISR is real: second request must be HIT on every ASCII-slug route
+for u in /ar/club/rs-berkane /ar/competition/botola-pro-1 /ar/author/yassine-elbassri /ar/articles/page/2 /ar/matches/1550109; do
+  for i in 1 2; do curl -s -o /dev/null -w "%{http_code} %header{x-vercel-cache} ttfb=%{time_starttransfer}s $u\n" "https://www.mfmsport.ma$u"; done; done
+# 2. Arabic routes unchanged (dynamic, 200) and a garbage Arabic club slug is 404 not 500
+curl -s -o /dev/null -w "%{http_code}\n" "https://www.mfmsport.ma/ar/tag/مزراوي"
+curl -s -o /dev/null -w "%{http_code}\n" "https://www.mfmsport.ma/ar/club/%D8%A7%D9%84%D8%B1%D8%AC%D8%A7%D8%A1"   # expect 404
+# 3. No stalls: article + competition cold TTFB under ~6 s even with API-Football quota exhausted
+# 4. Homepage weight: expect well under 400 KB and < 200 img tags
+curl -s https://www.mfmsport.ma/ar | wc -c; curl -s https://www.mfmsport.ma/ar | grep -o '<img' | wc -l
+# 5. Legacy: unmatched path is a single 404, /videos still 308s, /club/ma lands on Botola in one hop
+curl -s -o /dev/null -w "%{http_code} %{num_redirects}\n" https://www.mfmsport.ma/xyz-not-a-real-legacy-path
+curl -sIL https://www.mfmsport.ma/club/ma | grep -E "^HTTP|^location"
+# 6. Sitemap: zero raw spaces once slugs:normalize has run (see owner tasks)
+curl -s https://www.mfmsport.ma/sitemap.xml | grep -c ' '
+```
+
+Then re-export Speed Insights (mobile, Morocco) after two weeks and compare
+FCP / LCP / TTFB p75 against 2.89 / 3.24 / 1.66 s.
+
+### Owner's tasks from this work
+
+1. **Run the taxonomy slug repair**: `pnpm slugs:normalize:dry` against a Neon
+   branch, read the COLLISION lines (two tags that differ only by a trailing
+   space need an editor to merge), then `pnpm slugs:normalize` on the branch,
+   check `/ar/tag/<repaired>` renders, then on `main`. The hook only covers
+   future saves; the 273 existing rows need this.
+2. Check the `us-east-1` Neon endpoint noted above — if it is a dead project,
+   it may still be billing.
+3. Observability → Bot Name / ASN tables: the desktop "poor" countries are
+   almost certainly headless; a WAF challenge on those ASNs would also clean
+   the Speed Insights desktop numbers.
+
+---
+
 ## Session state — SEO remediation
 
 **Updated: 16 September 2026 — sitemap release verified, legacy Yoast sitemap identified.** Update this at every phase boundary. It is deliberately ground truth on disk rather than in a conversation summary.
@@ -365,6 +442,36 @@ recorded in the file (that document renders outside the App Router tree, so
 correct). If lint goes red again, fix it immediately rather than living with
 it: it takes the tests down with it.
 
+
+**A `revalidate` export on a route with a dynamic segment does nothing unless
+the LAST dynamic segment also exports `generateStaticParams`.** Next 16 builds
+it as `ƒ` dynamic and says nothing. This was true of every slug route on the
+site for a month — 0 % cached with the cache config sitting right there. Use
+`export const generateStaticParams = onDemandOnly` from `src/lib/seo/isr.ts`
+(the file cites the Next build code), and verify with `x-vercel-cache` on the
+second request, never with the file.
+
+**A route whose PATH can contain non-ASCII must never be ISR.** On Vercel an
+ISR response carries `x-next-cache-tags` with the implicit `_N_T_<pathname>`
+tag; Node rejects a header holding Arabic and the page 500s
+(`next/dist/esm/build/templates/app-page.js`, the `isMinimalMode && isSSG`
+branch). That is the June article 500 (commit `99a3c35`), now understood.
+Articles, tags and categories therefore stay dynamic with a data cache. If you
+add an ISR route with a dynamic segment, add its shape to `ISR_ROUTE_PATTERNS`
+so the middleware keeps non-ASCII paths off it.
+
+**Every outbound call on the request path has a bound, and the bounds are
+deliberate.** API-Football: 4 s (`UPSTREAM_TIMEOUT_MS`). Upstash: 1 retry,
+1.5 s per command (`REDIS_COMMAND_TIMEOUT_MS`) — the client's defaults are 5
+retries with exponential backoff, ≈ 11.7 s per failing command, and `cachedJson`
+issues 2–4 commands per call; that is how one blip became a 94-second TTFB.
+`new Redis(...)` / `Redis.fromEnv()` anywhere else on the request path must
+carry the same options.
+
+**The homepage match panels get a window of the season, not the season.**
+`HOME_FIXTURE_WINDOW` in `(site)/page.tsx` (live + 12 results + 12 upcoming).
+Passing a competition's full fixture list to a client component put 240
+fixtures and 784 crest `<img>`s in the homepage HTML — 1.25 MB.
 
 **Never add a `loading.tsx` to a route segment that has 404-capable children.** Its Suspense boundary flushes the response shell before the page body runs, committing HTTP 200 — so `notFound()` renders its page inside an already-successful response and every 404 on the site silently becomes a soft 200. This happened; see the principles doc. `/search` has the only `loading.tsx`, and it has no child routes and never calls `notFound()`.
 

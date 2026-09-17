@@ -2,7 +2,7 @@
 
 > **Assert on the artefact a crawler or user actually receives — not on a proxy for it.**
 
-This document exists because of five bugs found in one SEO remediation project. Every one of them had already been "verified" by something that looked like evidence. Each was found only when someone fetched the bytes a client would actually get.
+This document exists because of six bugs found in one SEO remediation project. Every one of them had already been "verified" by something that looked like evidence. Each was found only when someone fetched the bytes a client would actually get.
 
 They are collected here because the pattern generalises well beyond SEO, and because the individual fixes will age out of relevance long before the habit does.
 
@@ -19,6 +19,7 @@ Every miss shared one shape: **a success signal that does not measure the thing.
 | `sitemap.ts` has no match-page loop | The source has no loop | Match pages aren't listed |
 | `grep -c adsbygoogle` returned 1 | One *line* contains that string | An ad script is executing |
 | Body length computed as 0 | The measuring function returned 0 | The article has no body |
+| `export const revalidate = 3600` is in the file | The file exports a number | The page is cached for an hour |
 
 None of these are lazy checks. They are the checks a careful person makes. They fail because the gap between the proxy and the artefact is exactly where the bug lives — a bug in that gap is invisible to the proxy *by construction*.
 
@@ -127,6 +128,20 @@ Two errors compounded: `grep -c` counts *matching lines*, not occurrences (and m
 
 ---
 
+### 6. The `revalidate` export that cached nothing
+
+**Claimed:** club, competition, author, tag and category pages are ISR — each file says `export const revalidate = N`, with a comment explaining the cache.
+
+**Reality:** every one of them was served `Cache-Control: private, no-cache, no-store` on every request. Observability showed them at **0 % cached for a month**. Only static-path pages (`/ar`, `/ar/articles`) were HITs.
+
+Next 16 only builds a dynamic route as ISR when its *last* dynamic segment has `generateStaticParams` — otherwise `revalidate` is silently ignored and the route is `ƒ` dynamic. `[locale]/layout.tsx` had one; the `[slug]` pages did not. The code that "enables" caching was present, correct-looking, and inert. (`src/lib/seo/isr.ts` has the citation into Next's build code.)
+
+**Found by:** `curl -s -o /dev/null -w '%header{x-vercel-cache} %header{cache-control}'` against one URL of each route type, twice. A second request that is not a `HIT` is the whole finding.
+
+**Generalises to:** a configuration export is a request, not an outcome. The framework may decline it without a word. For anything that claims to cache, the check is the second response's cache header, not the first file's exports.
+
+---
+
 ## Practical checklist
 
 Before claiming something works:
@@ -134,6 +149,7 @@ Before claiming something works:
 - [ ] Did I fetch the artefact, or infer from the source?
 - [ ] Does my assertion distinguish partial success from total failure?
 - [ ] Did I check the HTTP status, not just the rendered body?
+- [ ] If it claims to be cached, did I read `x-vercel-cache` on the *second* request?
 - [ ] If I counted, did I count the construct — `grep -o | wc -l`, not `grep -c`?
 - [ ] Did I test the positive case *and* the negative case?
 - [ ] If it writes to a database, did I run it for real against a throwaway branch?
