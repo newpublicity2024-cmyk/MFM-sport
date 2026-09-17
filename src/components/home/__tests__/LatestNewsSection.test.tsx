@@ -8,7 +8,7 @@ vi.mock("@/components/home/LeaguePlaylistBanner", () => ({
 
 import { LatestNewsSection } from "@/components/home/LatestNewsSection";
 import type { LeagueCardArticle } from "@/lib/home/cards";
-import type { TagChip } from "@/lib/home/latestNewsTags";
+import { LATEST_KEY, type TagChip } from "@/lib/home/latestNewsTags";
 
 const tags: TagChip[] = [
   { id: "3", name: "Maroc", slug: "maroc" },
@@ -20,7 +20,7 @@ const latest: LeagueCardArticle[] = [
   { id: "a3", title: "Third", slug: "third", heroUrl: null },
 ];
 const articlesByTag: Record<string, LeagueCardArticle[]> = {
-  "": latest,
+  [LATEST_KEY]: latest,
   "3": [{ id: "m1", title: "Maroc Story", slug: "maroc-story", heroUrl: null }],
   "490": [],
 };

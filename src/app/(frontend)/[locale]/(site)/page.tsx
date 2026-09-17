@@ -21,10 +21,10 @@ import {
   sortByDisplayOrder,
   toCompetitionRef,
 } from "@/lib/home/competitionOrder";
-import { resolveLatestNewsTags } from "@/lib/home/latestNewsTags";
+import { LATEST_KEY, resolveLatestNewsTags } from "@/lib/home/latestNewsTags";
 import type { ApiFixture } from "@/lib/api-football/types";
 import { HeroSection } from "@/components/home/HeroSection";
-import { LatestNewsSection, LATEST_KEY } from "@/components/home/LatestNewsSection";
+import { LatestNewsSection } from "@/components/home/LatestNewsSection";
 import { VideosSection } from "@/components/home/VideosSection";
 import { HomeMatchesSection } from "@/components/home/HomeMatchesSection";
 import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";

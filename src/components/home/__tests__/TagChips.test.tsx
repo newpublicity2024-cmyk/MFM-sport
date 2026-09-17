@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { TagChips } from "@/components/home/TagChips";
-import type { TagChip } from "@/lib/home/latestNewsTags";
+import { LATEST_KEY, type TagChip } from "@/lib/home/latestNewsTags";
 
 const tags: TagChip[] = [
   { id: "3", name: "المغرب", slug: "maroc" },
@@ -12,7 +12,7 @@ function renderChips(locale: string, arrows = false, onSelect = vi.fn()) {
   return render(
     <TagChips
       tags={tags}
-      selectedId=""
+      selectedId={LATEST_KEY}
       onSelect={onSelect}
       locale={locale}
       allLabel="الكل"
@@ -42,7 +42,8 @@ describe("TagChips", () => {
     fireEvent.click(screen.getByRole("button", { name: "المغرب" }));
     expect(onSelect).toHaveBeenCalledWith("3");
     fireEvent.click(screen.getByRole("button", { name: "الكل" }));
-    expect(onSelect).toHaveBeenCalledWith("");
+    expect(onSelect).toHaveBeenCalledWith(LATEST_KEY);
+    expect(LATEST_KEY).not.toBe("");
   });
 
   it("renders no arrows unless asked (mobile row swipes)", () => {
