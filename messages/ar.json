@@ -35,10 +35,9 @@
   "home": {
     "topNews": "أهم الأخبار",
     "latestNews": "آخر الأخبار",
-    "byLeague": "الأخبار حسب البطولة",
+    "allNews": "الكل",
+    "tagFilters": "تصفية حسب الوسم",
     "latestVideos": "أحدث الفيديوهات",
-    "videoThirdHalf": "الشوط الثالث",
-    "videoFromStadiums": "من الملاعب الرياضية",
     "matchStatus": {
       "finished": "منتهية",
       "live": "مباشر",

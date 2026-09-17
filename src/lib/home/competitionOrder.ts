@@ -125,3 +125,48 @@ export function buildLeagueOrder(
   }
   return out;
 }
+
+/**
+ * The leagues the hero matches panel lists, in the admin's order.
+ *
+ * `rows` is Homepage Settings → heroMatches.leagues (depth-2 populated). Rows
+ * whose competition did not populate (deleted, or read at depth 0) are
+ * skipped, and a competition chosen twice appears once. An empty result falls
+ * back to the site's default competition, exactly as the old single-pick
+ * field did, so an unconfigured global still shows a panel.
+ */
+export function resolveHeroCompetitions<T extends OrderableCompetition>(
+  rows: unknown,
+  docs: T[],
+): ResolvedCompetition[] {
+  const out: ResolvedCompetition[] = [];
+  const seen = new Set<number>();
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const ref = toCompetitionRef((row as { competition?: unknown })?.competition);
+    if (!ref || seen.has(ref.apiFootballId)) continue;
+    seen.add(ref.apiFootballId);
+    out.push(ref);
+  }
+  if (out.length > 0) return out;
+  const fallback = toCompetitionRef(pickDefaultCompetition(docs));
+  return fallback ? [fallback] : [];
+}
+
+/**
+ * league id → rank for a panel that lists an admin-ordered set of leagues.
+ * The chosen leagues take ranks 0..n-1 in the admin's order (ahead of every
+ * displayOrder value, which start at 0 too but are shifted past the chosen
+ * block), and every other CMS competition keeps its displayOrder after them.
+ */
+export function buildPinnedLeagueOrder(
+  pinned: { apiFootballId: number }[],
+  docs: { apiFootballId?: number | null; displayOrder?: number | null }[],
+): Record<number, number> {
+  const out: Record<number, number> = {};
+  const cms = buildLeagueOrder(docs);
+  for (const [id, order] of Object.entries(cms)) out[Number(id)] = pinned.length + order;
+  pinned.forEach((c, i) => {
+    out[c.apiFootballId] = i;
+  });
+  return out;
+}

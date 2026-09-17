@@ -58,10 +58,13 @@ YOUTUBE_API_KEY=
 
 - [ ] **Step 2: Add the real key to `.env` (gitignored)**
 
-Append to `.env` (NOT `.env.example`):
+Append to `.env` (NOT `.env.example`), and set the same variable in Vercel
+(Production + Preview). Never paste the key into a file that is committed —
+a real key sat in this very step until 17 September 2026 and had to be
+treated as leaked (it is still in git history; the key was revoked).
 
 ```
-YOUTUBE_API_KEY=AIzaSyCbYFZOep6YRTqnTkhn7i7yPHqMUE8mcGo
+YOUTUBE_API_KEY=<your key from Google Cloud → APIs & Services → Credentials>
 ```
 
 - [ ] **Step 3: Add two section-title keys to each message file**

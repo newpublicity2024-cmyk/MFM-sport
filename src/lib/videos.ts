@@ -1,5 +1,5 @@
 import { getPayloadClient } from "@/lib/payload/queries";
-import type { PlaylistKey } from "@/lib/youtube";
+import type { FeedKey } from "@/lib/youtube";
 import { VIDEOS_PER_PLAYLIST } from "@/lib/youtube";
 
 /** Shape consumed by the homepage video components. Locale-agnostic title. */
@@ -11,9 +11,9 @@ export type HomeVideo = {
   publishedAt: string;
 };
 
-/** Fetch videos for one playlist, ordered by sortOrder (playlist order). */
+/** Fetch videos for one feed, ordered by sortOrder (newest upload first). */
 export async function getVideos(
-  playlist: PlaylistKey,
+  playlist: FeedKey = "channel-uploads",
   limit: number = VIDEOS_PER_PLAYLIST,
 ): Promise<HomeVideo[]> {
   const payload = await getPayloadClient();

@@ -4,6 +4,87 @@ Arabic-language Moroccan football news site. Next.js 16 (App Router) + Payload C
 
 ---
 
+## Session state — homepage refresh (17 September 2026)
+
+Branch `feat/home-big-four-latest-news-videos`, **not pushed, not deployed**
+when this was written. Owner asked for: big-four leagues in the hero matches
+panel (admin-selectable, first open); "news by league" → "latest news" with
+tag-chip filters and a spotlight article; one YouTube section fed by the
+channel's uploads; smaller mobile hero titles; where the YouTube key lives.
+
+### What changed
+
+| Area | Change |
+|---|---|
+| Hero matches panel | `heroMatches.competition` (single) → `heroMatches.leagues` (array). Page fetches every listed league's season, windows each (`HOME_FIXTURE_WINDOW`), concatenates; `resolveHeroCompetitions()` + `buildPinnedLeagueOrder()` in `src/lib/home/competitionOrder.ts`. Empty list → default competition. |
+| Latest news | `LeagueNewsSection` + `LeaguesPanel` deleted. `LatestNewsSection` + `TagChips` (slidable, RTL-tested). Chips = Homepage Settings `latestNewsTags`, else derived from the latest 12 articles' tags (`src/lib/home/latestNewsTags.ts`, ≥2 articles, max 8). Desktop: chips beside the title, newest article in the spotlight cell (col 3 row 1), carousel gets the rest. Mobile: chips on their own row, slider, ad, Instagram banner. Homepage Settings `newsFilters` field removed from config (table `homepage_news_filters` left in place, unused). |
+| Videos | `PLAYLISTS` → `FEEDS`: one feed, the channel's uploads playlist `UU…` derived from `YOUTUBE_CHANNEL_ID` (`src/lib/youtube.ts`). Second section removed from homepage and `/videos`; title is `home.latestVideos`. `Videos.playlist` select has one option `channel-uploads` (column kept, enum value added). Prune now clears rows of any other feed key once a real fetch succeeds. |
+| Mobile hero | `HeroSlider` caption: `text-lg line-clamp-2 p-3 pb-7` under `lg`, the old clamp/3 lines/`p-6` restored at `lg:`. |
+| Lint | `reports/` (gitignored Vercel exports) added to eslint ignores — it was the source of 25 local-only "errors". |
+
+### YouTube key — findings
+
+- Code reads `process.env.YOUTUBE_API_KEY` only (cron route + CLI). **Not in code.**
+- All 24 rows in `videos` were last written **2 June 2026** and every one
+  **404s on YouTube's oEmbed** — the cron has 500'd since June, consistent with
+  the variable being absent in Vercel (owner could not find it either).
+- **The June key was pasted into a committed doc**
+  (`docs/superpowers/plans/2026-06-02-youtube-video-sync.md`, PR #6) — leaked in
+  git history. Scrubbed from the tree on this branch; the key must be
+  **revoked** in Google Cloud regardless. `scripts/verify-home-refresh.mjs no-key`
+  scans the tree for `AIza…` literals (with a positive control).
+- A key in code is never safe on a GitHub-hosted repo; Vercel env var,
+  restricted to the YouTube Data API v3. `.env.example` now exists and lists it.
+
+### DDL — rehearsed, NOT yet on production
+
+Prepared via Neon MCP `prepare_database_migration` (migration
+`2f1665f6-e903-4edf-8efa-7571bbd29543`, temp branch
+`br-frosty-wildflower-a2hvdh5f`, parent `br-royal-wildflower-a21skzaw`) and
+verified there: enum value present and castable, 8 indexes, 4 FKs, and the
+four hero rows read back as premier-league / la-liga / serie-a / bundesliga.
+Table and index names come from a Payload-generated migration against a
+throwaway local Postgres, not from guessing. Statements: create
+`homepage_hero_matches_leagues` and `homepage_latest_news_tags` (Payload array
+shape: `_order, _parent_id, id varchar PK, <rel>_id`), FKs + indexes,
+`ALTER TYPE enum_videos_playlist ADD VALUE 'channel-uploads'`, and the
+big-four INSERT for `_parent_id = 1`. All additive; nothing dropped.
+
+**Order: DDL → deploy.** Deploying first makes the admin's Homepage Settings
+save fail (missing tables) and the hero panel fall back to Botola; the
+homepage itself survives because `findHomepageSettings` catches and returns
+null.
+
+### After deploy, verify on the served bytes
+
+```bash
+# hero panel lists 4 league groups (aria-expanded buttons), first open
+curl -s https://www.mfmsport.ma/ar | grep -o 'aria-expanded="[a-z]*"' | sort | uniq -c
+# latest-news chips present, league panel gone
+curl -s https://www.mfmsport.ma/ar | grep -o 'data-tag-chips' | wc -l          # expect 2 (desktop + mobile rows)
+curl -s https://www.mfmsport.ma/ar | grep -o 'data-spotlight' | wc -l          # expect 1
+# exactly one YouTube player on the homepage
+curl -s https://www.mfmsport.ma/ar | grep -o 'youtube.com/embed/' | wc -l      # expect 1 (0 until the key is set and the cron has run)
+# cron healthy once YOUTUBE_API_KEY is in Vercel (needs CRON_SECRET)
+curl -s -H "Authorization: Bearer $CRON_SECRET" https://www.mfmsport.ma/api/cron/sync-videos
+```
+
+### Owner's tasks from this work
+
+1. Create a **new** YouTube Data API v3 key (restricted to that API), put it in
+   Vercel as `YOUTUBE_API_KEY` (Production + Preview), and **delete the June
+   key** in Google Cloud. The next cron run (every 3 h) fills the section and
+   prunes the 24 dead rows.
+2. Say the word and the prepared migration is applied to production
+   (`complete_database_migration`), then push / open the PR.
+3. Optional: choose the chips in Homepage Settings → *Latest news — tag
+   filters*; empty means "derive from the latest articles".
+4. Later, once the branch has been on production a while: drop
+   `homepage_news_filters` and `homepage.hero_matches_competition_id`
+   (both unread now).
+
+---
+
 ## Session state — performance remediation from the Vercel reports
 
 **Updated: 17 September 2026 — PR #62 merged (`833389c`) and DEPLOYED; every

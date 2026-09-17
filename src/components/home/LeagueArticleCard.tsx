@@ -7,11 +7,14 @@ type Props = {
   article: LeagueCardArticle;
   locale: string;
   className?: string;
+  /** Marks the desktop spotlight cell of the latest-news section. */
+  "data-spotlight"?: boolean;
 };
 
-export function LeagueArticleCard({ article, locale, className }: Props) {
+export function LeagueArticleCard({ article, locale, className, ...rest }: Props) {
   return (
     <article
+      {...rest}
       className={cn(
         "group relative flex flex-col overflow-hidden rounded-xl border border-border bg-background transition-colors hover:border-primary/30",
         className,

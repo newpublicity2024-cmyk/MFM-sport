@@ -104,9 +104,13 @@ export function HeroSlider({ slides, locale }: Props) {
               </div>
             )}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-scrim/80 via-transparent to-transparent" />
-            <div className="absolute bottom-0 start-0 end-0 p-6">
+            {/* Mobile: the slide is 224px tall, so the caption is kept to two
+                18px lines hugging the bottom edge (small padding, the dots
+                sit in the last 1.5rem); the image stays visible above it.
+                Desktop restores the large clamp, three lines and roomier padding. */}
+            <div className="absolute bottom-0 start-0 end-0 p-3 pb-7 lg:p-6">
               {slide.categoryName && slide.categorySlug && (
-                <div className="relative z-10 mb-2 inline-block">
+                <div className="relative z-10 mb-1 inline-block lg:mb-2">
                   <CategoryBadge
                     name={slide.categoryName}
                     slug={slide.categorySlug}
@@ -114,7 +118,10 @@ export function HeroSlider({ slides, locale }: Props) {
                   />
                 </div>
               )}
-              <h2 className="text-[clamp(1.5rem,3vw+1rem,2.25rem)] font-bold leading-tight text-white line-clamp-3">
+              <h2
+                data-hero-title
+                className="text-lg font-bold leading-snug text-white line-clamp-2 lg:text-[clamp(1.5rem,3vw+1rem,2.25rem)] lg:leading-tight lg:line-clamp-3"
+              >
                 <Link
                   href={`/${locale}/articles/${slide.slug}`}
                   tabIndex={active ? 0 : -1}
@@ -126,7 +133,7 @@ export function HeroSlider({ slides, locale }: Props) {
               {slide.publishedAt && (
                 <time
                   dateTime={slide.publishedAt}
-                  className="mt-2 block text-sm text-white/70"
+                  className="mt-1 block text-xs text-white/70 lg:mt-2 lg:text-sm"
                 >
                   {formatDate(slide.publishedAt, locale)}
                 </time>

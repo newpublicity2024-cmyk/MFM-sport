@@ -35,10 +35,9 @@
   "home": {
     "topNews": "Top News",
     "latestNews": "Latest News",
-    "byLeague": "News by League",
+    "allNews": "All",
+    "tagFilters": "Filter by tag",
     "latestVideos": "Latest Videos",
-    "videoThirdHalf": "The Third Half",
-    "videoFromStadiums": "From the Stadiums",
     "matchStatus": {
       "finished": "Ended",
       "live": "Live",
