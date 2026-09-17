@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import type { Config } from "@/payload-types";
+import { cache, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
 import {
-  cachedGetArticleBySlug,
-  cachedGetArticleLocalizedSlugs,
   cachedResolveArticleBySlug,
   cachedGetRelatedArticles,
   cachedGetArticles,
@@ -15,7 +14,6 @@ import {
   cachedFindHomepageSettings,
   cachedGetCompetitions,
 } from "@/lib/payload/cached-queries";
-import { decodeSlug } from "@/lib/payload/slug";
 import { robotsFor } from "@/lib/seo/indexation";
 import {
   formatDate,
@@ -86,6 +84,36 @@ async function loadSidebarMatches(locale: Config["locale"]) {
   return { competition, fixtures };
 }
 
+/**
+ * The matches sidebar as its own async server component, rendered inside a
+ * Suspense boundary. The chain behind it — settings, then API-Football's
+ * /leagues, then /fixtures — is the slowest thing on the page and the only part
+ * that talks to a third party, so it must not sit between the reader and the
+ * article. With the boundary, the article HTML is flushed as soon as the
+ * Payload reads finish and the calendar streams in behind it; a slow or dead
+ * upstream now costs a late widget rather than a late page.
+ *
+ * Safe on this route because `notFound()` is raised in generateMetadata, before
+ * anything streams — so the 404 status is never locked in by an early flush.
+ */
+async function SidebarCalendar({ locale }: { locale: Config["locale"] }) {
+  const { competition, fixtures } = await loadSidebarMatches(locale);
+  if (!competition?.name) return null;
+  return (
+    <CompetitionCalendar fixtures={fixtures} locale={locale} title={competition.name} />
+  );
+}
+
+/**
+ * One article lookup per request. generateMetadata and the page body run in
+ * parallel and both need the article; React's `cache` dedupes them into a
+ * single call of the data-cached resolver, where before they used two
+ * different cache keys and, on a cold cache, two round-trips to Neon.
+ */
+const resolveArticle = cache((slug: string, locale: Config["locale"]) =>
+  cachedResolveArticleBySlug(slug, locale),
+);
+
 // IMPORTANT: this route is intentionally DYNAMIC (no `revalidate` / no
 // `generateStaticParams`). Article slugs are non-ASCII (Arabic), and on Vercel
 // serving such a path through the ISR/SSG layer throws
@@ -101,10 +129,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   const loc = locale as Config["locale"];
 
-  const [article, localized] = await Promise.all([
-    cachedGetArticleBySlug(slug, loc),
-    cachedGetArticleLocalizedSlugs(slug, loc),
-  ]);
+  const { article, redirectToSlug } = await resolveArticle(slug, loc);
+  // A cross-locale slug is 301'd by the page body; there is nothing to describe.
+  if (redirectToSlug) return {};
   // notFound() must be raised HERE, in generateMetadata, not just in the page
   // body. generateMetadata resolves before the response starts streaming, so the
   // 404 status can still be set. By the time the page component runs, the
@@ -120,9 +147,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     heroImageUrl ||
     `/api/og?title=${encodeURIComponent(article.title)}&category=${encodeURIComponent(categoryName)}`;
 
-  const decoded = decodeSlug(slug);
-  const slugs = localized?.slugs ?? { ar: decoded, fr: decoded, en: decoded };
-  const pathFor = (l: Config["locale"]) => `/${l}/articles/${encodeURIComponent(slugs[l])}`;
+  // Arabic is the only served locale, and the article was just resolved under
+  // it, so its own slug is the canonical one. This used to be a second query
+  // (locale: "all") to map slugs across fr/en, which nothing serves any more.
+  const pathFor = (l: Config["locale"]) => `/${l}/articles/${encodeURIComponent(article.slug)}`;
   const canonical = pathFor(loc);
 
   // Arabic only. The site retired /fr and /en (PR #43) and middleware 301s both
@@ -162,16 +190,12 @@ export default async function ArticlePage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const { article, redirectToSlug } = await cachedResolveArticleBySlug(
-    slug,
-    locale as Config["locale"],
-  );
+  const loc = locale as Config["locale"];
+  const { article, redirectToSlug } = await resolveArticle(slug, loc);
   if (redirectToSlug) {
     redirect(`/${locale}/articles/${encodeURIComponent(redirectToSlug)}`);
   }
   if (!article) notFound();
-
-  const t = await getTranslations({ locale, namespace: "article" });
 
   const heroImage = getArticleHeroUrl(article, "hero");
   const heroAlt = getImageAlt(article.featuredImage);
@@ -181,26 +205,20 @@ export default async function ArticlePage({ params }: Props) {
     .map((c: any) => (typeof c === "object" ? c.id : c))
     .filter(Boolean);
 
-  const related =
+  // Everything that depends only on the resolved article, in one round. These
+  // used to run one after another — translations, then related, then the rest —
+  // and on a cold data cache each step was its own trip to Neon.
+  const [t, related, latestNews, ads] = await Promise.all([
+    getTranslations({ locale, namespace: "article" }),
     categoryIds.length > 0
-      ? await cachedGetRelatedArticles(
-          article.id,
-          categoryIds,
-          locale as Config["locale"],
-          4,
-        )
-      : null;
-
-  const author = typeof article.author === "object" ? article.author : null;
-
-  const loc = locale as Config["locale"];
-  const dir = locale === "ar" ? "rtl" : "ltr";
-
-  const [sidebarMatches, latestNews, ads] = await Promise.all([
-    loadSidebarMatches(loc),
+      ? cachedGetRelatedArticles(article.id, categoryIds, loc, 4)
+      : Promise.resolve(null),
     cachedGetArticles({ locale: loc, limit: 13 }),
     cachedGetAds(loc),
   ]);
+
+  const author = typeof article.author === "object" ? article.author : null;
+  const dir = locale === "ar" ? "rtl" : "ltr";
   // Exclude the article being read; show up to a dozen so the 5-row slider scrolls.
   // Map publishedAt: null → undefined so it satisfies SidebarNewsList's type.
   const sidebarNews = latestNews.docs
@@ -353,13 +371,9 @@ export default async function ArticlePage({ params }: Props) {
         dir={dir}
         className="hidden shrink-0 space-y-4 lg:sticky lg:top-24 lg:block lg:w-[260px] xl:w-[300px]"
       >
-        {sidebarMatches.competition?.name && (
-          <CompetitionCalendar
-            fixtures={sidebarMatches.fixtures}
-            locale={locale}
-            title={sidebarMatches.competition.name}
-          />
-        )}
+        <Suspense fallback={null}>
+          <SidebarCalendar locale={loc} />
+        </Suspense>
         <SidebarNewsList articles={sidebarNews} locale={locale} title={tLatest} />
       </aside>
     </div>

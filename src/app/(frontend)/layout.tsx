@@ -6,7 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { AdHeadInjector } from "@/components/ads/AdHeadInjector";
-import { getAdHeadCodes } from "@/lib/payload/ads";
+import { cachedGetAdHeadCodes } from "@/lib/payload/cached-queries";
 import { SITE_URL } from "@/lib/seo/siteUrl";
 import "./styles.css";
 
@@ -46,7 +46,9 @@ export const metadata: Metadata = {
 };
 
 export default async function FrontendLayout({ children }: { children: React.ReactNode }) {
-  const adHeadCodes = await getAdHeadCodes();
+  // Data-cached (tag: ads). This layout wraps every page, so an uncached read
+  // here was a Neon round-trip on every request site-wide — see cached-queries.
+  const adHeadCodes = await cachedGetAdHeadCodes();
   return (
     // lang/dir belong on <html>, not on a nested <div>. This element sits above
     // [locale], so it never had access to the locale — which is why they ended

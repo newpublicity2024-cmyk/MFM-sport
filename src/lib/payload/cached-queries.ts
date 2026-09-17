@@ -2,14 +2,12 @@ import { unstable_cache } from "next/cache";
 import type { Config } from "@/payload-types";
 import {
   resolveArticleBySlug,
-  getArticleBySlug,
-  getArticleLocalizedSlugs,
   getRelatedArticles,
   getArticles,
   findHomepageSettings,
   getCompetitions,
 } from "./queries";
-import { getAds } from "./ads";
+import { getAds, getAdHeadCodes } from "./ads";
 import { ARTICLES_TAG, ADS_TAG, SETTINGS_TAG } from "./cache-tags";
 
 type Locale = Config["locale"];
@@ -38,22 +36,6 @@ export function cachedResolveArticleBySlug(slug: string, locale: Locale) {
   return unstable_cache(
     (s: string, l: Locale) => resolveArticleBySlug(s, l),
     ["resolve-article-by-slug"],
-    { tags: [ARTICLES_TAG], revalidate: REVALIDATE_SECONDS },
-  )(slug, locale);
-}
-
-export function cachedGetArticleBySlug(slug: string, locale: Locale) {
-  return unstable_cache(
-    (s: string, l: Locale) => getArticleBySlug(s, l),
-    ["get-article-by-slug"],
-    { tags: [ARTICLES_TAG], revalidate: REVALIDATE_SECONDS },
-  )(slug, locale);
-}
-
-export function cachedGetArticleLocalizedSlugs(slug: string, locale: Locale) {
-  return unstable_cache(
-    (s: string, l: Locale) => getArticleLocalizedSlugs(s, l),
-    ["get-article-localized-slugs"],
     { tags: [ARTICLES_TAG], revalidate: REVALIDATE_SECONDS },
   )(slug, locale);
 }
@@ -94,6 +76,21 @@ export function cachedGetAds(locale: Locale) {
     tags: [ADS_TAG],
     revalidate: REVALIDATE_SECONDS,
   })(locale);
+}
+
+/**
+ * The ad-network head snippets the root layout injects on every page.
+ *
+ * The root layout renders on every dynamic request and every ISR regeneration
+ * site-wide, so an uncached read here was one Neon round-trip per page view
+ * regardless of route — the only query on the site that no page could avoid.
+ * Tagged ADS_TAG, so saving an ad in the admin still takes effect at once.
+ */
+export function cachedGetAdHeadCodes() {
+  return unstable_cache(() => getAdHeadCodes(), ["get-ad-head-codes"], {
+    tags: [ADS_TAG],
+    revalidate: REVALIDATE_SECONDS,
+  })();
 }
 
 /**
