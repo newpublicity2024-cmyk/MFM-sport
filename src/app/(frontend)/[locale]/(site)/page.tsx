@@ -5,7 +5,6 @@ import { getTranslations } from "next-intl/server";
 import {
   getArticles,
   getArticlesByTag,
-  getArticlesByCategory,
   getCompetitions,
   getOurLeagueIds,
   findHomepageSettings,
@@ -15,31 +14,28 @@ import { getFixturesByDateForLeagues } from "@/lib/api-football/fixtures";
 import { getCompetitionFixtures } from "@/lib/api-football/competition";
 import { windowFixtures } from "@/lib/api-football/fixtureWindow";
 import {
-  buildLeagueOrder,
   buildLogoOverrides,
+  buildPinnedLeagueOrder,
   competitionLogoUrl,
-  resolveFeaturedCompetition,
+  resolveHeroCompetitions,
   sortByDisplayOrder,
   toCompetitionRef,
 } from "@/lib/home/competitionOrder";
+import { resolveLatestNewsTags } from "@/lib/home/latestNewsTags";
 import type { ApiFixture } from "@/lib/api-football/types";
 import { HeroSection } from "@/components/home/HeroSection";
-import { LeagueNewsSection } from "@/components/home/LeagueNewsSection";
+import { LatestNewsSection, LATEST_KEY } from "@/components/home/LatestNewsSection";
 import { VideosSection } from "@/components/home/VideosSection";
 import { HomeMatchesSection } from "@/components/home/HomeMatchesSection";
 import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";
 import { AdCarousel } from "@/components/ads/AdCarousel";
 import { getAds } from "@/lib/payload/ads";
-import {
-  toHeroSlide,
-  toLeagueCard,
-  resolveNewsFilters,
-  type LeagueCardArticle,
-} from "@/lib/home/cards";
+import { toHeroSlide, toLeagueCard, type LeagueCardArticle } from "@/lib/home/cards";
 
-// Articles fetched per news-filter tab. The desktop carousel pages through these
-// 4 at a time (up to 5 pages of 20); the mobile slider swipes through them all.
-const HOME_ARTICLES_PER_TAB = 20;
+// Articles per latest-news list (the unfiltered one and one per tag chip). The
+// desktop carousel pages through these 4 at a time; the mobile slider swipes
+// through them all. Every list ships in the page, so this bounds its weight.
+const HOME_ARTICLES_PER_LIST = 12;
 
 // ISR: render once and serve from the edge cache for 5 min instead of running a
 // function on every visit. Live scores still refresh client-side (HomeMatchesSection
@@ -96,56 +92,44 @@ export default async function HomePage({ params }: Props) {
     getOurLeagueIds(),
     findHomepageSettings(localeTyped),
     getCompetitions(localeTyped),
-    getArticles({ locale: localeTyped, page: 1, limit: 6 }),
+    getArticles({ locale: localeTyped, page: 1, limit: HOME_ARTICLES_PER_LIST }),
   ]);
 
   // League carousel mirrors every competition the site has, in the collection's
   // own displayOrder — so promoting the league currently in season is an edit,
-  // not a deploy. Same ordering and crest rules as the news-filter pills.
+  // not a deploy. Same ordering and crest rules as the hero panel's groups.
   const carouselLeagues = sortByDisplayOrder(competitions.docs).map((c) => ({
     slug: c.slug,
     name: c.name,
     logoUrl: competitionLogoUrl(c.apiFootballId, c.logoUrl),
   }));
 
-  // News-by-league filter: admin-configured via Homepage Settings. Each pill is a
-  // competition (crest + name) whose tab lists articles carrying the chosen Tag,
-  // falling back to the competition's linked category. If the global has no filter
-  // yet, fall back to every league-type competition in display order so the
-  // section persists.
-  const fallbackRows = sortByDisplayOrder(
-    competitions.docs.filter((c) => c.type === "league"),
-  ).map((competition) => ({ competition }));
-  const resolvedFilters = resolveNewsFilters(
-    homepage?.newsFilters?.length ? homepage.newsFilters : fallbackRows,
-  );
-  const newsLeagues = resolvedFilters.map((r) => r.league);
-
-  const articlesByLeagueEntries = await Promise.all(
-    resolvedFilters.map(async (r): Promise<[string, LeagueCardArticle[]]> => {
-      let docs: unknown[] = [];
-      if (r.tagId != null) {
-        docs = (await getArticlesByTag(r.tagId, localeTyped, 1, HOME_ARTICLES_PER_TAB)).docs;
-      }
-      if (docs.length === 0 && r.categoryId != null) {
-        docs = (await getArticlesByCategory(r.categoryId, localeTyped, 1, HOME_ARTICLES_PER_TAB)).docs;
-      }
-      return [r.league.id, docs.map(toLeagueCard)];
+  // Latest news: the unfiltered newest articles, plus one list per tag chip.
+  // Chips are the admin's (Homepage Settings), else the tags the latest
+  // articles carry. Each chip's list is fetched here so switching a chip is
+  // instant and the section works without a client round trip.
+  const newsTags = resolveLatestNewsTags(homepage?.latestNewsTags, latest.docs);
+  const articlesByTagEntries = await Promise.all(
+    newsTags.map(async (tag): Promise<[string, LeagueCardArticle[]]> => {
+      const res = await getArticlesByTag(tag.id, localeTyped, 1, HOME_ARTICLES_PER_LIST);
+      return [tag.id, res.docs.map(toLeagueCard)];
     }),
   );
-  const articlesByLeague: Record<string, LeagueCardArticle[]> = Object.fromEntries(
-    articlesByLeagueEntries,
-  );
+  const articlesByTag: Record<string, LeagueCardArticle[]> = {
+    [LATEST_KEY]: latest.docs.map(toLeagueCard),
+    ...Object.fromEntries(articlesByTagEntries),
+  };
 
-  // Hero slider uses the latest articles regardless of league.
+  // Hero slider uses the latest articles regardless of tag.
   const heroSlides = latest.docs.slice(0, 5).map(toHeroSlide);
 
-  // Match panels: hero = the configured competition's current season across all
-  // statuses, falling back to the default competition. Lower = a specific
-  // competition or today's fixtures across all our leagues. Seasons are resolved
-  // from API-Football's `current` flag, so neither pins a year.
-  const heroCompetition = resolveFeaturedCompetition(
-    homepage?.heroMatches?.competition,
+  // Match panels: hero = every league the admin listed (default: the site's
+  // default competition), one collapsible group each with the first open.
+  // Lower = a specific competition or today's fixtures across all our leagues.
+  // Seasons are resolved from API-Football's `current` flag, so nothing pins a
+  // year.
+  const heroCompetitions = resolveHeroCompetitions(
+    homepage?.heroMatches?.leagues,
     competitions.docs,
   );
   const lowerCompetition =
@@ -155,13 +139,15 @@ export default async function HomePage({ params }: Props) {
   // A competition's list is its whole season; the panels get a window of it
   // (live + recent results + nearest upcoming), not all 240 rows — see
   // lib/api-football/fixtureWindow. Today's-date mode is small by nature.
-  const [heroSeason, lowerFixtures]: [ApiFixture[], ApiFixture[]] = await Promise.all([
-    heroCompetition ? getCompetitionFixtures(heroCompetition) : Promise.resolve([]),
+  const [heroSeasons, lowerFixtures]: [ApiFixture[][], ApiFixture[]] = await Promise.all([
+    Promise.all(heroCompetitions.map((c) => getCompetitionFixtures(c))),
     lowerCompetition
       ? getCompetitionFixtures(lowerCompetition)
       : getFixturesByDateForLeagues(today, ourLeagueIds),
   ]);
-  const heroFixtures = windowFixtures(heroSeason, HOME_FIXTURE_WINDOW);
+  const heroFixtures = heroSeasons.flatMap((season) =>
+    windowFixtures(season, HOME_FIXTURE_WINDOW),
+  );
   const todayFixtures = lowerCompetition
     ? windowFixtures(lowerFixtures, HOME_FIXTURE_WINDOW)
     : lowerFixtures;
@@ -169,12 +155,13 @@ export default async function HomePage({ params }: Props) {
   // Upstream fixture data carries API-Football's own crests and no ordering, so
   // hand the panel the CMS's view of both, keyed by league id.
   const logoOverrides = buildLogoOverrides(competitions.docs);
-  const leagueOrder = buildLeagueOrder(competitions.docs);
+  // The hero panel lists its groups in the admin's order (the chosen leagues
+  // first, then everything else by displayOrder).
+  const heroLeagueOrder = buildPinnedLeagueOrder(heroCompetitions, competitions.docs);
 
-  const [ads, thirdHalfVideos, fromStadiumsVideos] = await Promise.all([
+  const [ads, channelVideos] = await Promise.all([
     getAds(locale as Config["locale"]),
-    getVideos("the-third-half"),
-    getVideos("from-the-stadiums"),
+    getVideos("channel-uploads"),
   ]);
 
   const statusLabels = {
@@ -211,9 +198,9 @@ export default async function HomePage({ params }: Props) {
           leaguesLabel={t("leaguesNav")}
           leagues={carouselLeagues}
           statusLabels={statusLabels}
-          openLeagueId={heroCompetition?.apiFootballId}
+          openLeagueId={heroCompetitions[0]?.apiFootballId}
           logoOverrides={logoOverrides}
-          leagueOrder={leagueOrder}
+          leagueOrder={heroLeagueOrder}
         />
       </div>
 
@@ -223,35 +210,31 @@ export default async function HomePage({ params }: Props) {
       </div>
 
       <div className="container space-y-6">
-        <LeagueNewsSection
-          title={t("byLeague")}
+        <LatestNewsSection
+          title={t("latestNews")}
           locale={locale}
-          leagues={newsLeagues}
-          articlesByLeague={articlesByLeague}
+          tags={newsTags}
+          articlesByTag={articlesByTag}
+          labels={{
+            all: t("allNews"),
+            tagFilters: t("tagFilters"),
+            empty: tArticle("noArticles"),
+          }}
           ads={ads["news-card"]}
         />
       </div>
 
-      {/* Between latest news and the first YouTube section. */}
+      {/* Between latest news and the YouTube section. */}
       <div className="container">
         <AdCarousel ads={ads["news-videos"]} format="banner" />
       </div>
 
+      {/* One section: the channel's latest uploads (see lib/youtube). */}
       <div className="container space-y-6">
-        <VideosSection
-          title={t("videoThirdHalf")}
-          locale={locale}
-          videos={thirdHalfVideos}
-        />
-
-        <VideosSection
-          title={t("videoFromStadiums")}
-          locale={locale}
-          videos={fromStadiumsVideos}
-        />
+        <VideosSection title={t("latestVideos")} locale={locale} videos={channelVideos} />
       </div>
 
-      {/* Between the second YouTube section and the matches section. */}
+      {/* Between the YouTube section and the matches section. */}
       <div className="container">
         <AdCarousel ads={ads["videos-matches"]} format="banner" />
       </div>

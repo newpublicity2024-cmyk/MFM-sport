@@ -1,13 +1,13 @@
 /**
- * Shared YouTube playlist -> Payload `videos` sync core.
+ * Shared YouTube channel-uploads -> Payload `videos` sync core.
  *
  * Used by BOTH the CLI script (`scripts/sync-videos.ts`) and the scheduled cron
  * route (`/api/cron/sync-videos`), so there is one implementation of the fetch +
  * upsert logic. Pure of any Next.js / CLI specifics — callers provide the Payload
  * instance and the API key.
  */
-import { PLAYLISTS, VIDEOS_PER_PLAYLIST, parseIsoDuration } from "./youtube";
-import type { PlaylistKey } from "./youtube";
+import { FEEDS, VIDEOS_PER_PLAYLIST, parseIsoDuration } from "./youtube";
+import type { FeedKey } from "./youtube";
 
 const API = "https://www.googleapis.com/youtube/v3";
 
@@ -42,9 +42,10 @@ async function ytGet<T>(path: string, params: Record<string, string>): Promise<T
 }
 
 /**
- * Fetch the latest N videos of one playlist, in playlist order. The MFM
- * playlists are ordered newest-first, so index 0 is the most recent upload and
- * becomes sortOrder 0 (the homepage/archive sort ascending by sortOrder).
+ * Fetch the latest N videos of one playlist, in playlist order. A channel's
+ * uploads playlist is ordered newest-first, so index 0 is the most recent
+ * upload and becomes sortOrder 0 (the homepage/archive sort ascending by
+ * sortOrder).
  */
 export async function fetchPlaylist(
   playlistId: string,
@@ -117,10 +118,12 @@ export type SyncResult = {
 };
 
 /**
- * Fetch both playlists and upsert into `videos` (idempotent by youtubeId,
- * sortOrder from playlist position). With `prune`, videos no longer in a
- * playlist's latest set are deleted — but ONLY for a playlist that actually
- * returned videos, so a transient empty/failed fetch can never wipe the table.
+ * Fetch every feed and upsert into `videos` (idempotent by youtubeId, sortOrder
+ * from playlist position). With `prune`, every row not in the latest set is
+ * deleted — across ALL feed keys, so rows left by a feed that no longer exists
+ * (the two dead playlists of 2026) are cleared by the first successful sync.
+ * Pruning only happens when the fetch actually returned videos, so a transient
+ * empty/failed fetch can never wipe the table.
  */
 export async function syncVideos(
   payload: SyncPayload,
@@ -131,16 +134,18 @@ export async function syncVideos(
   let updated = 0;
   let pruned = 0;
   const perPlaylist: Record<string, number> = {};
+  const keepIds = new Set<string>();
+  let fetchedAny = false;
 
-  for (const { key, playlistId } of PLAYLISTS) {
+  for (const { key, playlistId } of FEEDS) {
     const videos = await fetchPlaylist(playlistId, apiKey);
     perPlaylist[key] = videos.length;
-    // Safety: never mutate a playlist's rows when the fetch came back empty.
+    // Safety: never mutate rows when the fetch came back empty.
     if (videos.length === 0) continue;
-
-    const keepIds = new Set(videos.map((v) => v.youtubeId));
+    fetchedAny = true;
 
     for (const v of videos) {
+      keepIds.add(v.youtubeId);
       const existing = (await payload.find({
         collection: "videos",
         where: { youtubeId: { equals: v.youtubeId } },
@@ -148,7 +153,7 @@ export async function syncVideos(
       })) as { docs: VideoRow[] };
       const data = {
         youtubeId: v.youtubeId,
-        playlist: key as PlaylistKey,
+        playlist: key as FeedKey,
         title: v.title,
         thumbnailUrl: v.thumbnailUrl,
         duration: v.duration,
@@ -163,18 +168,18 @@ export async function syncVideos(
         created++;
       }
     }
+  }
 
-    if (opts.prune) {
-      const stale = (await payload.find({
-        collection: "videos",
-        where: { playlist: { equals: key } },
-        limit: 1000,
-      })) as { docs: VideoRow[] };
-      for (const doc of stale.docs) {
-        if (!keepIds.has(doc.youtubeId)) {
-          await payload.delete({ collection: "videos", id: doc.id });
-          pruned++;
-        }
+  if (opts.prune && fetchedAny) {
+    const all = (await payload.find({
+      collection: "videos",
+      limit: 1000,
+      pagination: false,
+    })) as { docs: VideoRow[] };
+    for (const doc of all.docs) {
+      if (!keepIds.has(doc.youtubeId)) {
+        await payload.delete({ collection: "videos", id: doc.id });
+        pruned++;
       }
     }
   }

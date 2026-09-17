@@ -17,6 +17,9 @@ const eslintConfig = [
       'src/payload-generated-schema.ts',
       'node_modules/',
       'public/',
+      // Gitignored dashboard exports (saved web pages with their JS). CI never
+      // sees them; without this, local lint reports their errors as ours.
+      'reports/',
     ],
   },
   {

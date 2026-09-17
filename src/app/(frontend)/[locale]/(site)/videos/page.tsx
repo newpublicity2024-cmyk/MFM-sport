@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { VideosListing } from "@/components/videos/VideosListing";
 
-// ISR: the videos page renders the two YouTube playlists (no pagination), so it
-// can be edge-cached and refreshed hourly alongside the YouTube sync.
+// ISR: the videos page renders the channel's latest uploads (no pagination), so
+// it can be edge-cached and refreshed hourly alongside the YouTube sync.
 export const revalidate = 3600;
 
 type Props = {

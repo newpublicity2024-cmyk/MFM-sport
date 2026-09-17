@@ -3,15 +3,17 @@ import { revalidateHomepageChange } from "@/lib/payload/revalidate";
 
 /**
  * Homepage Settings — a single admin-editable document that controls:
- *  - the news-by-league filter (which pills appear, in what order, and which
- *    Tag sources each pill's articles), and
- *  - which competition's matches show in the hero panel and the lower matches
- *    section, and
+ *  - which leagues the hero matches panel lists (one collapsible group each,
+ *    the first one open), and
+ *  - which tags appear as filter chips on the "latest news" section, and
+ *  - which competition fills the lower matches section, and
  *  - which competition fills the matches calendar in the article-page sidebar.
  *
- * Every one of those is a Competitions relationship, never a league id in code.
- * Where one is left empty the site falls back to the competition with the
- * lowest `displayOrder`, so "the league currently playing" is always an edit.
+ * Every competition here is a Competitions relationship, never a league id in
+ * code. Where one is left empty the site falls back to the competition with
+ * the lowest `displayOrder`, so "the league currently playing" is always an
+ * edit. The tag list likewise falls back to the tags carried by the latest
+ * articles when it is empty.
  *
  * Read is public so the homepage (and its ISR prerender) can load it without auth.
  */
@@ -30,54 +32,34 @@ export const Homepage: GlobalConfig = {
   },
   admin: {
     description: {
-      en: "Control the homepage news filter, which matches show in the hero and lower match sections, and the matches calendar on article pages.",
-      fr: "Gérez le filtre d'actualités de l'accueil, les matchs affichés dans le hero et la section des matchs, et le calendrier des matchs des pages article.",
-      ar: "تحكّم في فلتر أخبار الصفحة الرئيسية، وفي المباريات المعروضة في القسم الرئيسي وقسم المباريات السفلي، وفي روزنامة المباريات بصفحات المقالات.",
+      en: "Control which leagues the hero matches panel lists, the tag filters of the latest-news section, the lower matches section, and the matches calendar on article pages.",
+      fr: "Gérez les championnats du panneau des matchs du hero, les filtres par étiquette de la section « Dernières actualités », la section des matchs et le calendrier des matchs des pages article.",
+      ar: "تحكّم في البطولات المعروضة بلوحة مباريات القسم الرئيسي، وفي وسوم تصفية قسم «آخر الأخبار»، وفي قسم المباريات السفلي، وفي روزنامة المباريات بصفحات المقالات.",
     },
   },
   fields: [
     {
-      name: "newsFilters",
+      name: "latestNewsTags",
       type: "array",
-      label: { en: "News filter", fr: "Filtre d'actualités", ar: "فلتر الأخبار" },
+      label: { en: "Latest news — tag filters", fr: "Dernières actualités — filtres par étiquette", ar: "آخر الأخبار — وسوم التصفية" },
       labels: {
-        singular: { en: "Filter item", fr: "Élément de filtre", ar: "عنصر الفلتر" },
-        plural: { en: "Filter items", fr: "Éléments de filtre", ar: "عناصر الفلتر" },
+        singular: { en: "Tag", fr: "Étiquette", ar: "وسم" },
+        plural: { en: "Tags", fr: "Étiquettes", ar: "وسوم" },
       },
       admin: {
         description: {
-          en: "The pills in the 'News by league' section, top to bottom. Each pill shows a competition's crest/name and lists articles carrying the chosen tag.",
-          fr: "Les pastilles de la section « Actualités par compétition », de haut en bas. Chaque pastille affiche le logo/nom d'une compétition et liste les articles portant l'étiquette choisie.",
-          ar: "أزرار قسم «الأخبار حسب البطولة» من الأعلى للأسفل. كل زر يعرض شعار/اسم بطولة ويُظهر المقالات التي تحمل الوسم المختار.",
+          en: "The filter chips beside the 'Latest news' title, in order. Selecting a chip shows that tag's newest articles. Leave empty to show the tags carried by the latest articles.",
+          fr: "Les puces de filtre à côté du titre « Dernières actualités », dans l'ordre. Sélectionner une puce affiche les derniers articles de cette étiquette. Laissez vide pour afficher les étiquettes des derniers articles.",
+          ar: "أزرار التصفية بجانب عنوان «آخر الأخبار» بالترتيب. اختيار زر يعرض أحدث مقالات ذلك الوسم. اتركه فارغًا لعرض وسوم أحدث المقالات.",
         },
       },
       fields: [
         {
-          name: "competition",
-          type: "relationship",
-          relationTo: "competitions",
-          required: true,
-          label: { en: "Competition", fr: "Compétition", ar: "البطولة" },
-          admin: {
-            description: {
-              en: "Provides the pill's crest and name.",
-              fr: "Fournit le logo et le nom de la pastille.",
-              ar: "يوفّر شعار الزر واسمه.",
-            },
-          },
-        },
-        {
           name: "tag",
           type: "relationship",
           relationTo: "tags",
-          label: { en: "News tag", fr: "Étiquette d'actualités", ar: "وسم الأخبار" },
-          admin: {
-            description: {
-              en: "Articles with this tag fill this tab. If empty (or none yet), the tab falls back to the competition's linked category.",
-              fr: "Les articles portant cette étiquette remplissent cet onglet. Si vide (ou aucun pour l'instant), l'onglet utilise la catégorie liée à la compétition.",
-              ar: "تظهر المقالات التي تحمل هذا الوسم في هذا التبويب. إذا تُرك فارغًا (أو لا توجد مقالات بعد) يعود التبويب إلى التصنيف المرتبط بالبطولة.",
-            },
-          },
+          required: true,
+          label: { en: "Tag", fr: "Étiquette", ar: "الوسم" },
         },
       ],
     },
@@ -87,17 +69,29 @@ export const Homepage: GlobalConfig = {
       label: { en: "Hero matches panel", fr: "Panneau des matchs (hero)", ar: "لوحة مباريات القسم الرئيسي" },
       fields: [
         {
-          name: "competition",
-          type: "relationship",
-          relationTo: "competitions",
-          label: { en: "Competition", fr: "Compétition", ar: "البطولة" },
+          name: "leagues",
+          type: "array",
+          label: { en: "Leagues", fr: "Championnats", ar: "البطولات" },
+          labels: {
+            singular: { en: "League", fr: "Championnat", ar: "بطولة" },
+            plural: { en: "Leagues", fr: "Championnats", ar: "بطولات" },
+          },
           admin: {
             description: {
-              en: "Its fixtures (finished, live, upcoming) fill the hero matches panel. Leave empty to use the competition with the lowest display order.",
-              fr: "Ses matchs (terminés, en direct, à venir) remplissent le panneau du hero. Laissez vide pour utiliser la compétition dont l'ordre d'affichage est le plus petit.",
-              ar: "تملأ مبارياتها (المنتهية والمباشرة والقادمة) لوحة المباريات في القسم الرئيسي. اتركه فارغًا لاستخدام البطولة ذات أصغر ترتيب عرض.",
+              en: "One collapsible group per league, in this order; the first one starts open. Each shows the league's live, recent and upcoming fixtures. Leave empty to use the competition with the lowest display order.",
+              fr: "Un groupe repliable par championnat, dans cet ordre ; le premier est ouvert au chargement. Chacun affiche les matchs en direct, récents et à venir. Laissez vide pour utiliser la compétition dont l'ordre d'affichage est le plus petit.",
+              ar: "مجموعة قابلة للطيّ لكل بطولة بهذا الترتيب؛ الأولى تكون مفتوحة عند التحميل. تعرض كل مجموعة مباريات البطولة المباشرة والأخيرة والقادمة. اتركه فارغًا لاستخدام البطولة ذات أصغر ترتيب عرض.",
             },
           },
+          fields: [
+            {
+              name: "competition",
+              type: "relationship",
+              relationTo: "competitions",
+              required: true,
+              label: { en: "Competition", fr: "Compétition", ar: "البطولة" },
+            },
+          ],
         },
       ],
     },

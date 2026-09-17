@@ -8,7 +8,7 @@ vi.mock("@/lib/youtube-sync", () => ({
     created: 1,
     updated: 2,
     pruned: 0,
-    perPlaylist: { "the-third-half": 12, "from-the-stadiums": 12 },
+    perPlaylist: { "channel-uploads": 12 },
   }),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));

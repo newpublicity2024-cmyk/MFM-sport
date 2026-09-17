@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { fetchPlaylist, syncVideos, type SyncPayload } from "@/lib/youtube-sync";
 
-// Stub the YouTube HTTP layer. fetchPlaylist makes two calls per playlist:
+// Stub the YouTube HTTP layer. fetchPlaylist makes two calls per feed:
 // playlistItems (returns videoIds) then videos (returns details).
 function mockYouTube(idsByCall: string[][], detailDuration = "PT8M12S") {
   let call = 0;
@@ -75,7 +75,8 @@ function fakePayload(existingByPlaylist: Record<string, string[]> = {}): {
       if (where.playlist?.equals) {
         return { docs: rows.filter((r) => r.playlist === where.playlist.equals) };
       }
-      return { docs: [] };
+      // No where: the prune pass reads the whole table.
+      return { docs: rows.slice() };
     },
     async create(args: any) {
       created.push(args.data.youtubeId);
@@ -95,40 +96,59 @@ function fakePayload(existingByPlaylist: Record<string, string[]> = {}): {
 }
 
 describe("syncVideos", () => {
-  it("creates new videos and reports counts per playlist", async () => {
-    // Both playlists return one fresh id each; DB empty.
-    vi.stubGlobal("fetch", mockYouTube([["new1"], ["new2"]]));
+  it("asks YouTube for the channel's uploads playlist, never a hand-picked one", async () => {
+    const fetchMock = mockYouTube([["new1"]]);
+    vi.stubGlobal("fetch", fetchMock);
+    await syncVideos(fakePayload().payload, "key");
+    const playlistCall = fetchMock.mock.calls
+      .map((c) => String(c[0]))
+      .find((u) => u.includes("/playlistItems"))!;
+    expect(new URL(playlistCall).searchParams.get("playlistId")).toBe("UUnDy06vggD-48O8ePrXMhAw");
+  });
+
+  it("creates new videos and reports counts for the feed", async () => {
+    vi.stubGlobal("fetch", mockYouTube([["new1", "new2"]]));
     const { payload, created } = fakePayload();
     const res = await syncVideos(payload, "key");
     expect(created).toEqual(["new1", "new2"]);
     expect(res.created).toBe(2);
     expect(res.updated).toBe(0);
-    expect(res.perPlaylist).toEqual({ "the-third-half": 1, "from-the-stadiums": 1 });
+    expect(res.perPlaylist).toEqual({ "channel-uploads": 2 });
   });
 
   it("updates an existing video instead of recreating it", async () => {
-    vi.stubGlobal("fetch", mockYouTube([["keep"], []]));
-    const { payload, created, updated } = fakePayload({ "the-third-half": ["keep"] });
+    vi.stubGlobal("fetch", mockYouTube([["keep"]]));
+    const { payload, created, updated } = fakePayload({ "channel-uploads": ["keep"] });
     const res = await syncVideos(payload, "key");
     expect(created).toEqual([]);
     expect(updated).toEqual([1000]);
     expect(res.updated).toBe(1);
   });
 
-  it("prunes videos no longer in the playlist when prune=true", async () => {
-    vi.stubGlobal("fetch", mockYouTube([["keep"], []]));
-    const { payload, deleted } = fakePayload({ "the-third-half": ["keep", "stale"] });
+  it("prunes videos no longer in the feed when prune=true", async () => {
+    vi.stubGlobal("fetch", mockYouTube([["keep"]]));
+    const { payload, deleted } = fakePayload({ "channel-uploads": ["keep", "stale"] });
     await syncVideos(payload, "key", { prune: true });
     // 'keep' stays, 'stale' (row id 1001) is removed.
     expect(deleted).toEqual([1001]);
   });
 
-  it("never prunes a playlist whose fetch returned empty (safety)", async () => {
-    // Playlist 1 returns nothing -> must NOT delete its existing rows.
-    vi.stubGlobal("fetch", mockYouTube([[], []]));
-    const { payload, deleted } = fakePayload({ "the-third-half": ["a", "b"] });
+  it("prune also clears rows left by the retired playlists", async () => {
+    vi.stubGlobal("fetch", mockYouTube([["fresh"]]));
+    const { payload, deleted } = fakePayload({
+      "the-third-half": ["dead1"],
+      "from-the-stadiums": ["dead2"],
+    });
+    const res = await syncVideos(payload, "key", { prune: true });
+    expect(deleted).toEqual([1000, 1001]);
+    expect(res.pruned).toBe(2);
+  });
+
+  it("never prunes when the fetch returned empty (safety)", async () => {
+    vi.stubGlobal("fetch", mockYouTube([[]]));
+    const { payload, deleted } = fakePayload({ "channel-uploads": ["a", "b"] });
     const res = await syncVideos(payload, "key", { prune: true });
     expect(deleted).toEqual([]);
-    expect(res.perPlaylist["the-third-half"]).toBe(0);
+    expect(res.perPlaylist["channel-uploads"]).toBe(0);
   });
 });

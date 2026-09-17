@@ -1,12 +1,12 @@
 /**
- * YouTube Playlist -> Payload `videos` sync (CLI).
+ * YouTube channel uploads -> Payload `videos` sync (CLI).
  *
  * The fetch + upsert logic lives in `src/lib/youtube-sync.ts` and is shared with
  * the scheduled cron route (`/api/cron/sync-videos`). This script is just the CLI
  * wrapper (arg parsing, dry-run logging, Payload bootstrap).
  *
  * Usage:
- *   pnpm sync:videos              # fetch both playlists, upsert into DB
+ *   pnpm sync:videos              # fetch the channel's latest uploads, upsert into DB
  *   pnpm sync:videos:dry          # fetch + log only, NO DB connection
  *   pnpm sync:videos -- --prune   # also delete videos no longer in latest set
  *
@@ -17,7 +17,7 @@
  */
 
 import "dotenv/config";
-import { PLAYLISTS } from "../src/lib/youtube";
+import { FEEDS } from "../src/lib/youtube";
 import { fetchPlaylist, syncVideos } from "../src/lib/youtube-sync";
 
 function parseArgs(argv: string[]): { dryRun: boolean; prune: boolean } {
@@ -36,8 +36,8 @@ async function main() {
   }
 
   if (dryRun) {
-    // Read-only: fetch each playlist and log, never touch the DB.
-    for (const { key, playlistId } of PLAYLISTS) {
+    // Read-only: fetch each feed and log, never touch the DB.
+    for (const { key, playlistId } of FEEDS) {
       const videos = await fetchPlaylist(playlistId, apiKey);
       console.log(`[${key}] fetched ${videos.length} videos`);
       for (const v of videos) console.log(`   - ${v.youtubeId}  ${v.duration}  ${v.title}`);

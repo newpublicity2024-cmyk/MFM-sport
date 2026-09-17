@@ -464,7 +464,7 @@ export interface Video {
    * The 11-character YouTube video ID.
    */
   youtubeId: string;
-  playlist: 'the-third-half' | 'from-the-stadiums';
+  playlist: 'channel-uploads';
   title: string;
   thumbnailUrl: string;
   duration?: string | null;
@@ -923,7 +923,7 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   createdAt?: T;
 }
 /**
- * Control the homepage news filter, which matches show in the hero and lower match sections, and the matches calendar on article pages.
+ * Control which leagues the hero matches panel lists, the tag filters of the latest-news section, the lower matches section, and the matches calendar on article pages.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "homepage".
@@ -931,26 +931,24 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
 export interface Homepage {
   id: number;
   /**
-   * The pills in the 'News by league' section, top to bottom. Each pill shows a competition's crest/name and lists articles carrying the chosen tag.
+   * The filter chips beside the 'Latest news' title, in order. Selecting a chip shows that tag's newest articles. Leave empty to show the tags carried by the latest articles.
    */
-  newsFilters?:
+  latestNewsTags?:
     | {
-        /**
-         * Provides the pill's crest and name.
-         */
-        competition: number | Competition;
-        /**
-         * Articles with this tag fill this tab. If empty (or none yet), the tab falls back to the competition's linked category.
-         */
-        tag?: (number | null) | Tag;
+        tag: number | Tag;
         id?: string | null;
       }[]
     | null;
   heroMatches?: {
     /**
-     * Its fixtures (finished, live, upcoming) fill the hero matches panel. Leave empty to use the competition with the lowest display order.
+     * One collapsible group per league, in this order; the first one starts open. Each shows the league's live, recent and upcoming fixtures. Leave empty to use the competition with the lowest display order.
      */
-    competition?: (number | null) | Competition;
+    leagues?:
+      | {
+          competition: number | Competition;
+          id?: string | null;
+        }[]
+      | null;
   };
   homeMatches: {
     mode: 'today' | 'competition';
@@ -977,17 +975,21 @@ export interface Homepage {
  * via the `definition` "homepage_select".
  */
 export interface HomepageSelect<T extends boolean = true> {
-  newsFilters?:
+  latestNewsTags?:
     | T
     | {
-        competition?: T;
         tag?: T;
         id?: T;
       };
   heroMatches?:
     | T
     | {
-        competition?: T;
+        leagues?:
+          | T
+          | {
+              competition?: T;
+              id?: T;
+            };
       };
   homeMatches?:
     | T

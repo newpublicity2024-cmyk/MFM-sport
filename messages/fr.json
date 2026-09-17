@@ -34,11 +34,10 @@
   },
   "home": {
     "topNews": "A la une",
-    "latestNews": "Dernieres actualites",
-    "byLeague": "Actualités par championnat",
+    "latestNews": "Dernières actualités",
+    "allNews": "Tout",
+    "tagFilters": "Filtrer par étiquette",
     "latestVideos": "Dernières vidéos",
-    "videoThirdHalf": "La Troisième Mi-temps",
-    "videoFromStadiums": "Depuis les Stades",
     "matchStatus": {
       "finished": "Terminés",
       "live": "En direct",

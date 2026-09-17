@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseIsoDuration, PLAYLISTS } from "./youtube";
+import { parseIsoDuration, FEEDS, YOUTUBE_CHANNEL_ID, uploadsPlaylistId } from "./youtube";
 
 describe("parseIsoDuration", () => {
   it("formats minutes and seconds zero-padded", () => {
@@ -26,13 +26,20 @@ describe("parseIsoDuration", () => {
   });
 });
 
-describe("PLAYLISTS", () => {
-  it("declares the two configured playlists in order", () => {
-    expect(PLAYLISTS.map((p) => p.key)).toEqual([
-      "the-third-half",
-      "from-the-stadiums",
-    ]);
-    expect(PLAYLISTS[0].playlistId).toBe("PL0toBD2vH6zPrTFvXcVQqYLpwifwiWEGi");
-    expect(PLAYLISTS[1].playlistId).toBe("PL0toBD2vH6zMqBunGKI5DRd1jz1CH7-xa");
+describe("uploadsPlaylistId", () => {
+  it("derives a channel's uploads playlist by swapping the UC prefix for UU", () => {
+    expect(uploadsPlaylistId("UCnDy06vggD-48O8ePrXMhAw")).toBe("UUnDy06vggD-48O8ePrXMhAw");
+  });
+  it("rejects anything that is not a channel id (a playlist id, a handle)", () => {
+    expect(() => uploadsPlaylistId("PL0toBD2vH6zPrTFvXcVQqYLpwifwiWEGi")).toThrow();
+    expect(() => uploadsPlaylistId("@mfmsport1430")).toThrow();
+  });
+});
+
+describe("FEEDS", () => {
+  it("declares exactly one feed: the channel's uploads, not a hand-picked playlist", () => {
+    expect(FEEDS.map((f) => f.key)).toEqual(["channel-uploads"]);
+    expect(FEEDS[0].playlistId).toBe(uploadsPlaylistId(YOUTUBE_CHANNEL_ID));
+    expect(FEEDS[0].playlistId.startsWith("UU")).toBe(true);
   });
 });

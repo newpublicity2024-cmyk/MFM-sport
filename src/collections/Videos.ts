@@ -30,14 +30,18 @@ export const Videos: CollectionConfig = {
       },
     },
     {
+      // Which feed a row came from. The field keeps its historical name so the
+      // `playlist` column (a Postgres enum) needs no rename; the only live
+      // value is the channel's uploads. Rows still carrying one of the two
+      // retired playlist values are dead videos, cleared by the next sync.
       name: "playlist",
       type: "select",
       required: true,
       index: true,
-      label: { en: "Playlist", fr: "Liste de lecture", ar: "قائمة التشغيل" },
+      defaultValue: "channel-uploads",
+      label: { en: "Feed", fr: "Flux", ar: "المصدر" },
       options: [
-        { label: { en: "The Third Half", fr: "La troisième mi-temps", ar: "الشوط الثالث" }, value: "the-third-half" },
-        { label: { en: "From the Stadiums", fr: "Depuis les stades", ar: "من الملاعب الرياضية" }, value: "from-the-stadiums" },
+        { label: { en: "Channel uploads", fr: "Vidéos de la chaîne", ar: "فيديوهات القناة" }, value: "channel-uploads" },
       ],
     },
     {

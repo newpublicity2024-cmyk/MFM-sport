@@ -34,7 +34,7 @@ same as the archive-import DDL.
 
 **First, confirm the naming convention on the live schema.** Payload derives
 column names from field paths, and the statements below assume the same
-convention the existing `heroMatches.competition` field produced. Print it:
+convention the existing `homeMatches.competition` field produced. Print it:
 
 ```sql
 SELECT column_name, data_type
@@ -109,7 +109,7 @@ So in the common case, ranking the in-season league `0` is the entire job.
 
 | Field | Controls |
 |---|---|
-| Hero matches panel → Competition | The big panel beside the hero slider. Its group also starts expanded. |
+| Hero matches panel → Leagues | The big panel beside the hero slider: one collapsible group per league you list, in that order, the first one open. Since 17 September 2026 this is a **list** (table `homepage_hero_matches_leagues`), seeded with the big four — Premier League, La Liga, Serie A, Bundesliga. Empty → the default competition alone. |
 | Lower matches section → Source / Competition | The matches strip further down. `Today's matches` spans all listed leagues. |
 | Article page — matches sidebar → Competition | The calendar in the right rail of every article. Its heading is the competition's localized name. |
 
@@ -135,7 +135,7 @@ Per `docs/verification-principles.md`, a green build proves nothing here. After
 deploying and editing:
 
 ```bash
-# The hero panel's league heading should be the competition you featured.
+# The hero panel should list the leagues you chose (one group each).
 curl -s https://www.mfmsport.ma/ar | grep -o 'data-leagues-slider' | wc -l
 
 # The article sidebar heading should be the competition's Arabic name, and
