@@ -52,12 +52,9 @@ image optimisation (`images.unoptimized: true` is a billing decision).
 | Sitemap | **10,693 locs, 0 raw spaces**; 2,413 tag URLs (was 1,000, truncated); sampled tag/category locs all 200 |
 
 Database: 413 tag + 22 category slugs repaired on production (rehearsed on
-Neon branch `br-holy-silence-a2ouxynp`, which still exists). 273 tags remain
-broken: each is a same-name duplicate of a working tag (WP import vs
-editor-created), carrying 1,614 article links between them, 0 overlapping.
-The merge (repoint `articles_rels.tags_id`, delete the duplicate) is a
-destructive write awaiting the owner's explicit go-ahead; the sitemap skips
-them until then.
+Neon branch `br-holy-silence-a2ouxynp`, which still exists). The 273
+remaining duplicates (WP import vs editor-created twins) were merged the same
+day — see owner task 1 below — so no broken taxonomy slug is left.
 
 Local: `pnpm test:run` 640 passed (36 new), `tsc --noEmit` clean, lint 0 errors.
 
@@ -85,14 +82,12 @@ FCP / LCP / TTFB p75 against 2.89 / 3.24 / 1.66 s.
 
 ### Owner's tasks from this work
 
-1. **Run the 273 duplicate-tag merge** — approved by the owner on 17 September,
-   but the auto-mode classifier refuses a session that deletes rows on the
-   shared database, so it is `scripts/merge-duplicate-tags.sql`: a single
-   idempotent transaction with its expected counts in the header. Neon branch
-   first, then main (`psql "$DATABASE_URL" -f scripts/merge-duplicate-tags.sql`),
-   or approve the `run_sql_transaction` call in a normal-permission session.
-   Afterwards the tag pages of those 1,614 article links start working and the
-   sitemap picks the tags up on its next daily regeneration.
+1. ~~Run the 273 duplicate-tag merge~~ **DONE 17 September** via the Neon MCP
+   with the owner's explicit permission (rehearsed on `br-holy-silence-a2ouxynp`,
+   then main): 272 name-matched pairs + 2 hand-resolved leftovers (tag 7 → 579
+   `كأس-العالم`, tag 358 → 800 `الكورفا-سود`). 37,603 article↔tag links before
+   and after, 0 duplicate slugs, 0 duplicate links, **0 broken tag slugs**,
+   2,789 → 2,515 tags. `scripts/merge-duplicate-tags.sql` stays as the record.
 2. **Rotate the Neon `neondb_owner` password.** The slug repair was applied
    with a connection string obtained through the Neon MCP; it is not on disk,
    but it passed through a session transcript. Rotating it means updating
