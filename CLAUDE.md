@@ -97,8 +97,13 @@ FCP / LCP / TTFB p75 against 2.89 / 3.24 / 1.66 s.
 4. Observability → Bot Name / ASN tables: the desktop "poor" countries are
    almost certainly headless; a WAF challenge on those ASNs would also clean
    the Speed Insights desktop numbers.
-5. Re-export Speed Insights (mobile, Morocco) around 1 October and compare
-   FCP / LCP / TTFB p75 against 2.89 / 3.24 / 1.66 s.
+5. Re-read Speed Insights (mobile + countries panel; there is no export, so
+   screenshots) on a window that is entirely post-deploy — deploy went live
+   **17 Sep 10:35 UTC**: Last 24 Hours from 18 Sep midday; Last 7 Days on
+   24 Sep; Last 30 Days from ~17–20 October (NOT 1 October — that window still
+   holds 13 pre-deploy days). Compare FCP / LCP / TTFB p75 against
+   2.89 / 3.24 / 1.66 s. The deploy hour itself showed a cold-cache spike
+   (~5–6 s FCP, 11:00–12:00 UTC) that any window including it will carry.
 
 ---
 
