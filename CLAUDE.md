@@ -6,8 +6,8 @@ Arabic-language Moroccan football news site. Next.js 16 (App Router) + Payload C
 
 ## Session state — performance remediation from the Vercel reports
 
-**Updated: 17 September 2026 — branch `perf/vercel-reports-remediation`, seven
-commits, NOT yet deployed.** Source: the owner's Vercel dashboard exports in
+**Updated: 17 September 2026 — PR #62 merged (`833389c`) and DEPLOYED; every
+check below passed on the served bytes at 10:35–10:40 UTC.** Source: the owner's Vercel dashboard exports in
 `reports/` (Speed Insights mobile/desktop, RES by path and country,
 Observability routes, status-code and WAF JSON, 18 Aug–17 Sep). Every finding
 was re-checked against the served bytes before anything was changed. The DB is
@@ -37,14 +37,31 @@ Not done, deliberately: `Server-Timing` on the article route (App Router pages
 cannot set response headers); the DB-region move (moot — Frankfurt);
 image optimisation (`images.unoptimized: true` is a billing decision).
 
-### Verified locally
+### Verified on production (17 September 2026, after deploy)
 
-`pnpm test:run` 639 passed (35 new), `tsc --noEmit` clean, `pnpm lint` 0
-errors. **Nothing on this branch is verified on production** — it has not been
-deployed. The claims above about *causes* are verified; the claims about
-*fixes* are not until the checks below pass on the served bytes.
+| Check | Result |
+|---|---|
+| ISR on club / competition / author / `articles/page/2` / `matches/[id]` | second request `HIT` (or `STALE` = cached, revalidating) on all five; was `private, no-store` |
+| Arabic tag + category routes | 200, dynamic as designed |
+| Garbage Arabic slug on an ISR route (`/ar/club/الرجاء`) | **404**, not 500 |
+| Article page TTFB (warm) | 0.7–0.9 s; the 35 s / 95 s stalls did not recur |
+| Homepage HTML | **313 KB / 152 `<img>`** (was 1.25 MB / 864) |
+| Unmatched legacy path | 404 in one response, 0 redirects, 0 ad scripts |
+| `/videos` | 308 → `/ar/videos` (still) |
+| `/club/ma` | 308 → `/ar/competition/botola-pro-1` → 200 |
+| Sitemap | **10,693 locs, 0 raw spaces**; 2,413 tag URLs (was 1,000, truncated); sampled tag/category locs all 200 |
 
-### After deploy — run these, in this order
+Database: 413 tag + 22 category slugs repaired on production (rehearsed on
+Neon branch `br-holy-silence-a2ouxynp`, which still exists). 273 tags remain
+broken: each is a same-name duplicate of a working tag (WP import vs
+editor-created), carrying 1,614 article links between them, 0 overlapping.
+The merge (repoint `articles_rels.tags_id`, delete the duplicate) is a
+destructive write awaiting the owner's explicit go-ahead; the sitemap skips
+them until then.
+
+Local: `pnpm test:run` 640 passed (36 new), `tsc --noEmit` clean, lint 0 errors.
+
+### Re-verify after any deploy touching these areas
 
 ```bash
 # 1. ISR is real: second request must be HIT on every ASCII-slug route
@@ -68,16 +85,19 @@ FCP / LCP / TTFB p75 against 2.89 / 3.24 / 1.66 s.
 
 ### Owner's tasks from this work
 
-1. **Run the taxonomy slug repair**: `pnpm slugs:normalize:dry` against a Neon
-   branch, read the COLLISION lines (two tags that differ only by a trailing
-   space need an editor to merge), then `pnpm slugs:normalize` on the branch,
-   check `/ar/tag/<repaired>` renders, then on `main`. The hook only covers
-   future saves; the 273 existing rows need this.
-2. Check the `us-east-1` Neon endpoint noted above — if it is a dead project,
+1. **Decide on the 273 duplicate-tag merge** (see above). Mechanical and
+   measured; a session can run it on a Neon branch first, but it deletes rows.
+2. **Rotate the Neon `neondb_owner` password.** The slug repair was applied
+   with a connection string obtained through the Neon MCP; it is not on disk,
+   but it passed through a session transcript. Rotating it means updating
+   `DATABASE_URL` in Vercel at the same time.
+3. Check the `us-east-1` Neon endpoint noted above — if it is a dead project,
    it may still be billing.
-3. Observability → Bot Name / ASN tables: the desktop "poor" countries are
+4. Observability → Bot Name / ASN tables: the desktop "poor" countries are
    almost certainly headless; a WAF challenge on those ASNs would also clean
    the Speed Insights desktop numbers.
+5. Re-export Speed Insights (mobile, Morocco) around 1 October and compare
+   FCP / LCP / TTFB p75 against 2.89 / 3.24 / 1.66 s.
 
 ---
 
