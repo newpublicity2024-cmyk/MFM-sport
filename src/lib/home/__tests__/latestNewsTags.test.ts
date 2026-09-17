@@ -61,7 +61,13 @@ describe("resolveLatestNewsTags", () => {
     expect(chips.map((c) => c.name)).toEqual(["chosen"]);
   });
 
-  it("derives from the latest articles when the admin list is empty", () => {
+  it("uses the site-wide ranking when the admin list is empty", () => {
+    const site = [tag(9, "site-wide")].map((t) => ({ id: String(t.id), name: t.name, slug: t.slug }));
+    expect(resolveLatestNewsTags([], latest, site).map((c) => c.name)).toEqual(["site-wide"]);
+  });
+
+  it("derives from the latest articles when both the admin list and the ranking are empty", () => {
     expect(resolveLatestNewsTags([], latest).map((c) => c.name)).toEqual(["derived"]);
+    expect(resolveLatestNewsTags([], latest, []).map((c) => c.name)).toEqual(["derived"]);
   });
 });

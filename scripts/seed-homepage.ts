@@ -10,11 +10,10 @@
  * - Seeds the hero matches panel with Europe's big four in this order:
  *   Premier League, La Liga, Serie A, Bundesliga — whichever of them exist in
  *   the Competitions collection (matched by API-Football league id).
- * - Sets the lower matches section to today's fixtures across all leagues.
  * - Leaves the latest-news tag chips EMPTY, so the section derives them from
  *   the tags the newest articles carry (see lib/home/latestNewsTags).
  *
- * Idempotent: re-running overwrites the hero list and lower matches mode. It
+ * Idempotent: re-running overwrites the hero list. It
  * does not touch latestNewsTags, so an editor's chosen chips survive a re-run.
  */
 
@@ -47,11 +46,10 @@ async function main() {
     slug: "homepage",
     data: {
       heroMatches: { leagues },
-      homeMatches: { mode: "today" },
     },
   });
   console.log(
-    `seeded homepage global: hero panel = ${leagues.length} leagues, lower = today; latest-news tags left to the editor`,
+    `seeded homepage global: hero panel = ${leagues.length} leagues; latest-news tags left to the editor`,
   );
 
   console.log("done.");

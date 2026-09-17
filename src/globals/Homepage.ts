@@ -6,8 +6,11 @@ import { revalidateHomepageChange } from "@/lib/payload/revalidate";
  *  - which leagues the hero matches panel lists (one collapsible group each,
  *    the first one open), and
  *  - which tags appear as filter chips on the "latest news" section, and
- *  - which competition fills the lower matches section, and
  *  - which competition fills the matches calendar in the article-page sidebar.
+ *
+ * The lower matches section has no setting: it is the matches page in
+ * miniature (today's games across every listed league, a calendar and a
+ * league filter), so it needs nothing chosen for it.
  *
  * Every competition here is a Competitions relationship, never a league id in
  * code. Where one is left empty the site falls back to the competition with
@@ -32,9 +35,9 @@ export const Homepage: GlobalConfig = {
   },
   admin: {
     description: {
-      en: "Control which leagues the hero matches panel lists, the tag filters of the latest-news section, the lower matches section, and the matches calendar on article pages.",
-      fr: "Gérez les championnats du panneau des matchs du hero, les filtres par étiquette de la section « Dernières actualités », la section des matchs et le calendrier des matchs des pages article.",
-      ar: "تحكّم في البطولات المعروضة بلوحة مباريات القسم الرئيسي، وفي وسوم تصفية قسم «آخر الأخبار»، وفي قسم المباريات السفلي، وفي روزنامة المباريات بصفحات المقالات.",
+      en: "Control which leagues the hero matches panel lists, the tag filters of the latest-news section, and the matches calendar on article pages.",
+      fr: "Gérez les championnats du panneau des matchs du hero, les filtres par étiquette de la section « Dernières actualités » et le calendrier des matchs des pages article.",
+      ar: "تحكّم في البطولات المعروضة بلوحة مباريات القسم الرئيسي، وفي وسوم تصفية قسم «آخر الأخبار»، وفي روزنامة المباريات بصفحات المقالات.",
     },
   },
   fields: [
@@ -92,52 +95,6 @@ export const Homepage: GlobalConfig = {
               label: { en: "Competition", fr: "Compétition", ar: "البطولة" },
             },
           ],
-        },
-      ],
-    },
-    {
-      name: "homeMatches",
-      type: "group",
-      label: { en: "Lower matches section", fr: "Section des matchs (bas de page)", ar: "قسم المباريات السفلي" },
-      fields: [
-        {
-          name: "mode",
-          type: "select",
-          required: true,
-          defaultValue: "today",
-          label: { en: "Source", fr: "Source", ar: "المصدر" },
-          options: [
-            {
-              label: {
-                en: "Today's matches across all my leagues",
-                fr: "Les matchs du jour de toutes mes compétitions",
-                ar: "مباريات اليوم من كل بطولاتي",
-              },
-              value: "today",
-            },
-            {
-              label: {
-                en: "A specific competition",
-                fr: "Une compétition précise",
-                ar: "بطولة محدّدة",
-              },
-              value: "competition",
-            },
-          ],
-        },
-        {
-          name: "competition",
-          type: "relationship",
-          relationTo: "competitions",
-          label: { en: "Competition", fr: "Compétition", ar: "البطولة" },
-          admin: {
-            condition: (_, siblingData) => siblingData?.mode === "competition",
-            description: {
-              en: "Shown when Source is 'A specific competition'.",
-              fr: "Affiché quand la source est « Une compétition précise ».",
-              ar: "يظهر عندما يكون المصدر «بطولة محدّدة».",
-            },
-          },
         },
       ],
     },

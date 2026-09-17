@@ -83,8 +83,18 @@ export function chipsFromArticles(
     .map((e) => e.chip);
 }
 
-/** The rule in one place: the admin's list, else derived from the latest articles. */
-export function resolveLatestNewsTags(settingsRows: unknown, latestArticles: unknown[]): TagChip[] {
+/**
+ * The rule in one place: the admin's list; else the site-wide ranking when the
+ * caller has one (see tagUsage.getTopTags); else derived from the latest
+ * articles, so the row is never empty just because an aggregate failed.
+ */
+export function resolveLatestNewsTags(
+  settingsRows: unknown,
+  latestArticles: unknown[],
+  siteTags: TagChip[] = [],
+): TagChip[] {
   const chosen = chipsFromSettings(settingsRows);
-  return chosen.length > 0 ? chosen : chipsFromArticles(latestArticles);
+  if (chosen.length > 0) return chosen;
+  if (siteTags.length > 0) return siteTags;
+  return chipsFromArticles(latestArticles);
 }

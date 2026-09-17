@@ -34,7 +34,7 @@ same as the archive-import DDL.
 
 **First, confirm the naming convention on the live schema.** Payload derives
 column names from field paths, and the statements below assume the same
-convention the existing `homeMatches.competition` field produced. Print it:
+convention the existing `article_matches_competition_id` column produced. Print it:
 
 ```sql
 SELECT column_name, data_type
@@ -110,7 +110,7 @@ So in the common case, ranking the in-season league `0` is the entire job.
 | Field | Controls |
 |---|---|
 | Hero matches panel → Leagues | The big panel beside the hero slider: one collapsible group per league you list, in that order, the first one open. Since 17 September 2026 this is a **list** (table `homepage_hero_matches_leagues`), seeded with the big four — Premier League, La Liga, Serie A, Bundesliga. Empty → the default competition alone. |
-| Lower matches section → Source / Competition | The matches strip further down. `Today's matches` spans all listed leagues. |
+| *(none)* — lower matches section | Since 17 September 2026 it is the matches page in miniature: today's games across every listed league, a slidable calendar and a league chip filter. Nothing to configure. |
 | Article page — matches sidebar → Competition | The calendar in the right rail of every article. Its heading is the competition's localized name. |
 
 Each falls back to the default competition when left empty. The article sidebar

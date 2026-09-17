@@ -4,7 +4,6 @@ import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
 import {
   getArticles,
-  getArticlesByTag,
   getCompetitions,
   getOurLeagueIds,
   findHomepageSettings,
@@ -19,9 +18,9 @@ import {
   competitionLogoUrl,
   resolveHeroCompetitions,
   sortByDisplayOrder,
-  toCompetitionRef,
 } from "@/lib/home/competitionOrder";
-import { LATEST_KEY, resolveLatestNewsTags } from "@/lib/home/latestNewsTags";
+import { resolveLatestNewsTags } from "@/lib/home/latestNewsTags";
+import { getTopTags } from "@/lib/home/tagUsage";
 import type { ApiFixture } from "@/lib/api-football/types";
 import { HeroSection } from "@/components/home/HeroSection";
 import { LatestNewsSection } from "@/components/home/LatestNewsSection";
@@ -30,12 +29,17 @@ import { HomeMatchesSection } from "@/components/home/HomeMatchesSection";
 import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";
 import { AdCarousel } from "@/components/ads/AdCarousel";
 import { getAds } from "@/lib/payload/ads";
-import { toHeroSlide, toLeagueCard, type LeagueCardArticle } from "@/lib/home/cards";
+import { toHeroSlide, toLeagueCard } from "@/lib/home/cards";
 
-// Articles per latest-news list (the unfiltered one and one per tag chip). The
-// desktop carousel pages through these 4 at a time; the mobile slider swipes
-// through them all. Every list ships in the page, so this bounds its weight.
+// Articles in the latest-news list. The desktop carousel pages through these
+// 4 at a time; the mobile slider swipes through them all. A chip's list is
+// the same size, fetched on demand (app/api/home/latest-news).
 const HOME_ARTICLES_PER_LIST = 12;
+
+// Tag chips on the latest-news row: the site's most-used tags, this many. The
+// row slides, so the count is a weight budget (≈ 100 bytes per chip), not a
+// layout limit.
+const HOME_TAG_CHIP_LIMIT = 80;
 
 // ISR: render once and serve from the edge cache for 5 min instead of running a
 // function on every visit. Live scores still refresh client-side (HomeMatchesSection
@@ -67,10 +71,11 @@ export default async function HomePage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const [t, tArticle, tMatch] = await Promise.all([
+  const [t, tArticle, tMatch, tComp] = await Promise.all([
     getTranslations({ locale, namespace: "home" }),
     getTranslations({ locale, namespace: "article" }),
     getTranslations({ locale, namespace: "match" }),
+    getTranslations({ locale, namespace: "competition" }),
   ]);
   const matchLabels = {
     liveNow: tMatch("liveNow"),
@@ -98,59 +103,51 @@ export default async function HomePage({ params }: Props) {
   // League carousel mirrors every competition the site has, in the collection's
   // own displayOrder — so promoting the league currently in season is an edit,
   // not a deploy. Same ordering and crest rules as the hero panel's groups.
-  const carouselLeagues = sortByDisplayOrder(competitions.docs).map((c) => ({
+  const orderedCompetitions = sortByDisplayOrder(competitions.docs);
+  const carouselLeagues = orderedCompetitions.map((c) => ({
     slug: c.slug,
     name: c.name,
     logoUrl: competitionLogoUrl(c.apiFootballId, c.logoUrl),
   }));
+  // League chips of the lower matches section: same order and crests.
+  const leagueChips = orderedCompetitions.map((c) => ({
+    id: String(c.apiFootballId),
+    name: c.name,
+    logoUrl: competitionLogoUrl(c.apiFootballId, c.logoUrl),
+  }));
 
-  // Latest news: the unfiltered newest articles, plus one list per tag chip.
-  // Chips are the admin's (Homepage Settings), else the tags the latest
-  // articles carry. Each chip's list is fetched here so switching a chip is
-  // instant and the section works without a client round trip.
-  const newsTags = resolveLatestNewsTags(homepage?.latestNewsTags, latest.docs);
-  const articlesByTagEntries = await Promise.all(
-    newsTags.map(async (tag): Promise<[string, LeagueCardArticle[]]> => {
-      const res = await getArticlesByTag(tag.id, localeTyped, 1, HOME_ARTICLES_PER_LIST);
-      return [tag.id, res.docs.map(toLeagueCard)];
-    }),
-  );
-  const articlesByTag: Record<string, LeagueCardArticle[]> = {
-    [LATEST_KEY]: latest.docs.map(toLeagueCard),
-    ...Object.fromEntries(articlesByTagEntries),
-  };
+  // Latest news: the unfiltered newest articles now, a chip's list on demand.
+  // Chips are the admin's (Homepage Settings), else the site's most-used tags,
+  // else — should that aggregate fail — the tags the latest articles carry.
+  const topTags = await getTopTags(localeTyped, HOME_TAG_CHIP_LIMIT).catch((error) => {
+    console.error("[home] getTopTags failed, deriving chips from the latest articles:", error);
+    return [];
+  });
+  const newsTags = resolveLatestNewsTags(homepage?.latestNewsTags, latest.docs, topTags);
+  const latestCards = latest.docs.map(toLeagueCard);
 
   // Hero slider uses the latest articles regardless of tag.
   const heroSlides = latest.docs.slice(0, 5).map(toHeroSlide);
 
-  // Match panels: hero = every league the admin listed (default: the site's
+  // Hero matches panel: every league the admin listed (default: the site's
   // default competition), one collapsible group each with the first open.
-  // Lower = a specific competition or today's fixtures across all our leagues.
   // Seasons are resolved from API-Football's `current` flag, so nothing pins a
   // year.
   const heroCompetitions = resolveHeroCompetitions(
     homepage?.heroMatches?.leagues,
     competitions.docs,
   );
-  const lowerCompetition =
-    homepage?.homeMatches?.mode === "competition"
-      ? toCompetitionRef(homepage?.homeMatches?.competition)
-      : null;
-  // A competition's list is its whole season; the panels get a window of it
-  // (live + recent results + nearest upcoming), not all 240 rows — see
-  // lib/api-football/fixtureWindow. Today's-date mode is small by nature.
-  const [heroSeasons, lowerFixtures]: [ApiFixture[][], ApiFixture[]] = await Promise.all([
+  // A competition's list is its whole season; the hero panel gets a window of
+  // it (live + recent results + nearest upcoming), not all 240 rows — see
+  // lib/api-football/fixtureWindow. The lower section is today's games across
+  // every league the site lists; its calendar loads other days on demand.
+  const [heroSeasons, todayFixtures]: [ApiFixture[][], ApiFixture[]] = await Promise.all([
     Promise.all(heroCompetitions.map((c) => getCompetitionFixtures(c))),
-    lowerCompetition
-      ? getCompetitionFixtures(lowerCompetition)
-      : getFixturesByDateForLeagues(today, ourLeagueIds),
+    getFixturesByDateForLeagues(today, ourLeagueIds),
   ]);
   const heroFixtures = heroSeasons.flatMap((season) =>
     windowFixtures(season, HOME_FIXTURE_WINDOW),
   );
-  const todayFixtures = lowerCompetition
-    ? windowFixtures(lowerFixtures, HOME_FIXTURE_WINDOW)
-    : lowerFixtures;
 
   // Upstream fixture data carries API-Football's own crests and no ordering, so
   // hand the panel the CMS's view of both, keyed by league id.
@@ -214,7 +211,7 @@ export default async function HomePage({ params }: Props) {
           title={t("latestNews")}
           locale={locale}
           tags={newsTags}
-          articlesByTag={articlesByTag}
+          latest={latestCards}
           labels={{
             all: t("allNews"),
             tagFilters: t("tagFilters"),
@@ -245,7 +242,15 @@ export default async function HomePage({ params }: Props) {
           emptyLabel={t("matchesEmpty")}
           locale={locale}
           fixtures={todayFixtures}
-          labels={matchLabels}
+          today={today}
+          leagues={leagueChips}
+          labels={{
+            ...matchLabels,
+            allLeagues: tComp("allCompetitions"),
+            leagueFilters: t("leagueFilters"),
+            dateLabel: t("dateLabel"),
+            days: t("days"),
+          }}
         />
 
         <NewsletterStrip locale={locale} />

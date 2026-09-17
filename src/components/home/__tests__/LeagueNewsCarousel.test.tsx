@@ -81,4 +81,13 @@ describe("LeagueNewsCarousel", () => {
     expect(screen.getByText("Title 4")).toBeInTheDocument();
     expect(screen.queryByText("Title 0")).not.toBeInTheDocument();
   });
+
+  it("centres the dots under the whole section on desktop: row 3 spanning all three columns", () => {
+    render(<LeagueNewsCarousel articles={makeArticles(8)} locale="ar" />);
+    const strip = dots()[0]!.parentElement as HTMLElement;
+    expect(strip.className).toContain("justify-center");
+    expect(strip.className).toContain("lg:col-span-3");
+    expect(strip.className).toContain("lg:row-start-3");
+    expect(strip.className.split(" ")).not.toContain("lg:col-span-2");
+  });
 });

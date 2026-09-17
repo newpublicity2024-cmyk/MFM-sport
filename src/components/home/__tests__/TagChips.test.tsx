@@ -11,7 +11,7 @@ const tags: TagChip[] = [
 function renderChips(locale: string, arrows = false, onSelect = vi.fn()) {
   return render(
     <TagChips
-      tags={tags}
+      chips={tags}
       selectedId={LATEST_KEY}
       onSelect={onSelect}
       locale={locale}
@@ -46,9 +46,30 @@ describe("TagChips", () => {
     expect(LATEST_KEY).not.toBe("");
   });
 
-  it("renders no arrows unless asked (mobile row swipes)", () => {
+  it("renders no arrows unless asked; with arrows they are desktop-only (mobile swipes)", () => {
     renderChips("ar");
     expect(screen.queryByRole("button", { name: /Scroll tags/ })).toBeNull();
+    renderChips("ar", true);
+    screen.getAllByRole("button", { name: /Scroll tags/ }).forEach((b) => {
+      expect(b.parentElement!.className).toContain("hidden");
+      expect(b.parentElement!.className).toContain("lg:flex");
+    });
+  });
+
+  it("shows a crest before the name when a chip carries one", () => {
+    render(
+      <TagChips
+        chips={[{ id: "39", name: "Premier League", logoUrl: "https://x/39.png" }]}
+        selectedId={LATEST_KEY}
+        onSelect={() => {}}
+        locale="ar"
+        allLabel="الكل"
+        label="leagues"
+      />,
+    );
+    const chip = screen.getByRole("button", { name: "Premier League" });
+    expect(chip.querySelector("img")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "الكل" }).querySelector("img")).toBeNull();
   });
 
   it("arrows scroll the strip, and in RTL the physical direction is mirrored", () => {

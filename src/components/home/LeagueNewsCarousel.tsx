@@ -27,7 +27,7 @@ type Props = {
 // (not the leagues filter) define the row heights: the leagues panel scrolls in
 // row 1 and the playlist banner / square ad fill row 2 at exactly one card-row
 // tall. Returns a fragment of two grid items: the cards (cols 1-2, rows 1-2) and
-// the dots (cols 1-2, row 3). 4 cards per page (or 3 + the square ad in its cell
+// the dots (all three cols, row 3 — centred under the whole section). 4 cards per page (or 3 + the square ad in its cell
 // when an ad is active). Dots only, auto-advances and loops, pauses on
 // hover/focus, honors prefers-reduced-motion. Mount with key={leagueId} so
 // switching tabs resets to the first page.
@@ -84,7 +84,7 @@ export function LeagueNewsCarousel({ articles, locale, ads = [] }: Props) {
 
       {pages.length > 1 && (
         <div
-          className="flex justify-center gap-2 pt-1 lg:col-span-2 lg:col-start-1 lg:row-start-3"
+          className="flex justify-center gap-2 pt-1 lg:col-span-3 lg:col-start-1 lg:row-start-3"
           role="tablist"
           aria-label="news pages"
         >
