@@ -15,6 +15,15 @@ export type TagChip = {
   slug: string;
 };
 
+/**
+ * Key of the unfiltered "all" list, and the id of its chip. Deliberately not
+ * the empty string: the lists cross the server → client boundary as one
+ * object, and an empty-string key did not survive that trip on production
+ * (17 September 2026 — the section rendered "no articles" while the chips,
+ * built from the same articles, rendered fine).
+ */
+export const LATEST_KEY = "all";
+
 /** Upper bound on derived chips — the admin list is not capped. */
 export const MAX_DERIVED_TAG_CHIPS = 8;
 

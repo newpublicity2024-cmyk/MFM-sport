@@ -3,12 +3,12 @@
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { TagChip } from "@/lib/home/latestNewsTags";
+import { LATEST_KEY, type TagChip } from "@/lib/home/latestNewsTags";
 
 type Props = {
   /** The tag filters, in order. An "all" chip is always rendered first. */
   tags: TagChip[];
-  /** "" = the unfiltered latest list, else a tag id. */
+  /** LATEST_KEY = the unfiltered latest list, else a tag id. */
   selectedId: string;
   onSelect: (id: string) => void;
   locale: string;
@@ -51,7 +51,7 @@ export function TagChips({
   }
 
   const chips: { id: string; name: string }[] = [
-    { id: "", name: allLabel },
+    { id: LATEST_KEY, name: allLabel },
     ...tags.map((t) => ({ id: t.id, name: t.name })),
   ];
 
@@ -95,7 +95,7 @@ export function TagChips({
           const isActive = chip.id === selectedId;
           return (
             <button
-              key={chip.id || "__all"}
+              key={chip.id}
               type="button"
               onClick={() => onSelect(chip.id)}
               aria-pressed={isActive}

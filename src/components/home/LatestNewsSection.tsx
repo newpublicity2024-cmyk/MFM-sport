@@ -9,17 +9,14 @@ import { TagChips } from "./TagChips";
 import { SectionShell } from "@/components/home/SectionShell";
 import { AdCarousel } from "@/components/ads/AdCarousel";
 import type { LeagueCardArticle } from "@/lib/home/cards";
-import type { TagChip } from "@/lib/home/latestNewsTags";
+import { LATEST_KEY, type TagChip } from "@/lib/home/latestNewsTags";
 import type { AdItem } from "@/lib/payload/ads";
-
-/** Key of the unfiltered list inside `articlesByTag`. */
-export const LATEST_KEY = "";
 
 type Props = {
   title: string;
   locale: string;
   tags: TagChip[];
-  /** Keyed by tag id; `""` is the unfiltered latest list. */
+  /** Keyed by tag id; `LATEST_KEY` is the unfiltered latest list. */
   articlesByTag: Record<string, LeagueCardArticle[]>;
   labels: { all: string; tagFilters: string; empty: string };
   ads?: AdItem[];
