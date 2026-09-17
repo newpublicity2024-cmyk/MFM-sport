@@ -33,10 +33,9 @@ type Props = {
 /**
  * A single-row, horizontally slidable strip of filter chips. Chosen chip is
  * `aria-pressed`. Swipes on touch; on desktop, optional arrows page the strip
- * and the row never wraps, so however many chips it holds the section header
- * keeps its height. Rendered once: place it in a wrapping flex header with
- * `basis-full lg:basis-auto lg:flex-1` and it drops under the title on mobile
- * and sits beside it on desktop.
+ * and the row never wraps, so however many chips it holds the strip keeps its
+ * height. The arrows sit beside the strip in the flow (not over it), so the
+ * first and last chips are never covered.
  */
 export function TagChips({
   chips,
@@ -63,41 +62,29 @@ export function TagChips({
 
   const all: Chip[] = [{ id: LATEST_KEY, name: allLabel }, ...chips];
 
+  // Arrows are flex siblings of the scroller, never overlays: whatever the
+  // scroll position, the first and last chips are fully visible beside them.
+  const arrowClass =
+    "hidden h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition-colors hover:bg-muted lg:flex";
+
   return (
-    <div className={cn("relative min-w-0", className)}>
+    <div className={cn("flex min-w-0 items-center gap-2", className)}>
       {arrows && (
-        <>
-          <div className="pointer-events-none absolute inset-y-0 start-0 z-10 hidden items-center lg:flex">
-            <button
-              type="button"
-              aria-label="Scroll tags to start"
-              onClick={() => scroll("start")}
-              className="pointer-events-auto flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition-colors hover:bg-muted"
-            >
-              <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
-            </button>
-          </div>
-          <div className="pointer-events-none absolute inset-y-0 end-0 z-10 hidden items-center lg:flex">
-            <button
-              type="button"
-              aria-label="Scroll tags to end"
-              onClick={() => scroll("end")}
-              className="pointer-events-auto flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition-colors hover:bg-muted"
-            >
-              <ChevronRight className="h-4 w-4 rtl:rotate-180" />
-            </button>
-          </div>
-        </>
+        <button
+          type="button"
+          aria-label="Scroll tags to start"
+          onClick={() => scroll("start")}
+          className={arrowClass}
+        >
+          <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
+        </button>
       )}
       <div
         ref={scrollerRef}
         role="group"
         aria-label={label}
         data-tag-chips
-        className={cn(
-          "flex snap-x gap-2 overflow-x-auto no-scrollbar whitespace-nowrap py-0.5",
-          arrows && "lg:px-9",
-        )}
+        className="flex min-w-0 flex-1 snap-x gap-2 overflow-x-auto no-scrollbar whitespace-nowrap py-0.5"
       >
         {all.map((chip) => {
           const isActive = chip.id === selectedId;
@@ -122,6 +109,16 @@ export function TagChips({
           );
         })}
       </div>
+      {arrows && (
+        <button
+          type="button"
+          aria-label="Scroll tags to end"
+          onClick={() => scroll("end")}
+          className={arrowClass}
+        >
+          <ChevronRight className="h-4 w-4 rtl:rotate-180" />
+        </button>
+      )}
     </div>
   );
 }

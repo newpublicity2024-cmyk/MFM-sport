@@ -70,8 +70,18 @@ describe("DayCarousel", () => {
     const [, arEnd] = screen.getAllByRole("button", { name: "Scroll days to end" });
     fireEvent.click(arEnd!);
     expect(scrollBy).toHaveBeenLastCalledWith(expect.objectContaining({ left: -400 }));
-    expect(arEnd!.parentElement!.className).toContain("hidden");
-    expect(arEnd!.parentElement!.className).toContain("lg:flex");
-    expect(arEnd!.parentElement!.className).toContain("end-0");
+    expect(arEnd!.className).toContain("hidden");
+    expect(arEnd!.className).toContain("lg:flex");
+  });
+
+  it("arrows sit beside the strip in the flow, never over its first or last pill", () => {
+    const { container } = renderStrip("ar");
+    const strip = container.querySelector("[data-day-carousel]") as HTMLElement;
+    const start = screen.getByRole("button", { name: "Scroll days to start" });
+    const end = screen.getByRole("button", { name: "Scroll days to end" });
+    expect(start.nextElementSibling).toBe(strip);
+    expect(strip.nextElementSibling).toBe(end);
+    expect(start.className).not.toMatch(/\babsolute\b/);
+    expect(strip.className).not.toMatch(/px-9/);
   });
 });

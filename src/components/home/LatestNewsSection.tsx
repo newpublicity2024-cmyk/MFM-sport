@@ -29,8 +29,8 @@ export function latestNewsUrl(tagId: string, locale: string): string {
 
 /**
  * Homepage "latest news". The league filter this section used to carry is
- * gone; the filter is one slidable row of tag chips (beside the title on
- * desktop, dropping under it on mobile) listing the site's most-used tags.
+ * gone; the filter is one slidable row of tag chips under the title, listing
+ * the site's most-used tags.
  * Picking a chip swaps every list below it to that tag's newest articles,
  * fetched on first use and kept for the life of the page.
  */
@@ -74,27 +74,25 @@ export function LatestNewsSection({ title, locale, tags, latest, labels, ads = [
 
   return (
     <SectionShell>
-      {/* One header row: the title, then the chip strip. The strip wraps onto
-          its own line below the title on mobile (basis-full) and shares the
-          row on desktop (flex-1). One render, two layouts. */}
-      <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-3">
-        <h2 className="relative shrink-0 text-xl font-bold">
+      <div className="mb-3">
+        <h2 className="relative inline-block text-xl font-bold">
           {title}
           <span className="absolute -bottom-1 start-0 h-0.5 w-12 bg-primary" />
         </h2>
-        {tags.length > 0 && (
-          <TagChips
-            className="basis-full lg:basis-auto lg:flex-1"
-            chips={tags}
-            selectedId={selectedId}
-            onSelect={select}
-            locale={locale}
-            allLabel={labels.all}
-            label={labels.tagFilters}
-            arrows
-          />
-        )}
       </div>
+      {/* The chip strip has a row of its own under the title, at every width. */}
+      {tags.length > 0 && (
+        <TagChips
+          className="mb-4"
+          chips={tags}
+          selectedId={selectedId}
+          onSelect={select}
+          locale={locale}
+          allLabel={labels.all}
+          label={labels.tagFilters}
+          arrows
+        />
+      )}
 
       {loading ? (
         <div

@@ -75,35 +75,28 @@ export function DayCarousel({
     el.scrollBy({ left: sign * amount, behavior: "smooth" });
   }
 
+  // Arrows are flex siblings of the strip, never overlays over its first or
+  // last pill.
+  const arrowClass =
+    "hidden h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition-colors hover:bg-muted lg:flex";
+
   return (
     <div className={cn("flex flex-wrap items-center gap-3", className)}>
-      <div className="relative min-w-0 flex-1 basis-full sm:basis-auto">
-        <div className="pointer-events-none absolute inset-y-0 start-0 z-10 hidden items-center lg:flex">
-          <button
-            type="button"
-            aria-label="Scroll days to start"
-            onClick={() => scroll("start")}
-            className="pointer-events-auto flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition-colors hover:bg-muted"
-          >
-            <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
-          </button>
-        </div>
-        <div className="pointer-events-none absolute inset-y-0 end-0 z-10 hidden items-center lg:flex">
-          <button
-            type="button"
-            aria-label="Scroll days to end"
-            onClick={() => scroll("end")}
-            className="pointer-events-auto flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition-colors hover:bg-muted"
-          >
-            <ChevronRight className="h-4 w-4 rtl:rotate-180" />
-          </button>
-        </div>
+      <div className="flex min-w-0 flex-1 basis-full items-center gap-2 sm:basis-auto">
+        <button
+          type="button"
+          aria-label="Scroll days to start"
+          onClick={() => scroll("start")}
+          className={arrowClass}
+        >
+          <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
+        </button>
         <div
           ref={scrollerRef}
           role="group"
           aria-label={label}
           data-day-carousel
-          className="flex snap-x gap-1.5 overflow-x-auto no-scrollbar py-0.5 lg:px-9"
+          className="flex min-w-0 flex-1 snap-x gap-1.5 overflow-x-auto no-scrollbar py-0.5"
         >
           {days.map((d) => {
             const { day, num } = dayLabel(d, locale);
@@ -138,6 +131,14 @@ export function DayCarousel({
             );
           })}
         </div>
+        <button
+          type="button"
+          aria-label="Scroll days to end"
+          onClick={() => scroll("end")}
+          className={arrowClass}
+        >
+          <ChevronRight className="h-4 w-4 rtl:rotate-180" />
+        </button>
       </div>
 
       <label className="flex items-center gap-2 text-xs text-muted-foreground">
