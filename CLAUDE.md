@@ -10,6 +10,64 @@ Arabic-language Moroccan football news site. Next.js 16 (App Router) + Payload C
 
 ### Resume here
 
+**Backlog as of 17 September 2026** — parked while other work happens. Two
+lists: what the owner has to do (nothing in code moves without them), then
+what code work is left, in order.
+
+**Owner's tasks**
+
+1. **Search Console access.** Get it, then work through the checklist in
+   `docs/archive-import-runbook.md` § *Search Console*: which properties exist
+   (old site was non-www, new canonical is www — if only the old URL-prefix
+   property exists, add a Domain property), resubmit `sitemap_index.xml` once
+   (it now redirects, so it will go green), and export the Pages report, the
+   16-month Performance comparison, and per-sitemap counts. The "Not found
+   (404)" list sorted by impressions decides the import order below.
+2. **Locate the WordPress export** `mfmsport.WordPress.2026-04-24.xml` (646 MB).
+   It is gitignored and not on this machine; nothing below can run without it.
+3. **Re-authorise the Neon MCP** against the MFM Sport org (`broad-snow-50246164`).
+   It is currently scoped to Lalla Fatima, so there is no route to the
+   production DB from a session — `/mcp` in an interactive session.
+4. **`wp-content/uploads` backup** — still with the owner. 43,584 legacy images
+   404; bodies imported with `<img>` stripped. Backfillable later against
+   `legacy_slug` without re-importing text.
+5. **Ahrefs** — authorise the connector if referring-domain data is wanted.
+   Note `robots.txt` also blocks `AhrefsBot`, so a fresh crawl would be blind
+   until that line is removed.
+
+**Code work left, in order**
+
+1. **Confirm no `archive-brief` leaked into the sitemap** (needs item 3):
+   `SELECT seo_tier, count(*) FROM articles WHERE _status='published' GROUP BY 1`
+   — `editorial + archive-full` must equal the sitemap's article count (8,167 on
+   16 September). Untested, not known-good.
+2. **Fix the multi-line `readTag()` in `scripts/import-wp-archive.ts` (~line 258)**
+   before any pre-2024 import. 2021 is confirmed affected: 246 full articles would
+   be silently tiered `archive-brief` and never indexed. See *Hard gates*.
+3. **Run `pnpm audit:body-length --year=<Y>` for 2023, 2020, 2019, 2010** (2022
+   and 2021 are measured). Gate on `MIS-TIERED: 0`, not on the disagreement count.
+4. **Import 2023 → 2010** (needs items 2–3 and the export file), one year per
+   run, re-checking the two invariants after each: `redirects - 200 == imported`
+   and `archive-full + archive-brief == imported`. This is what fixes the
+   ~28,000 old-sitemap article URLs that still 404 — most of the old traffic.
+   Order by Search Console impressions if the export is in by then.
+5. **Release indexation in stages** (`RELEASED_ARCHIVE_YEARS` in
+   `src/lib/seo/indexation.ts`), 2–3 weeks apart, reading Search Console between
+   each — runbook Step 4.
+6. **Google Publisher Center** — submit `/news-sitemap.xml` once 404s have
+   dropped (runbook Step 5).
+7. **WAF / bot ASN breakdown** — the Vercel connector is now correctly scoped,
+   so this is unblocked. GA4 says >50% of traffic is datacenter-region bots.
+8. **Open defect, low priority:** RTL Lexical click-to-caret behaviour in the
+   admin (see *Open defects*).
+
+**Done and verified on production (do not redo):** 2024–2026 import; sitemap at
+9,268 URLs; old Yoast sitemap family and WP hub paths redirected (PR #61,
+16 September); featured league is CMS data (PR #58); `<html lang dir>`; real
+404s; redirect map repaired.
+
+---
+
 **The 2024–2026 staged release is IMPORTED. Next action is yours, not the code's: review Search Console before importing any older year.**
 
 | Batch | created | archive-full | archive-brief | video | no-date | empty | failed |
