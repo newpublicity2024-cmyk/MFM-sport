@@ -21,10 +21,11 @@ type Locale = Config["locale"];
  *
  * The article page is rendered dynamically — it must NOT use ISR/SSG because
  * non-ASCII (Arabic) slugs crash Vercel's SSG serving layer (see the article
- * route's own note + commit 99a3c35). To still avoid a round-trip to the
- * US-East Neon DB from the EU functions on every view, we wrap the hot reads in
- * `unstable_cache` (Vercel Data Cache). Repeat views within REVALIDATE_SECONDS
- * are served from the regional data cache instead of the database.
+ * route's own note + commit 99a3c35). To still avoid a Neon round-trip on
+ * every view, we wrap the hot reads in `unstable_cache` (Vercel Data Cache).
+ * Repeat views within REVALIDATE_SECONDS are served from the regional data
+ * cache instead of the database. (The DB is in Frankfurt, like the functions —
+ * an earlier version of this note said US-East, which was a different project.)
  *
  * Freshness: a short TTL bounds staleness, and the Payload afterChange/
  * afterDelete hooks call `revalidateTag` (see revalidate.ts) so published edits
