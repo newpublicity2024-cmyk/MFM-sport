@@ -51,9 +51,24 @@ describe("TagChips", () => {
     expect(screen.queryByRole("button", { name: /Scroll tags/ })).toBeNull();
     renderChips("ar", true);
     screen.getAllByRole("button", { name: /Scroll tags/ }).forEach((b) => {
-      expect(b.parentElement!.className).toContain("hidden");
-      expect(b.parentElement!.className).toContain("lg:flex");
+      expect(b.className).toContain("hidden");
+      expect(b.className).toContain("lg:flex");
     });
+  });
+
+  it("arrows sit in the flow beside the strip — start arrow before it, end arrow after — never over its chips", () => {
+    renderChips("ar", true);
+    const strip = screen.getByRole("group", { name: "tag filters" });
+    const start = screen.getByRole("button", { name: "Scroll tags to start" });
+    const end = screen.getByRole("button", { name: "Scroll tags to end" });
+    expect(start.nextElementSibling).toBe(strip);
+    expect(strip.nextElementSibling).toBe(end);
+    [start, end].forEach((b) => {
+      expect(b.className).not.toMatch(/\babsolute\b/);
+      expect(b.className).toContain("shrink-0");
+    });
+    // Nothing padded inside the scroller to make room for an overlay.
+    expect(strip.className).not.toMatch(/px-9/);
   });
 
   it("shows a crest before the name when a chip carries one", () => {
@@ -94,13 +109,12 @@ describe("TagChips", () => {
     expect(scrollBy).toHaveBeenLastCalledWith(expect.objectContaining({ left: 400 }));
   });
 
-  it("in Arabic the arrow on the logical start edge is the visual right edge (start-0 / end-0, not left/right)", () => {
+  it("in Arabic the start arrow is the first child (visually the right edge under dir=rtl), not pinned with left/right", () => {
     renderChips("ar", true);
-    const start = screen.getByRole("button", { name: "Scroll tags to start" }).parentElement!;
-    const end = screen.getByRole("button", { name: "Scroll tags to end" }).parentElement!;
-    expect(start.className).toContain("start-0");
-    expect(end.className).toContain("end-0");
-    expect(start.className).not.toMatch(/\bleft-0\b/);
-    expect(end.className).not.toMatch(/\bright-0\b/);
+    const wrapper = screen.getByRole("group", { name: "tag filters" }).parentElement as HTMLElement;
+    expect(wrapper.firstElementChild).toHaveAttribute("aria-label", "Scroll tags to start");
+    expect(wrapper.lastElementChild).toHaveAttribute("aria-label", "Scroll tags to end");
+    expect(wrapper.className).toContain("flex");
+    expect(wrapper.className).not.toMatch(/\b(left|right)-0\b/);
   });
 });

@@ -47,19 +47,19 @@ describe("LatestNewsSection", () => {
     screen.getAllByRole("button").forEach((b) => expect(b.textContent).not.toMatch(/Botola|Premier|League/));
   });
 
-  it("renders the chip strip once, in the header: beside the title on desktop, wrapping under it on mobile", () => {
+  it("renders the chip strip once, on its own row directly under the title (never beside it)", () => {
     const { container } = renderSection();
     const h2 = screen.getByRole("heading", { level: 2, name: "Latest news" });
-    const header = h2.parentElement as HTMLElement;
-    expect(header.className).toContain("flex-wrap");
     const rows = container.querySelectorAll("[data-tag-chips]");
     expect(rows.length).toBe(1);
-    const wrapper = rows[0]!.parentElement as HTMLElement;
-    expect(wrapper.parentElement).toBe(header);
-    expect(wrapper.className).toContain("basis-full");
-    expect(wrapper.className).toContain("lg:flex-1");
-    expect(h2.compareDocumentPosition(wrapper) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(within(header).getByRole("button", { name: "Scroll tags to end" })).toBeInTheDocument();
+    const strip = rows[0]!.parentElement as HTMLElement;
+    // The title's block, then the strip's block, as siblings — the strip is
+    // not a flex item of the title's row.
+    const titleBlock = h2.parentElement as HTMLElement;
+    expect(titleBlock.nextElementSibling).toBe(strip);
+    expect(titleBlock.className).not.toContain("flex");
+    expect(strip.className).not.toContain("basis-full");
+    expect(screen.getByRole("button", { name: "Scroll tags to end" })).toBeInTheDocument();
   });
 
   it("desktop: the newest article takes the spotlight cell (col 3, row 1) and the carousel gets the rest", () => {
