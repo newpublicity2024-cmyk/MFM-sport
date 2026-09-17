@@ -85,8 +85,14 @@ FCP / LCP / TTFB p75 against 2.89 / 3.24 / 1.66 s.
 
 ### Owner's tasks from this work
 
-1. **Decide on the 273 duplicate-tag merge** (see above). Mechanical and
-   measured; a session can run it on a Neon branch first, but it deletes rows.
+1. **Run the 273 duplicate-tag merge** — approved by the owner on 17 September,
+   but the auto-mode classifier refuses a session that deletes rows on the
+   shared database, so it is `scripts/merge-duplicate-tags.sql`: a single
+   idempotent transaction with its expected counts in the header. Neon branch
+   first, then main (`psql "$DATABASE_URL" -f scripts/merge-duplicate-tags.sql`),
+   or approve the `run_sql_transaction` call in a normal-permission session.
+   Afterwards the tag pages of those 1,614 article links start working and the
+   sitemap picks the tags up on its next daily regeneration.
 2. **Rotate the Neon `neondb_owner` password.** The slug repair was applied
    with a connection string obtained through the Neon MCP; it is not on disk,
    but it passed through a session transcript. Rotating it means updating
