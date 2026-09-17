@@ -4,7 +4,7 @@ import type {
   CollectionAfterDeleteHook,
   GlobalAfterChangeHook,
 } from "payload";
-import { ARTICLES_TAG, ADS_TAG, SETTINGS_TAG } from "./cache-tags";
+import { ARTICLES_TAG, ADS_TAG, SETTINGS_TAG, TAXONOMY_TAG, articleTag } from "./cache-tags";
 
 const LOCALES = ["ar", "fr", "en"] as const;
 
@@ -42,7 +42,7 @@ export function categoryPaths(categorySlug: string): string[] {
 async function articleRevalidateTargets(
   req: Parameters<CollectionAfterChangeHook>[0]["req"],
   id: string | number,
-): Promise<string[]> {
+): Promise<{ paths: string[]; tags: string[] }> {
   const doc = await req.payload.findByID({
     collection: "articles",
     id,
@@ -56,7 +56,10 @@ async function articleRevalidateTargets(
       c && typeof c === "object" && "slug" in c ? (c as { slug?: string }).slug : undefined,
     )
     .filter((s): s is string => Boolean(s));
-  return articlePaths(slugByLocale, categorySlugs);
+  const tags = Object.values(slugByLocale)
+    .filter((s): s is string => typeof s === "string" && s.length > 0)
+    .map(articleTag);
+  return { paths: articlePaths(slugByLocale, categorySlugs), tags };
 }
 
 export const revalidateArticleChange: CollectionAfterChangeHook = async ({ doc, req, context }) => {
@@ -67,10 +70,12 @@ export const revalidateArticleChange: CollectionAfterChangeHook = async ({ doc, 
   if (context?.disableRevalidate) return doc;
 
   try {
-    // Invalidate the dynamic article route's data cache (see cached-queries.ts)
-    // so an edit/publish is visible immediately, not after the 5-min TTL.
+    // Lists (latest, related, by tag/category) change on any publish: bust the
+    // shared tag. The article's own cached doc has its own tag, so THIS
+    // article is refreshed at once and every other article stays warm.
     revalidateTag(ARTICLES_TAG, "max");
-    const paths = await articleRevalidateTargets(req, doc.id);
+    const { paths, tags } = await articleRevalidateTargets(req, doc.id);
+    tags.forEach((t) => revalidateTag(t, "max"));
     paths.forEach((p) => revalidatePath(p));
   } catch (err) {
     req.payload.logger.error({ err }, "[revalidate] article afterChange failed");
@@ -82,8 +87,9 @@ export const revalidateArticleDelete: CollectionAfterDeleteHook = async ({ doc, 
   try {
     revalidateTag(ARTICLES_TAG, "max");
     // The doc is the just-deleted record in req's locale; revalidate listings,
-    // homepage, and (best-effort) this locale's article path.
+    // homepage, and (best-effort) this locale's article path and data entry.
     const slug = typeof doc?.slug === "string" ? doc.slug : undefined;
+    if (slug) revalidateTag(articleTag(slug), "max");
     const slugByLocale = slug && req.locale ? { [req.locale]: slug } : {};
     articlePaths(slugByLocale, []).forEach((p) => revalidatePath(p));
   } catch (err) {
@@ -98,8 +104,10 @@ export const revalidateCategoryChange: CollectionAfterChangeHook = async ({ doc,
   if (context?.disableRevalidate) return doc;
 
   try {
-    // A renamed category shows on article category badges, so bust article data too.
+    // A renamed category shows on article category badges, so bust article
+    // data too: lists via the shared tag, cached article docs via TAXONOMY_TAG.
     revalidateTag(ARTICLES_TAG, "max");
+    revalidateTag(TAXONOMY_TAG, "max");
     const slug = typeof doc?.slug === "string" ? doc.slug : "";
     categoryPaths(slug).forEach((p) => revalidatePath(p));
   } catch (err) {
@@ -111,6 +119,7 @@ export const revalidateCategoryChange: CollectionAfterChangeHook = async ({ doc,
 export const revalidateCategoryDelete: CollectionAfterDeleteHook = async ({ doc, req }) => {
   try {
     revalidateTag(ARTICLES_TAG, "max");
+    revalidateTag(TAXONOMY_TAG, "max");
     const slug = typeof doc?.slug === "string" ? doc.slug : "";
     categoryPaths(slug).forEach((p) => revalidatePath(p));
   } catch (err) {
@@ -119,12 +128,20 @@ export const revalidateCategoryDelete: CollectionAfterDeleteHook = async ({ doc,
   return doc;
 };
 
-/** Ads are cached per-locale in the article route's data cache; bust on any change. */
+/**
+ * Ads: every ad read — slots, carousels and the root layout's head snippets —
+ * goes through the data cache under ADS_TAG, so busting the tag is what makes
+ * a change visible. This used to also call `revalidatePath("/", "layout")`,
+ * which discards every ISR page on the site: for the next hour or so after an
+ * ad edit nothing was cached and every visitor paid a full render. The
+ * homepage is the one page whose ad carousels an editor checks right after
+ * saving, so it is revalidated explicitly; the rest pick the change up
+ * within their own TTL.
+ */
 export const revalidateAdChange: CollectionAfterChangeHook = async ({ doc, req }) => {
   try {
     revalidateTag(ADS_TAG, "max");
-    // Ad header snippets are injected in the root layout (all pages).
-    revalidatePath("/", "layout");
+    for (const locale of LOCALES) revalidatePath(`/${locale}`);
   } catch (err) {
     req.payload.logger.error({ err }, "[revalidate] ad afterChange failed");
   }
@@ -134,7 +151,7 @@ export const revalidateAdChange: CollectionAfterChangeHook = async ({ doc, req }
 export const revalidateAdDelete: CollectionAfterDeleteHook = async ({ doc, req }) => {
   try {
     revalidateTag(ADS_TAG, "max");
-    revalidatePath("/", "layout");
+    for (const locale of LOCALES) revalidatePath(`/${locale}`);
   } catch (err) {
     req.payload.logger.error({ err }, "[revalidate] ad afterDelete failed");
   }

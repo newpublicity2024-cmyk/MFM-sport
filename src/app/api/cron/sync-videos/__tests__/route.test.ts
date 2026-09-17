@@ -53,8 +53,9 @@ describe("GET /api/cron/sync-videos", () => {
     expect(json.ok).toBe(true);
     expect(json.created).toBe(1);
     expect(syncVideos).toHaveBeenCalledWith({}, "yt", { prune: true });
-    // homepage + /videos for each locale = 6 revalidations
-    expect((revalidatePath as unknown as ReturnType<typeof vi.fn>).mock.calls.length).toBe(6);
+    // /videos for each locale only — the homepage is left to its own ISR window
+    const calls = (revalidatePath as unknown as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls.map((c) => c[0]).sort()).toEqual(["/ar/videos", "/en/videos", "/fr/videos"]);
   });
 
   it("500s when YOUTUBE_API_KEY is missing", async () => {

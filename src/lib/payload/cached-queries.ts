@@ -12,7 +12,8 @@ import {
   getCompetitions,
 } from "./queries";
 import { getAds, getAdHeadCodes } from "./ads";
-import { ARTICLES_TAG, ADS_TAG, SETTINGS_TAG } from "./cache-tags";
+import { ARTICLES_TAG, ADS_TAG, SETTINGS_TAG, TAXONOMY_TAG, articleTag } from "./cache-tags";
+import { decodeSlug } from "./slug";
 
 type Locale = Config["locale"];
 
@@ -35,13 +36,28 @@ type Locale = Config["locale"];
  * touch `cookies()`/`headers()`, which `unstable_cache` forbids. Returns are
  * plain JSON-serializable Payload docs.
  */
-const REVALIDATE_SECONDS = 300; // 5 min ceiling; tag invalidation makes edits instant.
+const REVALIDATE_SECONDS = 300; // 5 min ceiling for lists; tag invalidation makes edits instant.
+
+/**
+ * An article's own document changes only when it is saved, and a save busts
+ * its own tag — so the entry can live much longer than a list. Lists (latest,
+ * related, by tag/category) keep the short ceiling: they change whenever any
+ * article is published, and a scheduled publish would not fire a hook.
+ */
+const ARTICLE_REVALIDATE_SECONDS = 3600;
 
 export function cachedResolveArticleBySlug(slug: string, locale: Locale) {
+  // Tagged by its own canonical slug (busted on that article's save) and by
+  // the taxonomy tag (busted when a category or tag is renamed, since the doc
+  // carries their names) — NOT by the global articles tag, so another
+  // article's publish leaves this one warm.
   return unstable_cache(
     (s: string, l: Locale) => resolveArticleBySlug(s, l),
     ["resolve-article-by-slug"],
-    { tags: [ARTICLES_TAG], revalidate: REVALIDATE_SECONDS },
+    {
+      tags: [articleTag(decodeSlug(slug)), TAXONOMY_TAG],
+      revalidate: ARTICLE_REVALIDATE_SECONDS,
+    },
   )(slug, locale);
 }
 
