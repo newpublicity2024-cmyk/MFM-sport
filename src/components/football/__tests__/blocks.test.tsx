@@ -91,8 +91,8 @@ describe("RecentResultsBlock", () => {
     const home = container.querySelector("[data-form-column='home']")!;
     const hrefs = [...home.querySelectorAll("a")].map((a) => a.getAttribute("href"));
     expect(hrefs).toEqual(["/ar/matches/6", "/ar/matches/5", "/ar/matches/4", "/ar/matches/3", "/ar/matches/2"]);
-    expect(getFixturesByTeam).toHaveBeenCalledWith(WAC, 2026, { last: 5 });
-    expect(getFixturesByTeam).toHaveBeenCalledWith(RCA, 2026, { last: 5 });
+    expect(getFixturesByTeam).toHaveBeenCalledWith(WAC, 2026, { last: 6 });
+    expect(getFixturesByTeam).toHaveBeenCalledWith(RCA, 2026, { last: 6 });
   });
 
   it("renders nothing when upstream throws", async () => {

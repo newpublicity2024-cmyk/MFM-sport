@@ -102,6 +102,16 @@ async function discoverFixture() {
   fail("no finished indexable league fixture found in the last 10 days; set FIXTURE_ID");
 }
 
+/**
+ * Markup without <script> bodies. The RSC flight payload inside
+ * <script>self.__next_f.push(…)</script> repeats every prop name of every
+ * streamed element, so attribute counts on the raw document double-count.
+ * Tags stay intact; JSON-LD is read from the raw document separately.
+ */
+function visibleMarkup(html) {
+  return html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+}
+
 /** The text from `startMarker` up to the next `nextMarker` after it (or the end); null if absent. */
 function sliceBetween(text, startMarker, nextMarker) {
   const start = text.indexOf(startMarker);
@@ -166,15 +176,29 @@ if (mode === "lint" || mode === "tests") {
   if (new Date(dt).getTime() !== new Date(fx.fixture.date).getTime()) {
     fail(`<time datetime="${dt}"> is not the fixture instant ${fx.fixture.date}`);
   }
-  const expected = casablancaTime(fx.fixture.date);
+  // Morocco's offset is 0 or +1 h depending on the date AND on the tz database
+  // version doing the conversion (tz 2026c moved the country to permanent
+  // UTC+0 from 20 September 2026; older data still says +1). The server's
+  // ICU may be newer or older than this checker's, so accept either offset
+  // here and prove the conversion itself on a pinned pre-switch fixture below.
   const timeText = inner.replace(/<[^>]+>/g, "");
-  if (!timeText.includes(expected)) {
-    fail(`visible kickoff "${timeText}" does not contain Casablanca time "${expected}" for ${fx.fixture.date}`);
+  const local = casablancaTime(fx.fixture.date);
+  const hhmm = (tz) => new Intl.DateTimeFormat("ar-MA", { hour: "2-digit", minute: "2-digit", timeZone: tz }).format(new Date(fx.fixture.date));
+  const candidates = { "Africa/Casablanca (checker tz data)": local, "UTC+1": hhmm("Etc/GMT-1"), "UTC+0": hhmm("UTC") };
+  const matched = Object.entries(candidates).find(([, v]) => timeText.includes(v));
+  if (!matched) fail(`visible kickoff "${timeText}" is none of ${JSON.stringify(candidates)} for ${fx.fixture.date}`);
+  if (matched[1] !== local) {
+    console.log(`note: server rendered ${matched[1]} (${matched[0]}); this checker's tz data (${process.versions.tz}) says ${local} — tz database versions differ`);
   }
-  // Negative control for the timezone check: the UTC rendering must differ
-  // from the Casablanca one on this date, or the assertion proves nothing.
-  const utc = new Intl.DateTimeFormat("ar-MA", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" }).format(new Date(fx.fixture.date));
-  if (utc === expected) console.log(`note: UTC and Casablanca agree at ${expected} on this date (Ramadan window?) — timezone check is not discriminating today`);
+  // Positive control, independent of tz data versions: 7 September 2026 was
+  // UTC+1 in Morocco in every tz release since 2018, so this fixture's
+  // 16:30Z kick-off must read 17:30 — proof the conversion is applied at all.
+  const control = await get(`/ar/matches/1550109`);
+  if (control.status !== 200) fail(`control fixture 1550109 → ${control.status}`);
+  const ctl = /<time[^>]*datetime="2026-09-07T16:30:00[^"]*"[^>]*>([\s\S]*?)<\/time>/i.exec(control.text);
+  if (!ctl) fail("control fixture 1550109 has no <time datetime=\"2026-09-07T16:30:00…\">");
+  if (!ctl[1].includes("17:30")) fail(`control fixture renders "${ctl[1].replace(/<[^>]+>/g, "")}", expected 17:30 for 16:30Z on 7 Sep 2026`);
+  const expected = matched[1];
 
   const ld = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
   if (ld.length !== 1) fail(`${ld.length} JSON-LD scripts, expected 1`);
@@ -212,7 +236,7 @@ if (mode === "lint" || mode === "tests") {
   const id = fx.fixture.id;
   const page = await get(`/ar/matches/${id}`);
   if (page.status !== 200) fail(`/ar/matches/${id} → ${page.status}`);
-  const html = page.text;
+  const html = visibleMarkup(page.text);
 
   // Blocks are sibling <section data-block> elements rendered in sequence, so a
   // block's markup runs from its marker to the next marker (or the end).
@@ -291,8 +315,9 @@ if (mode === "lint" || mode === "tests") {
   const fx = await discoverFixture();
   const page = await get(`/ar/matches/${fx.fixture.id}`);
   if (page.status !== 200) fail(`/ar/matches/${fx.fixture.id} → ${page.status}`);
+  const visible = visibleMarkup(page.text);
   const blocks = ["results", "h2h"]
-    .map((name) => sliceBetween(page.text, `data-block="${name}"`, /data-block="/g))
+    .map((name) => sliceBetween(visible, `data-block="${name}"`, /data-block="/g))
     .filter((b) => b !== null);
   if (blocks.length === 0) fail("no results/h2h blocks to inspect");
   const links = new Set();

@@ -21,9 +21,11 @@ async function load(fixture: ApiFixture): Promise<{ home: ApiFixture[]; away: Ap
   try {
     const { season } = fixture.league;
     const { home, away } = fixture.teams;
+    // One more than shown: once this fixture is played it is among the team's
+    // last matches and is dropped below, and the column should still show five.
     const [homeForm, awayForm] = await Promise.all([
-      getFixturesByTeam(home.id, season, { last: FORM_LENGTH }),
-      getFixturesByTeam(away.id, season, { last: FORM_LENGTH }),
+      getFixturesByTeam(home.id, season, { last: FORM_LENGTH + 1 }),
+      getFixturesByTeam(away.id, season, { last: FORM_LENGTH + 1 }),
     ]);
     const played = (list: ApiFixture[]) =>
       list

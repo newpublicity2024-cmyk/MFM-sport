@@ -12,9 +12,13 @@ export function cn(...inputs: ClassValue[]) {
  * bare `toLocaleTimeString` rendered kickoffs an hour early on production
  * (fixture 1550109: 16:30Z shown as 16:30, real Casablanca kickoff 17:30 —
  * measured 21 September 2026). The IANA zone, not a fixed +1: Morocco drops to
- * UTC+0 for Ramadan every year and ICU carries those transitions. Pinning the
- * zone also makes server and browser agree, so the client components that call
- * these helpers stop patching the text on hydration.
+ * UTC+0 for Ramadan every year, and tz 2026c moves the country to permanent
+ * UTC+0 from 20 September 2026 — Vercel's Node 24 already carries that, a
+ * hand-written offset would not. Pinning the zone also makes server and
+ * browser agree, so the client components that call these helpers stop
+ * patching the text on hydration. Note that a machine with older tz data
+ * (Node 22.23 ships tz 2026a) converts post-switch dates differently from
+ * production; assert on the served bytes, not on a local render.
  */
 export const SITE_TIME_ZONE = "Africa/Casablanca";
 
