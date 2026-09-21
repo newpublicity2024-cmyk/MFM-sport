@@ -1,17 +1,26 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
 import { onDemandOnly } from "@/lib/seo/isr";
 import { getFixtureById } from "@/lib/api-football/fixtures";
-import { LiveScoreboard } from "@/components/football/LiveScoreboard";
+import { MatchHeader } from "@/components/football/MatchHeader";
+import { MatchDetailsCard } from "@/components/football/MatchDetailsCard";
 import { MatchEvents } from "@/components/football/MatchEvents";
 import { MatchLineup } from "@/components/football/MatchLineup";
 import { MatchStats } from "@/components/football/MatchStats";
+import { StandingsExcerptBlock } from "@/components/football/blocks/StandingsExcerptBlock";
+import { RecentResultsBlock } from "@/components/football/blocks/RecentResultsBlock";
+import { HeadToHeadBlock } from "@/components/football/blocks/HeadToHeadBlock";
+import { BlockSkeleton } from "@/components/football/blocks/BlockSkeleton";
 import { SectionHeader } from "@/components/shared/SectionHeader";
-import { localizeLeague, localizeRound, localizeTeam } from "@/lib/api-football/localize";
+import { localizeLeague, localizeTeam } from "@/lib/api-football/localize";
+import { describeStatus } from "@/lib/api-football/status";
 import { isIndexableFixture } from "@/lib/seo/matchIndexing";
+import { matchJsonLd } from "@/lib/seo/matchJsonLd";
+import { formatDate } from "@/lib/utils";
 
 // ISR: regenerate the match shell at most once a minute; live score/events
 // still stream client-side via LiveScoreboard polling the cached fixture API.
@@ -35,11 +44,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const league = localizeLeague(fixture.league.id, fixture.league.name, locale);
   const title = `${home} ضد ${away} | MFM Sport`;
 
-  const kickoff = new Date(fixture.fixture.date).toLocaleDateString("ar-MA", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  // Casablanca date, not the server's UTC one (a 23:00Z kick-off is tomorrow here).
+  const kickoff = formatDate(fixture.fixture.date, locale);
   const description = `${home} ضد ${away} في ${league}. النتيجة المباشرة، التشكيلة، الأهداف وإحصائيات المباراة يوم ${kickoff}.`;
 
   const indexable = isIndexableFixture(fixture);
@@ -72,21 +78,52 @@ export default async function MatchPage({ params }: Props) {
   const fixture = await getFixtureById(Number(id));
   if (!fixture) notFound();
 
-  const t = await getTranslations({ locale, namespace: "match" });
+  const [t, tComp] = await Promise.all([
+    getTranslations({ locale, namespace: "match" }),
+    getTranslations({ locale, namespace: "competition" }),
+  ]);
   const { home, away } = fixture.teams;
+  const status = describeStatus(fixture.fixture.status.short);
+  const statusLabel = status.labelKey ? t(`status.${status.labelKey}`) : null;
+
+  const resultLabels = { win: t("resultWin"), draw: t("resultDraw"), loss: t("resultLoss") };
+  const standingsLabels = {
+    captionTemplate: (competition: string) => t("standingsExcerpt", { competition }),
+    fullStandings: t("fullStandings"),
+    team: tComp("team"), played: tComp("played"), won: tComp("won"), drawn: tComp("drawn"),
+    lost: tComp("lost"), goalsFor: tComp("goalsFor"), goalsAgainst: tComp("goalsAgainst"),
+    goalDiff: tComp("goalDiff"), points: tComp("points"), form: tComp("form"),
+  };
 
   return (
     <div className="container py-8 max-w-4xl">
-      {/* League info */}
-      <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
-        <Image src={fixture.league.logo} alt={fixture.league.name} width={20} height={20} />
-        <span>{localizeLeague(fixture.league.id, fixture.league.name, locale)}</span>
-        <span>·</span>
-        <span>{localizeRound(fixture.league.round, locale)}</span>
-      </div>
+      {/* What this page is about, for search engines: the event, its teams,
+          kick-off instant, venue and status, plus the breadcrumb trail. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            matchJsonLd(fixture, locale, { home: t("breadcrumbHome"), matches: t("breadcrumbMatches") }),
+          ),
+        }}
+      />
 
-      {/* Score header */}
-      <LiveScoreboard initial={fixture} locale={locale} />
+      <MatchHeader fixture={fixture} locale={locale} statusLabel={statusLabel} />
+
+      <MatchDetailsCard
+        fixture={fixture}
+        locale={locale}
+        labels={{
+          details: t("details"),
+          competition: t("competition"),
+          round: t("round"),
+          kickoffTime: t("kickoffTime"),
+          moroccoTime: t("moroccoTime"),
+          venue: t("venue"),
+          referee: t("referee"),
+          timeToBeConfirmed: t("status.tbd"),
+        }}
+      />
 
       {/* Events */}
       {fixture.events && fixture.events.length > 0 && (
@@ -140,6 +177,41 @@ export default async function MatchPage({ params }: Props) {
           </div>
         </section>
       )}
+
+      {/* Pre-match context: table position, form, history. Each block streams
+          behind its own boundary and renders nothing on upstream trouble, so a
+          quota outage costs a widget, never the page. The three read the
+          shared Redis cache (standings 1 h, team form 15 min, H2H 24 h), so
+          upstream cost scales with fixtures, not page views. */}
+      <Suspense fallback={<BlockSkeleton className="h-80" />}>
+        <StandingsExcerptBlock fixture={fixture} locale={locale} labels={standingsLabels} />
+      </Suspense>
+      <Suspense fallback={<BlockSkeleton className="h-96" />}>
+        <RecentResultsBlock
+          fixture={fixture}
+          locale={locale}
+          labels={{
+            ...resultLabels,
+            title: t("recentResults"),
+            scoredIn: t("scoredIn"),
+            over25: t("over25"),
+            bothScored: t("bothScored"),
+          }}
+        />
+      </Suspense>
+      <Suspense fallback={<BlockSkeleton className="h-80" />}>
+        <HeadToHeadBlock
+          fixture={fixture}
+          locale={locale}
+          labels={{
+            ...resultLabels,
+            title: t("headToHead", { count: 5 }),
+            wins: t("wins"),
+            draws: t("draws"),
+            goals: t("goals"),
+          }}
+        />
+      </Suspense>
     </div>
   );
 }

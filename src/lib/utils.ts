@@ -5,25 +5,51 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * The zone every date and time on the site is shown in.
+ *
+ * API-Football returns UTC instants and Vercel's functions run in UTC, so a
+ * bare `toLocaleTimeString` rendered kickoffs an hour early on production
+ * (fixture 1550109: 16:30Z shown as 16:30, real Casablanca kickoff 17:30 —
+ * measured 21 September 2026). The IANA zone, not a fixed +1: Morocco drops to
+ * UTC+0 for Ramadan every year and ICU carries those transitions. Pinning the
+ * zone also makes server and browser agree, so the client components that call
+ * these helpers stop patching the text on hydration.
+ */
+export const SITE_TIME_ZONE = "Africa/Casablanca";
+
+function intlLocale(locale: string): string {
+  return locale === "ar" ? "ar-MA" : locale === "fr" ? "fr-FR" : "en-US";
+}
+
 export function formatDate(date: string, locale: string): string {
-  return new Date(date).toLocaleDateString(
-    locale === "ar" ? "ar-MA" : locale === "fr" ? "fr-FR" : "en-US",
-    {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    },
-  );
+  return new Date(date).toLocaleDateString(intlLocale(locale), {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: SITE_TIME_ZONE,
+  });
 }
 
 export function formatTime(date: string, locale: string): string {
-  return new Date(date).toLocaleTimeString(
-    locale === "ar" ? "ar-MA" : locale === "fr" ? "fr-FR" : "en-US",
-    {
-      hour: "2-digit",
-      minute: "2-digit",
-    },
-  );
+  return new Date(date).toLocaleTimeString(intlLocale(locale), {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: SITE_TIME_ZONE,
+  });
+}
+
+/** Weekday, date and kickoff in one string — the details card and meta description. */
+export function formatKickoffDateTime(date: string, locale: string): string {
+  return new Date(date).toLocaleString(intlLocale(locale), {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: SITE_TIME_ZONE,
+  });
 }
 
 export function getImageUrl(

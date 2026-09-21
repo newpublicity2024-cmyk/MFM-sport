@@ -28,13 +28,26 @@ type Props = {
   };
 };
 
-function FormBadges({ form }: { form: string | null }) {
+const FORM_LABEL: Record<string, string> = { W: "فوز", D: "تعادل", L: "خسارة" };
+
+/**
+ * A team's last results as lettered, coloured dots. The letter is always
+ * rendered — colour alone would be unreadable to a screen reader and to
+ * anyone who cannot tell red from green — and the row carries a spoken label.
+ */
+export function FormBadges({ form }: { form: string | null }) {
   if (!form) return null;
+  const chars = form.split("");
   return (
-    <div className="flex gap-0.5">
-      {form.split("").map((char, i) => (
+    <div
+      className="flex gap-0.5"
+      role="img"
+      aria-label={chars.map((c) => FORM_LABEL[c] ?? c).join("، ")}
+    >
+      {chars.map((char, i) => (
         <span
           key={i}
+          aria-hidden="true"
           className={cn(
             "w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center text-white",
             char === "W" && "bg-win",
