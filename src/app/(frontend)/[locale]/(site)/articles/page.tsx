@@ -14,6 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     alternates: { canonical: `/${locale}/articles` },
     title: `${t("allArticles")} | MFM Sport`,
+    description: t("listingDescription"),
   };
 }
 

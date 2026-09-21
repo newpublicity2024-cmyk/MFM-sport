@@ -34,6 +34,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const filtered = Boolean(date || league);
   return {
     title: `${t("today")} | MFM Sport`,
+    description: t("listingDescription"),
     alternates: { canonical: `/${locale}/matches` },
     ...(filtered ? { robots: { index: false, follow: false } } : {}),
   };

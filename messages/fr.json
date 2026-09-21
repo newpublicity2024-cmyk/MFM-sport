@@ -67,7 +67,8 @@
     "shareArticle": "Partager l'article",
     "videoArticle": "Article video",
     "allArticles": "Tous les articles",
-    "noArticles": "Aucun article"
+    "noArticles": "Aucun article",
+    "listingDescription": "Toute l’actualité du football marocain et mondial sur MFM Sport : Botola Pro, équipe nationale, clubs marocains, transferts et analyses, en continu."
   },
   "author": {
     "articles": "Articles",
@@ -119,7 +120,8 @@
     "shotsOnTarget": "Tirs cadres",
     "corners": "Corners",
     "fouls": "Fautes",
-    "offsides": "Hors-jeu"
+    "offsides": "Hors-jeu",
+    "listingDescription": "Les matchs du jour en direct : scores minute par minute, compositions, buts et calendrier des prochains jours en Botola et en compétitions africaines et européennes."
   },
   "competition": {
     "standings": "Classement",
@@ -144,7 +146,8 @@
     "days": "j",
     "hours": "h",
     "minutes": "min",
-    "seconds": "s"
+    "seconds": "s",
+    "listingDescription": "Botola Pro, Ligue des champions CAF, CAN et grands championnats européens : classements, résultats, calendrier et actualités de chaque compétition."
   },
   "club": {
     "info": "Infos",
@@ -155,7 +158,8 @@
   },
   "videos": {
     "title": "Videos",
-    "noVideos": "Aucune video"
+    "noVideos": "Aucune video",
+    "listingDescription": "Les dernières vidéos de MFM Sport : déclarations, analyses et images des stades marocains, depuis la chaîne YouTube de MFM Sport."
   },
   "pages": {
     "about": "A propos",

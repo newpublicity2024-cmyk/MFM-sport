@@ -16,7 +16,12 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "nav" });
-  return { title: `${t("competitions")} | MFM Sport`, alternates: { canonical: `/${locale}/competition` }, };
+  const tComp = await getTranslations({ locale, namespace: "competition" });
+  return {
+    title: `${t("competitions")} | MFM Sport`,
+    description: tComp("listingDescription"),
+    alternates: { canonical: `/${locale}/competition` },
+  };
 }
 
 export default async function CompetitionsIndexPage({ params }: Props) {

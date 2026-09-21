@@ -8,6 +8,7 @@ import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { AdHeadInjector } from "@/components/ads/AdHeadInjector";
 import { cachedGetAdHeadCodes } from "@/lib/payload/cached-queries";
 import { SITE_URL } from "@/lib/seo/siteUrl";
+import { SITE_NAME } from "@/lib/seo/siteIdentity";
 import "./styles.css";
 
 const plexSans = IBM_Plex_Sans({
@@ -37,6 +38,9 @@ export const metadata: Metadata = {
   // og:description, which is a wasted snippet on every SERP the site appears in.
   description:
     "آخر أخبار الكرة المغربية: البطولة الاحترافية، المنتخب المغربي، الوداد والرجاء، دوري أبطال أفريقيا، نتائج المباريات وترتيب الفرق مباشرة على إم إف إم سبور.",
+  // og:site_name is one of Google's documented sources for the site name shown
+  // above a result; without it the name was derived from the domain ("Mfmsport").
+  openGraph: { siteName: SITE_NAME, locale: "ar_MA", type: "website" },
   // AdSense site verification: emits <meta name="google-adsense-account"> so
   // Google can confirm ownership during review. Present only once the client ID
   // is configured; complements the adsbygoogle loader in the (site) layout.
