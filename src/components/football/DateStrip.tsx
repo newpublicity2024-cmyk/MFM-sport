@@ -47,6 +47,7 @@ export function DateStrip({ selected, locale, basePath, league }: Props) {
               key={d}
               href={buildHref(basePath, d, league)}
               aria-current={isSelected ? "page" : undefined}
+              rel="nofollow"
               className={cn(
                 "flex flex-col items-center justify-center rounded-md px-3 py-2 min-w-[3.5rem] text-xs transition-colors",
                 isSelected
