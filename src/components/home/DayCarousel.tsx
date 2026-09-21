@@ -58,10 +58,21 @@ export function DayCarousel({
   const centre = isWithin(selected, today, span) ? today : selected;
   const days = Array.from({ length: span * 2 + 1 }, (_, i) => shiftDate(centre, i - span));
 
+  // Centre the selected pill INSIDE the strip — horizontal scroll on the strip
+  // itself, nothing else. Not scrollIntoView: that is allowed to move every
+  // scrollable ancestor, the page included, and on load it dragged the
+  // viewport down to this section (the homepage "opened on the videos").
+  const firstRun = useRef(true);
   useEffect(() => {
-    const el = scrollerRef.current?.querySelector<HTMLElement>('[aria-current="date"]');
-    // jsdom has no scrollIntoView; browsers do.
-    el?.scrollIntoView?.({ inline: "center", block: "nearest" });
+    const scroller = scrollerRef.current;
+    const pill = scroller?.querySelector<HTMLElement>('[aria-current="date"]');
+    if (!scroller || !pill) return;
+    const s = scroller.getBoundingClientRect();
+    const p = pill.getBoundingClientRect();
+    // Physical delta between the two centres works in LTR and RTL alike.
+    const delta = p.left + p.width / 2 - (s.left + s.width / 2);
+    scroller.scrollBy?.({ left: delta, behavior: firstRun.current ? "auto" : "smooth" });
+    firstRun.current = false;
   }, [selected]);
 
   function scroll(toward: "start" | "end") {
