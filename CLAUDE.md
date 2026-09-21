@@ -189,6 +189,21 @@ record tier + daily usage in the PR (ledger gate G14).
 
 ### Found on the way, NOT fixed (out of the approved scope)
 
+**The shared Redis cache and the rate limiter are almost certainly OFF on
+production.** `hasUpstash()` in `src/lib/cache.ts` and the guard in
+`src/lib/rate-limit.ts` accept only `UPSTASH_REDIS_REST_URL` /
+`UPSTASH_REDIS_REST_TOKEN`; Vercel's env listing (21 September 2026, via the
+Vercel connector) has no such variables — the Redis store is exposed as
+`KV_REST_API_URL` / `KV_REST_API_TOKEN` / `KV_URL` / `REDIS_URL`. The
+`@upstash/redis` client's own `fromEnv()` falls back to the `KV_*` names, but
+the guards never let it run. Consequence: every `cachedJson` call goes to
+Next's fetch cache instead (still shared per region on Vercel, but without the
+SWR + single-flight behaviour), and the newsletter routes' rate limit is a
+no-op. Fix is one line per file (accept the `KV_*` names); it changes
+production behaviour (enables caching + rate limiting), so it needs its own
+yes. Confirm before fixing: the store's command count in the Vercel dashboard
+should be ~0.
+
 **Every entity-miss 404 renders Next's `__next_error__` shell with an empty
 body.** `/ar/articles/<missing>`, `/ar/matches/999999999`, `/ar/club/<missing>`,
 `/ar/competition/<missing>` all answer 404 + `noindex` + 0 ad loaders
@@ -223,6 +238,8 @@ Ledger: `.unlazy/GATES.md` (gitignored). Local gates: `node scripts/verify-match
    needs the league's coverage flag); fan poll (table + POST route + WAF rule).
    Sitemap inclusion of match pages only once they carry linked articles.
 4. The entity-miss 404 shell defect above — separate branch.
+5. Say yes to the `KV_*` env-name fix above (enables the Redis cache and the
+   rate limiter that the code assumes are on).
 
 ---
 
