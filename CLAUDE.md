@@ -152,6 +152,80 @@ expect Google to take days to weeks to re-render the result.
 
 ---
 
+## Session state — match page pre-match blocks (21 September 2026)
+
+Branch `feat/match-prematch-blocks` off `main` (after PR #73), pushed as a
+PR on 21 September 2026 under the owner's "merge on green" instruction; the
+served-bytes checks below were run on the Vercel preview before the merge and
+again on production after it — results are in that PR's comments, which are
+the record. Owner brought Kooora's pre-match page
+(`reports/kooora.png`, `reports/kooora2.png`) and an external study; the study
+was checked against the repo first — its architecture (404 gate, cron +
+`revalidateTag` pipeline, FR/EN pages, a team-name table, "throw in the page
+not in metadata") did not match this codebase and was not followed. Owner
+decisions: phases 1+2 only, rows link only to indexable fixtures, sitemap
+unchanged, form across all competitions.
+
+### What changed on `/ar/matches/[id]`
+
+| Area | Change |
+|---|---|
+| **Kick-off times were shown in UTC** (bug, site-wide) | `formatDate` / `formatTime` in `src/lib/utils.ts` had no `timeZone`; Vercel runs in UTC, so fixture 1550109 (`16:30Z`) rendered **16:30** — real Casablanca kick-off 17:30. Both now pin `SITE_TIME_ZONE = "Africa/Casablanca"` (IANA handles the Ramadan UTC+0 switch; tested on a March 2026 date). Also removes the SSR/browser mismatch in the client components that call them. **Found on the preview: tz 2026c (in Vercel's Node 24) moves Morocco to permanent UTC+0 from Sunday 20 September 2026**, so from that day the served kick-off equals the UTC instant and that is correct; a local Node 22 (tz 2026a) still says +1. Never "fix" this with an offset, and never trust a local render of a date over the served bytes. |
+| Header | `MatchHeader`: competition pill + round, the page's **single `<h1>`** (`home ضد away`, dictionary names), `LiveScoreboard` unchanged inside it, status label for PST/CANC/TBD/… from `src/lib/api-football/status.ts` (`describeStatus`, every API-Football code → phase, `match.status.*` label key, schema.org `eventStatus`). |
+| Details card | `MatchDetailsCard`: competition (+ flag), round, **`<time datetime="<UTC instant>">`** with Casablanca text, venue + city, referee; null rows omitted; TBD shows the date + "لم يُحدَّد الموعد". |
+| JSON-LD | `src/lib/seo/matchJsonLd.ts`: `SportsEvent` (Arabic name, `startDate`, `eventStatus`, `location` when a venue exists — ~98 % of covered fixtures do, `homeTeam`/`awayTeam`) + `BreadcrumbList`. No nested `superEvent`. |
+| Standings excerpt | `getStandingsGroups()` (all groups; `getStandings` = group 0 as before) → `src/lib/football/standingsExcerpt.ts` (`pickGroup`: both teams in one group or null; `windowRows`: 6 rows centred, clamped at the edges, two triplets + gap when far apart, Kooora's 15 v 16 → 13–18) → `StandingsExcerpt` (real `<table>` with `<caption>` + `scope="col"`, both rows `aria-current`, lettered `FormBadges` with `aria-label`, "الترتيب الكامل" → `/ar/competition/<slug>` via `getCompetitionByApiFootballId` — fail-open, leagues only). |
+| Recent results | `RecentResultsBlock` → `getFixturesByTeam(id, fixture.league.season, { last: 5 })` (same cache key as the club page), played only, current fixture excluded; `RecentResults` + `ResultRow`: two columns (home first in DOM = right in RTL), badge ف/ت/خ with `aria-label`, competition label per row, the three x/N rows from `formStats()` over **exactly the rendered rows** (Kooora's 5/4 contradiction is a unit test). |
+| Head-to-head | `getHeadToHead(a, b, 6)` (`/fixtures/headtohead`, key on the sorted pair, 24 h) → `h2hSummary()` per team, not per home/away; counters sum to the rows rendered; goals bar with `role="img"`. |
+| Links | Rows are `<Link>` **only when `isIndexableFixture()`**; otherwise plain text with `data-unlinked-fixture`. No new crawl path into noindex pages. |
+| Blocks | Each block is an async server component behind its own `Suspense` (fixed-height skeleton), does its reads in a `try/catch` → `null`. A quota outage costs a widget, never the page. ISR `revalidate = 60` and `onDemandOnly` unchanged; the noindex gate unchanged. |
+| Table primitive | `src/components/ui/table.tsx`: `text-left` → `text-start`, `pr-0` → `pe-0` (shadcn defaults were physical; the competition page's header cell was left-aligned under `dir="rtl"`). |
+
+Upstream budget per **uncached** match page: fixture (30 s) + standings (1 h,
+shared per league) + form ×2 (15 min) + H2H (24 h) = **5 calls**, collapsed
+across users by Redis. The API-Football plan tier is still unknown and the
+quota has been exhausted before — **read the dashboard before merging** and
+record tier + daily usage in the PR (ledger gate G14).
+
+### Found on the way, NOT fixed (out of the approved scope)
+
+**Every entity-miss 404 renders Next's `__next_error__` shell with an empty
+body.** `/ar/articles/<missing>`, `/ar/matches/999999999`, `/ar/club/<missing>`,
+`/ar/competition/<missing>` all answer 404 + `noindex` + 0 ad loaders
+(correct), but the served `<html>` has **no `lang`, no `dir`** and the `<body>`
+is empty — `(frontend)/not-found.tsx` only arrives through the RSC payload and
+is drawn client-side (LTR flash, default font, and invisible to a non-JS
+crawler). The legacy-path 404 (`global-not-found.tsx`) is fine. The 3 September
+"404 verified RTL" note above was measured on that legacy path. Mechanism to
+confirm: `notFound()` thrown in `generateMetadata` makes Next fall back to its
+error document shell instead of rendering the not-found boundary inside
+`(frontend)/layout.tsx`. Fix belongs in its own branch; re-check with
+`curl -s https://www.mfmsport.ma/ar/matches/999999999 | grep -o '<html[^>]*>'`.
+
+### Verify on the served bytes (preview, then production)
+
+```bash
+BASE_URL=https://<preview>.vercel.app node scripts/verify-match-page.mjs served-page     # h1, <time>, Casablanca time, JSON-LD, 1 ad loader, ISR HIT
+BASE_URL=... node scripts/verify-match-page.mjs served-blocks   # excerpt 3–6 rows / 2 highlighted, form stats denominators, H2H counters
+BASE_URL=... node scripts/verify-match-page.mjs served-gate     # non-whitelisted still 200+noindex, unknown id 404, 0 ads on 404
+BASE_URL=... node scripts/verify-match-page.mjs served-links    # every match link in the blocks resolves to an indexable fixture
+BASE_URL=... node scripts/verify-match-page.mjs served-sitemap  # still 0 match pages in sitemap.xml
+```
+Ledger: `.unlazy/GATES.md` (gitignored). Local gates: `node scripts/verify-match-page.mjs lint|tests`.
+
+### Owner's tasks from this work
+
+1. API-Football dashboard: plan tier and today's request count → into the PR.
+2. Say the word to push and open the PR; run the five served checks against
+   the preview URL before merging, then again on production.
+3. Later, in order: article ↔ fixture link (`apiFixtureId` on Articles — a
+   production DDL) + `RelatedArticles`; model prediction (`/predictions`,
+   needs the league's coverage flag); fan poll (table + POST route + WAF rule).
+   Sitemap inclusion of match pages only once they carry linked articles.
+4. The entity-miss 404 shell defect above — separate branch.
+
+---
+
 ## Session state — performance remediation from the Vercel reports
 
 **Updated: 17 September 2026 — PR #62 merged (`833389c`) and DEPLOYED; every

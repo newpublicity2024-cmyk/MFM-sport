@@ -354,6 +354,32 @@ export const getCompetitionBySlug = cache(async (slug: string, locale: Locale) =
   return result.docs[0] || null;
 });
 
+/**
+ * The Competitions doc for an API-Football league id — how a match page finds
+ * the site's standings page for the league it belongs to. Fails open to null:
+ * the match page renders from API-Football alone, and a DB hiccup must cost it
+ * one link, not the page. `apiFootballId` is unique, so this is an index read.
+ */
+export const getCompetitionByApiFootballId = cache(
+  async (apiFootballId: number, locale: Locale) => {
+    try {
+      const payload = await getPayloadClient();
+      const result = await payload.find({
+        collection: "competitions",
+        where: { apiFootballId: { equals: apiFootballId } },
+        locale,
+        limit: 1,
+        depth: 0,
+        select: { slug: true, name: true, type: true },
+      });
+      return result.docs[0] || null;
+    } catch (error) {
+      console.error("[queries] getCompetitionByApiFootballId failed, returning null:", error);
+      return null;
+    }
+  },
+);
+
 export const getClubBySlug = cache(async (slug: string, locale: Locale) => {
   const payload = await getPayloadClient();
   const result = await payload.find({
