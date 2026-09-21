@@ -12,7 +12,8 @@
  *   node scripts/verify-match-page.mjs served-links    → SERVED-LINKS OK
  *   node scripts/verify-match-page.mjs served-sitemap  → SERVED-SITEMAP OK
  *
- * Served modes take BASE_URL (default https://www.mfmsport.ma). The fixture
+ * Served modes take BASE_URL (default https://www.mfmsport.ma) and an optional
+ * COOKIE header value for a protected preview deployment. The fixture
  * under test is discovered from /api/fixtures/date (a finished, indexable
  * fixture in a league with a table, from the last few days) unless FIXTURE_ID
  * is set. NOINDEX_FIXTURE_ID (default 1234567, a non-league English fixture)
@@ -59,9 +60,13 @@ function isIndexable(fx, ids) {
 }
 
 async function get(path, init) {
+  // COOKIE: the `_vercel_jwt=…` session from a preview share link, when the
+  // deployment sits behind Vercel Authentication.
+  const headers = { "user-agent": "mfm-verify/1.0" };
+  if (process.env.COOKIE) headers.cookie = process.env.COOKIE;
   const res = await fetch(`${BASE}${path}`, {
     redirect: "manual",
-    headers: { "user-agent": "mfm-verify/1.0" },
+    headers,
     ...init,
   });
   const text = await res.text();
