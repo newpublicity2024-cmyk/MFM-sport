@@ -37,3 +37,14 @@ describe("DateStrip", () => {
     expect(input.value).toBe("2026-05-04");
   });
 });
+
+describe("DateStrip crawl safety", () => {
+  it("marks every day link nofollow — the strip is an unbounded URL space", () => {
+    const { container } = render(
+      <DateStrip selected="2026-09-21" locale="en" basePath="/en/matches" />,
+    );
+    const links = container.querySelectorAll("a");
+    expect(links.length).toBe(7);
+    links.forEach((a) => expect(a.getAttribute("rel")).toBe("nofollow"));
+  });
+});

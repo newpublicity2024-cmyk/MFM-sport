@@ -94,6 +94,35 @@ curl -s -H "Authorization: Bearer $CRON_SECRET" https://www.mfmsport.ma/api/cron
 
 ---
 
+## Session state — bot spike on /ar/matches (21 September 2026)
+
+Owner's Vercel alerts (screenshot `reports/edge-latency.png`): *Edge Requests
+spike 5.35×* and *Function invocations spike above baseline*, twice in the
+morning. Cause, from the Observability query API (`vercel.request.count`
+grouped by `bot_name`/`route`, 04:00–11:30 UTC): **`meta-externalagent`**
+(Meta's AI-training crawler, Facebook ASN, US) made **50,632 requests to
+`/ar/matches`** — 41,797 of them between 08:00 and 11:30 — plus ~2,400 to
+`/privacy` and ~1,300 to `/contact`. `ClaudeBot` (Anthropic's training
+crawler) added 1,401 to `/ar/matches`. On 16 September the same route saw
+719 requests in six hours.
+
+Why that route: `/ar/matches?date=…&league=…` is a **crawl trap** — every
+day page links to seven more days × thirteen league filters, an unbounded
+URL space, and each hit is a dynamic render (searchParams → no ISR) with an
+upstream API-Football read per new date.
+
+Branch `fix/matches-crawl-trap`: `robots.txt` disallows `/*?date=`,
+`/*?league=`, `/*&league=` for everyone and lists `meta-externalagent` +
+`ClaudeBot` with the scrapers (`facebookexternalhit`, Claude-User, Googlebot
+untouched); the filtered variants send `noindex, nofollow`; the day strip
+and league filter links carry `rel="nofollow"`. robots.txt is a request, not
+a control: **the enforcement is a Vercel Firewall rule** — no custom
+firewall config exists yet (`get_firewall_config` → not found). Owner
+decision: Firewall → Bot Protection → block/challenge AI bots, or a custom
+rule `bot_name = meta-externalagent → challenge`.
+
+---
+
 ## Session state — performance remediation from the Vercel reports
 
 **Updated: 17 September 2026 — PR #62 merged (`833389c`) and DEPLOYED; every

@@ -36,6 +36,7 @@ export function CompetitionFilter({
       <Link
         href={buildHref(basePath, date)}
         aria-current={selectedLeague === null ? "page" : undefined}
+        rel="nofollow"
         className={cn(
           "rounded-full px-3 py-1 text-xs transition-colors",
           selectedLeague === null
@@ -53,6 +54,7 @@ export function CompetitionFilter({
             key={c.id}
             href={buildHref(basePath, date, id)}
             aria-current={isSelected ? "page" : undefined}
+            rel="nofollow"
             className={cn(
               "rounded-full px-3 py-1 text-xs transition-colors",
               isSelected

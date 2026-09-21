@@ -24,10 +24,19 @@ function isValidLeague(s: string | undefined): s is string {
   return typeof s === "string" && /^\d+$/.test(s);
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { locale } = await params;
+  const { date, league } = await searchParams;
   const t = await getTranslations({ locale, namespace: "match" });
-  return { title: `${t("today")} | MFM Sport`, alternates: { canonical: `/${locale}/matches` }, };
+  // A day/league variant is a filter of the same page, not a page of its own:
+  // canonical to the bare route and keep crawlers from indexing or following
+  // it — the date strip alone spawns an unbounded URL space otherwise.
+  const filtered = Boolean(date || league);
+  return {
+    title: `${t("today")} | MFM Sport`,
+    alternates: { canonical: `/${locale}/matches` },
+    ...(filtered ? { robots: { index: false, follow: false } } : {}),
+  };
 }
 
 export default async function MatchesPage({ params, searchParams }: Props) {

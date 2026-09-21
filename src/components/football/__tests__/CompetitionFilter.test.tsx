@@ -71,3 +71,21 @@ describe("CompetitionFilter", () => {
     expect(links[1]).toHaveAttribute("href", "/en/matches?date=2026-05-04&league=200");
   });
 });
+
+describe("CompetitionFilter crawl safety", () => {
+  it("marks every filter link nofollow", () => {
+    const { container } = render(
+      <CompetitionFilter
+        competitions={[{ id: 1, name: "Botola", apiFootballId: 200 }]}
+        selectedLeague={null}
+        date="2026-09-21"
+        basePath="/en/matches"
+        allLabel="All"
+        locale="en"
+      />,
+    );
+    const links = container.querySelectorAll("a");
+    expect(links.length).toBe(2);
+    links.forEach((a) => expect(a.getAttribute("rel")).toBe("nofollow"));
+  });
+});

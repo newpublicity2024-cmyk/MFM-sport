@@ -12,6 +12,14 @@ import { SITE_URL } from "@/lib/seo/siteUrl";
  * deliberately NOT listed — GA4 already shows an "AI Assistant" channel.
  */
 const SCRAPER_AGENTS = [
+  // Meta's AI-training crawler (not facebookexternalhit, which builds link
+  // previews and stays allowed). On 21 September 2026 it made 50,632 requests
+  // to /ar/matches?date=…&league=… in eleven hours — every one a function
+  // invocation — and tripped Vercel's edge-request and invocation alerts.
+  "meta-externalagent",
+  // Anthropic's training crawler (Claude-User / Claude-SearchBot, which fetch
+  // on a reader's behalf, are different agents and stay allowed).
+  "ClaudeBot",
   "AhrefsBot",
   "SemrushBot",
   "DotBot",
@@ -30,7 +38,11 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin/", "/api/", "/_next/"],
+        // The matches page's ?date= / ?league= links form an unbounded URL
+        // space (every day links to seven more days, times every league);
+        // crawlers walk it forever and each hit is a dynamic render. The
+        // page itself stays crawlable; its filtered variants do not.
+        disallow: ["/admin/", "/api/", "/_next/", "/*?date=", "/*?league=", "/*&league="],
       },
       {
         userAgent: SCRAPER_AGENTS,
