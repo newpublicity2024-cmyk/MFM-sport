@@ -123,6 +123,35 @@ rule `bot_name = meta-externalagent → challenge`.
 
 ---
 
+## Session state — Google result identity (21 September 2026)
+
+Owner's screenshot `reports/search-result-metadata.png`: Google showed the
+OLD WordPress title ("MFM Sport - Tout le sport, rien que le sport"), a WP
+shortcode `[mfm_sport_football_matches_program]` in the snippet, "Mfmsport"
+as the site name, and the retired "Moroccan Football News Portal" under a
+match-page sitelink. **None of those strings exist in the code or the DB**
+(grepped src/messages and every table) — they are Google's fallbacks and
+stale cache for a site that declared no identity: there was no JSON-LD
+anywhere and no `og:site_name`.
+
+Branch `feat/search-identity`: `src/lib/seo/siteIdentity.ts` — homepage
+`<title>` = `إم إف إم سبور - إم إف إم في قلب الحدث. أخبار الرياضة أولاً بأول.`
+(owner's slogan, no Latin letters); homepage JSON-LD with `WebSite`
+(name `إم إف إم سبور`, alternateName `MFM Sport`), `NewsMediaOrganization`
+(logo `/images/mfm-sport-logo.png` 887², slogan, `sameAs` socials) and a
+`SiteNavigationElement` list of the four sections; `og:site_name` on every
+page; and a distinct Arabic `description` on `/articles`, `/competition`,
+`/matches`, `/videos` (the text under a sitelink).
+
+**Sitelinks are Google's choice, not ours** — Google dropped the demotion
+tool in 2016. The owner wants the four sitelinks to be the four sections
+(الأخبار، المسابقات، المباريات، الفيديو) instead of an article and a match:
+the levers above (nav list in structured data, strong section
+descriptions, match pages `noindex` unless whitelisted) are what exists;
+expect Google to take days to weeks to re-render the result.
+
+---
+
 ## Session state — performance remediation from the Vercel reports
 
 **Updated: 17 September 2026 — PR #62 merged (`833389c`) and DEPLOYED; every

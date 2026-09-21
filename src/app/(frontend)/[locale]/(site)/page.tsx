@@ -30,6 +30,7 @@ import { NewsletterStrip } from "@/components/newsletter/NewsletterStrip";
 import { AdCarousel } from "@/components/ads/AdCarousel";
 import { getAds } from "@/lib/payload/ads";
 import { toHeroSlide, toLeagueCard } from "@/lib/home/cards";
+import { HOME_TITLE_AR, SITE_NAME, homeJsonLd } from "@/lib/seo/siteIdentity";
 
 // Articles in the latest-news list. The desktop carousel pages through these
 // 4 at a time; the mobile slider swipes through them all. A chip's list is
@@ -56,14 +57,18 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
+  // Arabic is the only served locale (see Conventions); the fr/en variants
+  // exist for the stored translations only and never reach a crawler.
+  const title =
+    locale === "ar"
+      ? HOME_TITLE_AR
+      : locale === "fr"
+        ? "MFM Sport - Actualites du football marocain"
+        : "MFM Sport - Moroccan Football News";
   return {
     alternates: { canonical: `/${locale}` },
-    title:
-      locale === "ar"
-        ? "MFM Sport - أخبار الكرة المغربية"
-        : locale === "fr"
-          ? "MFM Sport - Actualites du football marocain"
-          : "MFM Sport - Moroccan Football News",
+    title,
+    openGraph: { title, siteName: SITE_NAME, url: `/${locale}`, type: "website", locale: "ar_MA" },
   };
 }
 
@@ -180,7 +185,13 @@ export default async function HomePage({ params }: Props) {
     // No top padding: the OCP banner is intentionally flush under the header so the
     // page drops down by exactly the banner's height.
     <div className="space-y-6 pb-6">
-      <h1 className="sr-only">MFM Sport</h1>
+      <h1 className="sr-only">{HOME_TITLE_AR}</h1>
+      {/* Site name, logo, slogan and main sections for search engines — the
+          homepage is the one place Google reads site-level identity from. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd()) }}
+      />
 
       {/* Top ad — full section width, above the hero + leagues carousel. */}
       <div className="container">

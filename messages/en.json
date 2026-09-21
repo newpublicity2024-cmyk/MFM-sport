@@ -67,7 +67,8 @@
     "shareArticle": "Share Article",
     "videoArticle": "Video Article",
     "allArticles": "All Articles",
-    "noArticles": "No articles found"
+    "noArticles": "No articles found",
+    "listingDescription": "All Moroccan and world football news on MFM Sport: Botola Pro, the national team, Moroccan clubs, transfers and analysis, as it happens."
   },
   "author": {
     "articles": "Articles",
@@ -119,7 +120,8 @@
     "shotsOnTarget": "On Target",
     "corners": "Corners",
     "fouls": "Fouls",
-    "offsides": "Offsides"
+    "offsides": "Offsides",
+    "listingDescription": "Today’s matches live: minute-by-minute scores, line-ups, goals and the coming days’ fixtures across the Botola, African and European competitions."
   },
   "competition": {
     "standings": "Standings",
@@ -144,7 +146,8 @@
     "days": "d",
     "hours": "h",
     "minutes": "m",
-    "seconds": "s"
+    "seconds": "s",
+    "listingDescription": "Botola Pro, CAF Champions League, AFCON and Europe’s big leagues: standings, results, fixtures and news for every competition."
   },
   "club": {
     "info": "Info",
@@ -155,7 +158,8 @@
   },
   "videos": {
     "title": "Videos",
-    "noVideos": "No videos found"
+    "noVideos": "No videos found",
+    "listingDescription": "The latest MFM Sport videos: interviews, analysis and footage from Moroccan stadiums, from the MFM Sport YouTube channel."
   },
   "pages": {
     "about": "About",
