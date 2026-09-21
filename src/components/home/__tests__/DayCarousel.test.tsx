@@ -84,4 +84,27 @@ describe("DayCarousel", () => {
     expect(start.className).not.toMatch(/\babsolute\b/);
     expect(strip.className).not.toMatch(/px-9/);
   });
+
+  it("never calls scrollIntoView (it can scroll the page); centres the pill by scrolling the strip only", () => {
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { value: scrollIntoView, configurable: true });
+    const scrollBy = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollBy", { value: scrollBy, configurable: true });
+    const { container, rerender } = render(
+      <DayCarousel selected={TODAY} today={TODAY} onSelect={() => {}} locale="ar" dateLabel="التاريخ" label="days" />,
+    );
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    // The horizontal centring is a scrollBy on the strip element itself.
+    const strip = container.querySelector("[data-day-carousel]") as HTMLElement;
+    expect(scrollBy).toHaveBeenCalled();
+    expect(scrollBy.mock.instances[0]).toBe(strip);
+    expect(scrollBy.mock.calls[0]![0]).not.toHaveProperty("top");
+    // First run is instant (no visible jump on load); later selections animate.
+    expect(scrollBy.mock.calls[0]![0]).toMatchObject({ behavior: "auto" });
+    rerender(
+      <DayCarousel selected="2026-09-20" today={TODAY} onSelect={() => {}} locale="ar" dateLabel="التاريخ" label="days" />,
+    );
+    expect(scrollBy.mock.calls.at(-1)![0]).toMatchObject({ behavior: "smooth" });
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
 });
