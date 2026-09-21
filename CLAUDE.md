@@ -154,8 +154,11 @@ expect Google to take days to weeks to re-render the result.
 
 ## Session state — match page pre-match blocks (21 September 2026)
 
-Branch `feat/match-prematch-blocks` off `main` (after PR #73), **not pushed,
-not deployed** when this was written. Owner brought Kooora's pre-match page
+Branch `feat/match-prematch-blocks` off `main` (after PR #73), pushed as a
+PR on 21 September 2026 under the owner's "merge on green" instruction; the
+served-bytes checks below were run on the Vercel preview before the merge and
+again on production after it — results are in that PR's comments, which are
+the record. Owner brought Kooora's pre-match page
 (`reports/kooora.png`, `reports/kooora2.png`) and an external study; the study
 was checked against the repo first — its architecture (404 gate, cron +
 `revalidateTag` pipeline, FR/EN pages, a team-name table, "throw in the page
