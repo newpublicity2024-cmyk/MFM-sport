@@ -21,6 +21,11 @@ describe("StandingsExcerpt", () => {
     expect(container.querySelectorAll("tr[data-rank]")).toHaveLength(6);
     expect(container.querySelectorAll("tr[aria-current='true']")).toHaveLength(2);
     expect(container.querySelector("caption")).toHaveTextContent("ترتيب البطولة الاحترافية");
+    // The visible title is a heading ABOVE the table, not the caption under it.
+    const heading = container.querySelector("h2")!;
+    expect(heading).toHaveTextContent("ترتيب البطولة الاحترافية");
+    expect(heading.compareDocumentPosition(container.querySelector("table")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(container.querySelector("caption")!.className).toContain("sr-only");
     expect(container.querySelectorAll("th[scope='col']").length).toBeGreaterThanOrEqual(10);
     expect(container.querySelector("[data-block='standings']")).not.toBeNull();
   });
@@ -70,6 +75,6 @@ describe("StandingsExcerpt", () => {
     for (const el of container.querySelectorAll("[class]")) {
       expect(el.className, el.outerHTML.slice(0, 80)).not.toMatch(PHYSICAL_DIRECTION);
     }
-    expect(container.querySelector("caption")!.className).toContain("text-start");
+    expect(container.querySelector("caption")!.className).toContain("sr-only");
   });
 });

@@ -4,12 +4,12 @@ import { makeFixture, makeRow } from "./fixtures";
 
 const getStandingsGroups = vi.fn();
 const getCompetitionByApiFootballId = vi.fn();
-const getFixturesByTeam = vi.fn();
+const getTeamRecentFixtures = vi.fn();
 const getHeadToHead = vi.fn();
 
 vi.mock("@/lib/api-football/standings", () => ({ getStandingsGroups: (...a: unknown[]) => getStandingsGroups(...a) }));
 vi.mock("@/lib/payload/queries", () => ({ getCompetitionByApiFootballId: (...a: unknown[]) => getCompetitionByApiFootballId(...a) }));
-vi.mock("@/lib/api-football/fixtures", () => ({ getFixturesByTeam: (...a: unknown[]) => getFixturesByTeam(...a) }));
+vi.mock("@/lib/api-football/fixtures", () => ({ getTeamRecentFixtures: (...a: unknown[]) => getTeamRecentFixtures(...a) }));
 vi.mock("@/lib/api-football/headToHead", () => ({ getHeadToHead: (...a: unknown[]) => getHeadToHead(...a) }));
 
 import { StandingsExcerptBlock } from "@/components/football/blocks/StandingsExcerptBlock";
@@ -26,8 +26,8 @@ const standingsLabels = {
   team: "الفريق", played: "لعب", won: "فوز", drawn: "تعادل", lost: "خسارة",
   goalsFor: "له", goalsAgainst: "عليه", goalDiff: "الفارق", points: "نقاط", form: "آخر 5",
 };
-const resultLabels = { win: "فوز", draw: "تعادل", loss: "خسارة" };
-const resultsLabels = { ...resultLabels, title: "آخر النتائج", scoredIn: "سجّل في", over25: "أكثر من 2.5", bothScored: "كلاهما سجّل" };
+const resultLabels = { win: "فوز", draw: "تعادل", loss: "خسارة", atHome: "مستضيف", away: "خارج الديار" };
+const resultsLabels = { ...resultLabels, title: "آخر النتائج", scoredIn: "سجّل في", over25: "أكثر من 2.5", bothScored: "كلاهما سجّل", noResults: "لا توجد نتائج سابقة" };
 const h2hLabels = { ...resultLabels, title: "المواجهات", wins: "انتصارات", draws: "تعادلات", goals: "أهداف" };
 
 async function renderBlock(el: Promise<React.ReactElement | null>) {
@@ -86,17 +86,18 @@ describe("RecentResultsBlock", () => {
       makeFixture({ id: 5, homeId: teamId, awayId: 7, home: 3, away: 0, ts: 5 }),
       makeFixture({ id: 7, homeId: teamId, awayId: 8, home: null, away: null, status: "PST", ts: 7 }),
     ];
-    getFixturesByTeam.mockImplementation((teamId: number) => Promise.resolve(played(teamId)));
+    getTeamRecentFixtures.mockImplementation((teamId: number) => Promise.resolve(played(teamId)));
     const { container } = await renderBlock(RecentResultsBlock({ fixture, locale: "ar", labels: resultsLabels }));
     const home = container.querySelector("[data-form-column='home']")!;
     const hrefs = [...home.querySelectorAll("a")].map((a) => a.getAttribute("href"));
     expect(hrefs).toEqual(["/ar/matches/6", "/ar/matches/5", "/ar/matches/4", "/ar/matches/3", "/ar/matches/2"]);
-    expect(getFixturesByTeam).toHaveBeenCalledWith(WAC, 2026, { last: 6 });
-    expect(getFixturesByTeam).toHaveBeenCalledWith(RCA, 2026, { last: 6 });
+    // Cross-season read: no season argument, so early-season form is not empty.
+    expect(getTeamRecentFixtures).toHaveBeenCalledWith(WAC, 6);
+    expect(getTeamRecentFixtures).toHaveBeenCalledWith(RCA, 6);
   });
 
   it("renders nothing when upstream throws", async () => {
-    getFixturesByTeam.mockRejectedValue(new Error("timeout"));
+    getTeamRecentFixtures.mockRejectedValue(new Error("timeout"));
     const { container } = await renderBlock(RecentResultsBlock({ fixture, locale: "ar", labels: resultsLabels }));
     expect(container.innerHTML).toBe("");
   });

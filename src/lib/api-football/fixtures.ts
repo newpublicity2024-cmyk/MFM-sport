@@ -110,6 +110,22 @@ export const getFixturesByTeam = cache(
   },
 );
 
+/**
+ * A team's last `last` played fixtures regardless of season — the form a
+ * match page shows. Season-bound reads (`getFixturesByTeam`) go empty for
+ * the first weeks of a campaign; API-Football's `team` + `last` without a
+ * season keeps counting back into the previous one.
+ */
+export const getTeamRecentFixtures = cache(
+  (teamId: number, last: number): Promise<ApiFixture[]> =>
+    fixturesCached(
+      `tm:${teamId}:last:${last}`,
+      { ttlSeconds: 900, staleSeconds: 1800 },
+      60,
+      { team: teamId, last },
+    ),
+);
+
 export const getLiveFixtures = cache(
   (): Promise<ApiFixture[]> =>
     fixturesCached("live:all", { ttlSeconds: 30 }, 30, { live: "all" }),

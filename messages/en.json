@@ -163,7 +163,17 @@
       "abandoned": "Abandoned",
       "awarded": "Awarded",
       "walkover": "Walkover"
-    }
+    },
+    "atHome": "Home",
+    "away": "Away",
+    "noResults": "No previous results",
+    "pollTitle": "Who will win?",
+    "pollVote": "Pick your prediction",
+    "pollThanks": "Thanks — your prediction is in",
+    "pollClosed": "Voting closed at kick-off",
+    "pollVotes": "votes",
+    "pollError": "Could not record your vote, try again",
+    "pollDraw": "Draw"
   },
   "competition": {
     "standings": "Standings",

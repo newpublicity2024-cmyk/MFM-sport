@@ -118,3 +118,19 @@ describe("league dictionary coverage", () => {
     }
   });
 });
+
+describe("localizeLeague — competitions the match page shows in recent form", () => {
+  it("names friendlies in Arabic instead of transliterating the API label", () => {
+    expect(localizeLeague(667, "Friendlies Clubs", "ar")).toBe("مباراة ودية");
+    expect(localizeLeague(10, "Friendlies", "ar")).toBe("مباراة ودية دولية");
+    expect(localizeLeague(667, "Friendlies Clubs", "ar")).not.toContain("فريندليس");
+  });
+
+  it("covers every competition the indexation whitelist names", () => {
+    for (const [id, latin] of [[201, "Botola Pro 2"], [202, "Coupe du Trône"], [4, "Euro Championship"], [5, "UEFA Nations League"], [29, "World Cup - Qualification Africa"]] as const) {
+      const ar = localizeLeague(id, latin, "ar");
+      expect(ar, latin).not.toMatch(/[A-Za-z]/);
+      expect(ar, latin).not.toBe(localizeLeague(999999, latin, "ar")); // not the transliteration fallback
+    }
+  });
+});

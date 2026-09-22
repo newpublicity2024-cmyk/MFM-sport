@@ -1,5 +1,5 @@
 import type { ApiFixture } from "@/lib/api-football/types";
-import { getFixturesByTeam } from "@/lib/api-football/fixtures";
+import { getTeamRecentFixtures } from "@/lib/api-football/fixtures";
 import { hasFinalScore } from "@/lib/api-football/status";
 import { RecentResults, type RecentResultsLabels } from "../RecentResults";
 
@@ -12,20 +12,19 @@ type Props = {
 export const FORM_LENGTH = 5;
 
 /**
- * Each team's last five played matches in the fixture's season, every
- * competition included (a cup run is form too), newest first. Early in a
- * season a team may have fewer than five; the column shows what exists and
- * the stats' denominator follows. Upstream trouble → null, not a failed page.
+ * Each team's last five played matches across seasons, every competition
+ * included (a cup run is form too), newest first. Not bound to the fixture's
+ * season: in the first weeks of a campaign that read came back empty and the
+ * column showed 0/0. Upstream trouble → null, not a failed page.
  */
 async function load(fixture: ApiFixture): Promise<{ home: ApiFixture[]; away: ApiFixture[] } | null> {
   try {
-    const { season } = fixture.league;
     const { home, away } = fixture.teams;
     // One more than shown: once this fixture is played it is among the team's
     // last matches and is dropped below, and the column should still show five.
     const [homeForm, awayForm] = await Promise.all([
-      getFixturesByTeam(home.id, season, { last: FORM_LENGTH + 1 }),
-      getFixturesByTeam(away.id, season, { last: FORM_LENGTH + 1 }),
+      getTeamRecentFixtures(home.id, FORM_LENGTH + 1),
+      getTeamRecentFixtures(away.id, FORM_LENGTH + 1),
     ]);
     const played = (list: ApiFixture[]) =>
       list

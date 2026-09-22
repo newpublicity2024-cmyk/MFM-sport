@@ -163,7 +163,17 @@
       "abandoned": "Arrêté",
       "awarded": "Résultat administratif",
       "walkover": "Forfait"
-    }
+    },
+    "atHome": "Domicile",
+    "away": "Extérieur",
+    "noResults": "Aucun résultat précédent",
+    "pollTitle": "Qui va gagner ?",
+    "pollVote": "Faites votre pronostic",
+    "pollThanks": "Merci, votre pronostic est enregistré",
+    "pollClosed": "Vote clos au coup d'envoi",
+    "pollVotes": "votes",
+    "pollError": "Vote non enregistré, réessayez",
+    "pollDraw": "Nul"
   },
   "competition": {
     "standings": "Classement",

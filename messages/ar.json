@@ -163,7 +163,17 @@
       "abandoned": "أُوقفت",
       "awarded": "نتيجة إدارية",
       "walkover": "نتيجة إدارية"
-    }
+    },
+    "atHome": "مستضيف",
+    "away": "خارج الديار",
+    "noResults": "لا توجد نتائج سابقة",
+    "pollTitle": "من سيفوز؟",
+    "pollVote": "اختر توقّعك",
+    "pollThanks": "شكرًا، تم تسجيل توقّعك",
+    "pollClosed": "أُغلق التصويت عند انطلاق المباراة",
+    "pollVotes": "صوت",
+    "pollError": "تعذّر تسجيل التصويت، حاول مرة أخرى",
+    "pollDraw": "تعادل"
   },
   "competition": {
     "standings": "الترتيب",

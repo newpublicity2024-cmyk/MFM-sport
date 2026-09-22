@@ -94,4 +94,12 @@ describe("standingsExcerpt", () => {
   it("is null for a cup with no table", () => {
     expect(standingsExcerpt([], 1, 2)).toBeNull();
   });
+
+  it("is null before the season starts, when every row is at zero", () => {
+    const untouched = table(16).map((r) => ({ ...r, points: 0, goalsDiff: 0, all: { ...r.all, played: 0 } }));
+    expect(standingsExcerpt([untouched], 100, 700)).toBeNull();
+    // One played match anywhere in the group is enough to show it.
+    untouched[3] = { ...untouched[3]!, all: { ...untouched[3]!.all, played: 1 } };
+    expect(standingsExcerpt([untouched], 100, 700)).not.toBeNull();
+  });
 });

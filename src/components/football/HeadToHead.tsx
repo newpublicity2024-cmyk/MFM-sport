@@ -23,8 +23,9 @@ type Props = {
  * The last meetings between the two teams: per-team win/draw/win counters,
  * the list, and a split bar of aggregate goals. Counters are per team, not
  * per home/away side, and they are computed from the rows rendered below
- * them. Team A (the fixture's home side) comes first in the DOM, so it sits
- * on the right under dir="rtl" like everywhere else on the page.
+ * them. Team A (the fixture's home side) comes first in the DOM and in every
+ * row, so it sits on the right under dir="rtl" like everywhere else on the
+ * page; a venue tag says who hosted each meeting.
  */
 export function HeadToHead({ fixtures, teamA, teamB, locale, labels }: Props) {
   if (fixtures.length === 0) return null;
@@ -73,7 +74,7 @@ export function HeadToHead({ fixtures, teamA, teamB, locale, labels }: Props) {
             fixture={fx}
             locale={locale}
             labels={labels}
-            showCompetition
+            fixedFirstTeamId={teamA.id}
             liProps={{ "data-h2h-row": "" } as React.LiHTMLAttributes<HTMLLIElement>}
           />
         ))}
@@ -89,7 +90,7 @@ export function HeadToHead({ fixtures, teamA, teamB, locale, labels }: Props) {
           <span>{s.goalsA}</span>
           <div className="flex-1 flex h-2 rounded-full overflow-hidden bg-secondary">
             <span className="bg-primary h-full" style={{ width: `${shareA}%` }} />
-            <span className="bg-live h-full" style={{ width: `${100 - shareA}%` }} />
+            <span className="bg-foreground/25 h-full" style={{ width: `${100 - shareA}%` }} />
           </div>
           <span>{s.goalsB}</span>
         </div>

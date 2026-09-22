@@ -1,52 +1,95 @@
+import Image from "next/image";
 import Link from "next/link";
 import { cn, formatDate } from "@/lib/utils";
 import type { ApiFixture } from "@/lib/api-football/types";
 import { localizeLeague, localizeTeam } from "@/lib/api-football/localize";
 import { isIndexableFixture } from "@/lib/seo/matchIndexing";
-import { resultFor, type Result } from "@/lib/football/formStats";
+import { goalsFor, resultFor, type Result } from "@/lib/football/formStats";
 
-export type ResultLabels = { win: string; draw: string; loss: string };
+export type ResultLabels = {
+  win: string;
+  draw: string;
+  loss: string;
+  /** "at home" / "away" markers next to a team. */
+  atHome: string;
+  away: string;
+};
 
 const RESULT_LETTER: Record<Result, string> = { W: "ف", D: "ت", L: "خ" };
 
 type Props = {
   fixture: ApiFixture;
-  /** Whose result badge to show; omitted for a neutral head-to-head row. */
-  perspectiveTeamId?: number;
   locale: string;
   labels: ResultLabels;
-  showCompetition?: boolean;
+  /**
+   * The team the row is told from. Recent results: that team is the column's
+   * heading, so the row shows only the venue marker, the opponent and the
+   * score oriented team–opponent. Head-to-head: `fixedFirstTeamId`.
+   */
+  perspectiveTeamId?: number;
+  /** Head-to-head: this team always sits in the first slot, the other in the second. */
+  fixedFirstTeamId?: number;
   /** Attributes for the <li>, e.g. a data marker the served-bytes checks count. */
   liProps?: React.LiHTMLAttributes<HTMLLIElement>;
 };
 
-/**
- * One past match: date, home – score – away, a lettered result badge and,
- * optionally, the competition. Links to the match page ONLY when that page
- * is indexable: a link into a noindex fixture is a crawl path into a page we
- * have asked Google to ignore, the same shape as the /matches trap.
- */
-export function ResultRow({ fixture, perspectiveTeamId, locale, labels, showCompetition = false, liProps }: Props) {
-  const { home, away } = fixture.teams;
-  const result = perspectiveTeamId != null ? resultFor(fixture, perspectiveTeamId) : null;
-  const linkable = isIndexableFixture(fixture);
-  const homeName = localizeTeam(home.id, home.name, locale);
-  const awayName = localizeTeam(away.id, away.name, locale);
-  const isPerspective = (id: number) => id === perspectiveTeamId;
+function VenueTag({ home, labels }: { home: boolean; labels: ResultLabels }) {
+  return (
+    <span
+      data-venue={home ? "home" : "away"}
+      className={cn(
+        "shrink-0 rounded px-1 text-[10px] leading-4",
+        home ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground",
+      )}
+    >
+      {home ? labels.atHome : labels.away}
+    </span>
+  );
+}
 
-  const body = (
-    <>
-      <span className="text-xs text-muted-foreground tabular-nums shrink-0 w-24">
-        {formatDate(fixture.fixture.date, locale)}
-      </span>
-      <span className="flex-1 min-w-0 flex items-center justify-center gap-2 text-sm">
-        <span className={cn("truncate text-end flex-1", isPerspective(home.id) && "font-bold")}>{homeName}</span>
-        <span className="tabular-nums font-bold shrink-0 rounded bg-secondary px-1.5">
-          {fixture.goals.home ?? "-"} - {fixture.goals.away ?? "-"}
+function Score({ first, second }: { first: number | null; second: number | null }) {
+  return (
+    <span className="tabular-nums font-bold shrink-0 rounded bg-secondary px-1.5" data-score={`${first ?? "-"}-${second ?? "-"}`}>
+      {first ?? "-"} - {second ?? "-"}
+    </span>
+  );
+}
+
+/**
+ * One past match. Every row keeps the same shape, whatever side each team
+ * played on — a reader scanning a column should never have to work out
+ * which name is "ours" on this line. Links to the match page ONLY when that
+ * page is indexable: a link into a noindex fixture is a crawl path into a page
+ * we have asked Google to ignore, the same shape as the /matches trap.
+ */
+export function ResultRow({ fixture, locale, labels, perspectiveTeamId, fixedFirstTeamId, liProps }: Props) {
+  const { home, away } = fixture.teams;
+  const linkable = isIndexableFixture(fixture);
+  const name = (team: typeof home) => localizeTeam(team.id, team.name, locale);
+  const crest = (team: typeof home) => (
+    <Image src={team.logo} alt="" width={18} height={18} className="shrink-0" />
+  );
+
+  let middle: React.ReactNode;
+  let badge: React.ReactNode = null;
+
+  if (perspectiveTeamId != null) {
+    const isHome = home.id === perspectiveTeamId;
+    const opponent = isHome ? away : home;
+    const g = goalsFor(fixture, perspectiveTeamId);
+    const result = resultFor(fixture, perspectiveTeamId);
+    middle = (
+      <>
+        <VenueTag home={isHome} labels={labels} />
+        <Score first={g?.scored ?? null} second={g?.conceded ?? null} />
+        <span className="flex items-center gap-1.5 min-w-0 flex-1" data-opponent={opponent.id}>
+          {crest(opponent)}
+          <span className="truncate text-sm">{name(opponent)}</span>
         </span>
-        <span className={cn("truncate text-start flex-1", isPerspective(away.id) && "font-bold")}>{awayName}</span>
-      </span>
-      {result && (
+      </>
+    );
+    if (result) {
+      badge = (
         <span
           data-result={result}
           aria-label={result === "W" ? labels.win : result === "D" ? labels.draw : labels.loss}
@@ -59,11 +102,41 @@ export function ResultRow({ fixture, perspectiveTeamId, locale, labels, showComp
         >
           <span aria-hidden="true">{RESULT_LETTER[result]}</span>
         </span>
-      )}
+      );
+    }
+  } else {
+    const firstIsHome = fixedFirstTeamId == null || home.id === fixedFirstTeamId;
+    const first = firstIsHome ? home : away;
+    const second = firstIsHome ? away : home;
+    const goalsFirst = firstIsHome ? fixture.goals.home : fixture.goals.away;
+    const goalsSecond = firstIsHome ? fixture.goals.away : fixture.goals.home;
+    middle = (
+      <>
+        <span className="flex items-center justify-end gap-1.5 min-w-0 flex-1" data-slot="first">
+          <span className="truncate text-sm">{name(first)}</span>
+          {firstIsHome && <VenueTag home labels={labels} />}
+        </span>
+        <Score first={goalsFirst} second={goalsSecond} />
+        <span className="flex items-center gap-1.5 min-w-0 flex-1" data-slot="second">
+          {!firstIsHome && <VenueTag home labels={labels} />}
+          <span className="truncate text-sm">{name(second)}</span>
+        </span>
+      </>
+    );
+  }
+
+  const body = (
+    <>
+      <span className="flex flex-col shrink-0 w-24 text-xs text-muted-foreground leading-tight">
+        <span className="tabular-nums">{formatDate(fixture.fixture.date, locale)}</span>
+        <span className="text-[10px] truncate">{localizeLeague(fixture.league.id, fixture.league.name, locale)}</span>
+      </span>
+      {middle}
+      {badge}
     </>
   );
 
-  const className = "flex items-center gap-3 py-2 border-b border-border last:border-b-0";
+  const className = "flex items-center gap-2 py-2 border-b border-border last:border-b-0";
   return (
     <li {...liProps}>
       {linkable ? (
@@ -73,11 +146,6 @@ export function ResultRow({ fixture, perspectiveTeamId, locale, labels, showComp
       ) : (
         <div className={className} data-unlinked-fixture={fixture.fixture.id}>
           {body}
-        </div>
-      )}
-      {showCompetition && (
-        <div className="text-[11px] text-muted-foreground -mt-1 pb-1 ps-24">
-          {localizeLeague(fixture.league.id, fixture.league.name, locale)}
         </div>
       )}
     </li>
