@@ -152,6 +152,63 @@ expect Google to take days to weeks to re-render the result.
 
 ---
 
+## Session state — match page round two: poll + screenshot fixes (22 September 2026)
+
+Branch `feat/match-poll-and-polish`, PR #76. Owner reviewed the deployed page
+(`reports/matches-page`) and asked for the defects to be fixed and a reader
+prediction added.
+
+### The Upstash database is GONE — and that explains three things
+
+Vercel's store record for `upstash-kv-chestnut-envelope`
+(`store_qE2hTEEpZjXlTBTA`) reads **`status: uninstalled`**, with the
+notification *"Archived due to inactivity"*; a preview function resolving it
+gets `getaddrinfo ENOTFOUND possible-seasnail-120719.upstash.io`. So:
+
+1. `hasUpstash()` never matched Vercel's `KV_REST_API_*` names (PR #75), **and**
+2. even with the names fixed there was nothing at the other end, so
+3. the API-Football cache and the newsletter rate limiter have been inert —
+   which is presumably why the database went inactive in the first place.
+
+Consequence for this work: the poll stores votes in **Postgres**, not Redis.
+Restoring Upstash is still worth doing for the cache (owner task), but no
+feature should depend on it until it answers.
+
+### What changed
+
+| Area | Change |
+|---|---|
+| Winner poll | `WinnerPoll` island + `GET/POST /api/matches/[id]/poll`. One vote per visitor: first-party httpOnly cookie → `voter_id`, `INSERT … ON CONFLICT (fixture_id, voter_id) DO NOTHING RETURNING choice` (the primary key is the referee; an empty return means "already voted", and no count moves). Voting closes at kick-off **on the server** (`isVotingOpen`); the disabled buttons only mirror it. POST, never a link — a crawler follows links, so `?vote=home` would vote and mint URLs. Counts never enter the server HTML, so the page stays ISR-cacheable and a vote invalidates nothing. Rate-limited per IP. No IP stored (Law 09-08). |
+| Scoreboard | Was scheduled/live/finished only, so a **postponed match rendered as `0 - 0` labelled "نهاية المباراة"** with "مؤجلة" floating under the card. Now phase-aware (`describeStatus`): no score unless the match was played, status inside the card, TBD shows its label instead of `00:00`, and the duplicated date/venue footer is gone (the details card carries them). |
+| Standings excerpt | The title rendered **under** the table — `ui/table` is `caption-bottom`. Now a `SectionHeader` above the table carrying the full-standings link; the `<caption>` stays `sr-only`. Hidden entirely until someone in the group has played (a pre-season table of zeros says nothing). |
+| Results rows | Rows swapped the team's side line to line and truncated names. `ResultRow` now has one shape: date + competition, venue tag (مستضيف / خارج الديار), score **oriented team–opponent**, opponent, ف/ت/خ badge. The column's own team never appears in its own rows. Head-to-head pins team A to `data-slot="first"` in every row with a host marker. |
+| Form window | Read season-bound, so a team with no fixtures this season showed an empty card with `0/0`. New `getTeamRecentFixtures(teamId, last)` — **no season**, so form reaches back across the boundary; a team with nothing shows one line. |
+| Arabic names | "فريندليس كلوبس" and friends: friendlies (667, 10), Botola 2, Coupe du Trône, Euro, Nations League, WC qualification now in `leagues.ar`. |
+
+### DDL — APPLIED to production (22 September 2026)
+
+`match_poll_votes` (`fixture_id int`, `voter_id uuid`, `choice text` CHECK
+home/draw/away, `created_at timestamptz`, PK `(fixture_id, voter_id)`) plus
+`match_poll_votes_fixture_choice_idx`. Rehearsed on Neon branch
+`br-green-dew-a2j4kjfe` (one vote per visitor enforced, repeat returns zero
+rows, `'win'` rejected by the CHECK, aggregate correct), then applied via
+`complete_database_migration` with the owner's explicit yes. Read back on
+production: 4 columns, 2 indexes, 1 check, 0 rows. **Order was table → deploy**;
+the reverse would have shown a poll that errors on every vote.
+
+Deliberately not a Payload collection: votes are machine-written, never edited
+in the admin, and a collection would push per-vote churn through Payload hooks.
+
+### Verify on the served bytes
+
+```bash
+BASE_URL=<preview-or-prod> node scripts/verify-match-page.mjs served-poll
+# 3 choices in the HTML, NO counts/percentages there, 400 on a junk choice,
+# 409 on a fixture that has kicked off, and the total unchanged by the refusal
+```
+
+---
+
 ## Session state — match page pre-match blocks (21 September 2026)
 
 Branch `feat/match-prematch-blocks` off `main` (after PR #73), pushed as a

@@ -1,44 +1,49 @@
-import { Redis } from "@upstash/redis";
-import { REDIS_COMMAND_TIMEOUT_MS } from "@/lib/cache";
+import { sql } from "@payloadcms/db-postgres/drizzle";
+import { getPayloadClient } from "@/lib/payload/queries";
 
 export const POLL_CHOICES = ["home", "draw", "away"] as const;
 export type PollChoice = (typeof POLL_CHOICES)[number];
 
 export type PollCounts = Record<PollChoice, number>;
 
+export const EMPTY_COUNTS: PollCounts = { home: 0, draw: 0, away: 0 };
+
 export function isPollChoice(value: unknown): value is PollChoice {
   return typeof value === "string" && (POLL_CHOICES as readonly string[]).includes(value);
 }
 
-/** The subset of Redis the poll uses — lets tests inject a fake. */
-export interface PollRedis {
-  hgetall(key: string): Promise<Record<string, unknown> | null>;
-  hincrby(key: string, field: string, increment: number): Promise<number>;
-  get(key: string): Promise<unknown>;
-  set(key: string, value: unknown, opts?: { ex?: number; nx?: boolean }): Promise<unknown>;
-}
-
-const PREFIX = "poll:";
 /**
- * Votes outlive the match by a season: a finished match keeps showing what
- * people expected, and the key set stays bounded without a sweeper.
+ * Votes live in Postgres, next to everything else this site owns.
+ *
+ * The obvious home was the Upstash Redis the codebase already imports — but
+ * that database was archived by Upstash for inactivity (Vercel's store record
+ * says `uninstalled`; the function gets ENOTFOUND for its hostname), which is
+ * also why the API-Football cache and the newsletter rate limiter have had
+ * nothing to talk to. A poll is durable state the owner wants to keep, so it
+ * goes in the database that is actually running.
+ *
+ * Table `match_poll_votes` (hand-applied DDL, see CLAUDE.md): one row per
+ * (fixture_id, voter_id), CHECK on the choice, index on (fixture_id, choice).
+ * It is deliberately NOT a Payload collection: votes are machine-written,
+ * never edited in the admin, and a collection would put ~n rows of churn
+ * through Payload's hooks for nothing.
  */
-const TTL_SECONDS = 180 * 24 * 60 * 60;
 
-export function countsKey(fixtureId: number): string {
-  return `${PREFIX}c:${fixtureId}`;
+type CountRow = { choice: string; n: number };
+type ChoiceRow = { choice: string };
+
+function rowsOf<T>(result: unknown): T[] {
+  // node-postgres hands back a QueryResult ({ rows }); other drivers return
+  // the rows directly. Accept both rather than guess the driver.
+  if (Array.isArray(result)) return result as T[];
+  const rows = (result as { rows?: T[] } | null)?.rows;
+  return rows ?? [];
 }
-export function voterKey(fixtureId: number, voterId: string): string {
-  return `${PREFIX}v:${fixtureId}:${voterId}`;
-}
 
-export const EMPTY_COUNTS: PollCounts = { home: 0, draw: 0, away: 0 };
-
-function toCounts(raw: Record<string, unknown> | null): PollCounts {
+function toCounts(rows: CountRow[]): PollCounts {
   const counts = { ...EMPTY_COUNTS };
-  for (const choice of POLL_CHOICES) {
-    const n = Number(raw?.[choice] ?? 0);
-    counts[choice] = Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  for (const row of rows) {
+    if (isPollChoice(row.choice)) counts[row.choice] = Number(row.n) || 0;
   }
   return counts;
 }
@@ -49,7 +54,7 @@ function toCounts(raw: Record<string, unknown> | null): PollCounts {
  * choices rather than a bar.
  */
 export function toPercentages(counts: PollCounts): PollCounts {
-  const total = POLL_CHOICES.reduce((sum, c) => sum + counts[c], 0);
+  const total = totalVotes(counts);
   if (total === 0) return { ...EMPTY_COUNTS };
   const exact = POLL_CHOICES.map((c) => ({ c, value: (counts[c] * 100) / total }));
   const out = { ...EMPTY_COUNTS };
@@ -71,40 +76,32 @@ export function totalVotes(counts: PollCounts): number {
   return POLL_CHOICES.reduce((sum, c) => sum + counts[c], 0);
 }
 
-let _redis: PollRedis | null | undefined;
-
-/**
- * The poll's Redis client, or null when no store is configured.
- *
- * Accepts Vercel's `KV_REST_API_*` names as well as `UPSTASH_REDIS_REST_*`:
- * this project's Vercel environment exposes the store under the KV names, and
- * a poll that silently accepts no votes is worse than one that is visibly off.
- * Same bounds as lib/cache: one retry, a per-command timeout.
- */
-export function pollRedis(): PollRedis | null {
-  if (_redis !== undefined) return _redis;
-  const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
-  _redis = url && token
-    ? (new Redis({
-        url,
-        token,
-        retry: { retries: 1, backoff: () => 200 },
-        signal: () => AbortSignal.timeout(REDIS_COMMAND_TIMEOUT_MS),
-      }) as unknown as PollRedis)
-    : null;
-  return _redis;
+/** The slice of Payload's drizzle handle this module uses — lets tests inject a fake. */
+export interface PollDb {
+  execute(query: unknown): Promise<unknown>;
 }
 
-/** Test seam. */
-export function __setPollRedis(client: PollRedis | null | undefined): void {
-  _redis = client;
-}
-
-export async function readCounts(fixtureId: number, redis = pollRedis()): Promise<PollCounts | null> {
-  if (!redis) return null;
+async function db(): Promise<PollDb | null> {
   try {
-    return toCounts(await redis.hgetall(countsKey(fixtureId)));
+    const payload = await getPayloadClient();
+    return payload.db.drizzle as unknown as PollDb;
+  } catch (error) {
+    console.error("[poll] no database handle:", error);
+    return null;
+  }
+}
+
+export async function readCounts(fixtureId: number, handle?: PollDb | null): Promise<PollCounts | null> {
+  const conn = handle === undefined ? await db() : handle;
+  if (!conn) return null;
+  try {
+    const result = await conn.execute(sql`
+      SELECT choice, count(*)::int AS n
+      FROM match_poll_votes
+      WHERE fixture_id = ${fixtureId}
+      GROUP BY choice
+    `);
+    return toCounts(rowsOf<CountRow>(result));
   } catch (error) {
     console.error(`[poll] read failed for fixture ${fixtureId}:`, error);
     return null;
@@ -114,12 +111,18 @@ export async function readCounts(fixtureId: number, redis = pollRedis()): Promis
 export async function readVote(
   fixtureId: number,
   voterId: string,
-  redis = pollRedis(),
+  handle?: PollDb | null,
 ): Promise<PollChoice | null> {
-  if (!redis) return null;
+  const conn = handle === undefined ? await db() : handle;
+  if (!conn) return null;
   try {
-    const value = await redis.get(voterKey(fixtureId, voterId));
-    return isPollChoice(value) ? value : null;
+    const result = await conn.execute(sql`
+      SELECT choice FROM match_poll_votes
+      WHERE fixture_id = ${fixtureId} AND voter_id = ${voterId}::uuid
+      LIMIT 1
+    `);
+    const choice = rowsOf<ChoiceRow>(result)[0]?.choice;
+    return isPollChoice(choice) ? choice : null;
   } catch (error) {
     console.error(`[poll] vote read failed for fixture ${fixtureId}:`, error);
     return null;
@@ -131,37 +134,32 @@ export type CastResult =
   | { status: "unavailable" };
 
 /**
- * Record one vote. The voter key is written with NX, so a repeat vote from the
- * same cookie never increments a counter — the returned choice is the one
- * already held. Counters are incremented only after the claim succeeds.
+ * Record one vote.
+ *
+ * `ON CONFLICT DO NOTHING` makes the primary key the referee: a repeat vote
+ * from the same visitor returns no row, so it is reported as the choice they
+ * already hold and no count moves. One statement, no read-then-write race.
  */
 export async function castVote(
   fixtureId: number,
   voterId: string,
   choice: PollChoice,
-  redis = pollRedis(),
+  handle?: PollDb | null,
 ): Promise<CastResult> {
-  if (!redis) return { status: "unavailable" };
+  const conn = handle === undefined ? await db() : handle;
+  if (!conn) return { status: "unavailable" };
   try {
-    const claim = await redis.set(voterKey(fixtureId, voterId), choice, {
-      nx: true,
-      ex: TTL_SECONDS,
-    });
-    const won = claim === "OK" || claim === true;
-    if (!won) {
-      const existing = (await readVote(fixtureId, voterId, redis)) ?? choice;
-      const counts = (await readCounts(fixtureId, redis)) ?? EMPTY_COUNTS;
-      return { status: "already-voted", choice: existing, counts };
-    }
-    await redis.hincrby(countsKey(fixtureId), choice, 1);
-    // Keep the counter hash alive as long as the votes that built it.
-    try {
-      await redis.set(`${PREFIX}t:${fixtureId}`, 1, { ex: TTL_SECONDS });
-    } catch {
-      /* the marker is a nicety, not the vote */
-    }
-    const counts = (await readCounts(fixtureId, redis)) ?? EMPTY_COUNTS;
-    return { status: "recorded", choice, counts };
+    const inserted = await conn.execute(sql`
+      INSERT INTO match_poll_votes (fixture_id, voter_id, choice)
+      VALUES (${fixtureId}, ${voterId}::uuid, ${choice})
+      ON CONFLICT (fixture_id, voter_id) DO NOTHING
+      RETURNING choice
+    `);
+    const recorded = rowsOf<ChoiceRow>(inserted).length > 0;
+    const counts = (await readCounts(fixtureId, conn)) ?? EMPTY_COUNTS;
+    if (recorded) return { status: "recorded", choice, counts };
+    const existing = (await readVote(fixtureId, voterId, conn)) ?? choice;
+    return { status: "already-voted", choice: existing, counts };
   } catch (error) {
     console.error(`[poll] vote failed for fixture ${fixtureId}:`, error);
     return { status: "unavailable" };

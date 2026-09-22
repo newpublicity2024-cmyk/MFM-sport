@@ -62,12 +62,14 @@ function isIndexable(fx, ids) {
 async function get(path, init) {
   // COOKIE: the `_vercel_jwt=…` session from a preview share link, when the
   // deployment sits behind Vercel Authentication.
-  const headers = { "user-agent": "mfm-verify/1.0" };
+  const headers = { "user-agent": "mfm-verify/1.0", ...(init?.headers ?? {}) };
   if (process.env.COOKIE) headers.cookie = process.env.COOKIE;
   const res = await fetch(`${BASE}${path}`, {
     redirect: "manual",
-    headers,
     ...init,
+    // After the spread: a caller's `headers` must not drop the preview session
+    // cookie, or every POST comes back 401 from Vercel Authentication.
+    headers,
   });
   const text = await res.text();
   return { status: res.status, headers: res.headers, text };

@@ -11,6 +11,7 @@ const cookieStore = { get: vi.fn(), set: vi.fn() };
 vi.mock("@/lib/api-football/fixtures", () => ({ getFixtureById: (...a: unknown[]) => getFixtureById(...a) }));
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: (...a: unknown[]) => checkRateLimit(...a) }));
 vi.mock("next/headers", () => ({ cookies: async () => cookieStore }));
+vi.mock("@/lib/payload/queries", () => ({ getPayloadClient: vi.fn() }));
 vi.mock("@/lib/poll/store", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/poll/store")>();
   return {

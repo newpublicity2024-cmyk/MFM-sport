@@ -1,35 +1,66 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+// The store reaches Payload only for its drizzle handle; every test below
+// injects a fake one, so the real config (and its env) is never needed.
+vi.mock("@/lib/payload/queries", () => ({ getPayloadClient: vi.fn() }));
+
 import {
   toPercentages, totalVotes, isPollChoice, castVote, readCounts, readVote,
-  countsKey, voterKey, EMPTY_COUNTS, type PollRedis,
+  EMPTY_COUNTS, type PollDb,
 } from "@/lib/poll/store";
 import { isVotingOpen } from "@/lib/poll/voting";
 import type { ApiFixture } from "@/lib/api-football/types";
 
-function fakeRedis(): PollRedis & { store: Map<string, unknown>; hashes: Map<string, Record<string, number>> } {
-  const store = new Map<string, unknown>();
-  const hashes = new Map<string, Record<string, number>>();
-  return {
-    store,
-    hashes,
-    async hgetall(key) {
-      return hashes.get(key) ?? null;
-    },
-    async hincrby(key, field, by) {
-      const h = hashes.get(key) ?? {};
-      h[field] = (h[field] ?? 0) + by;
-      hashes.set(key, h);
-      return h[field]!;
-    },
-    async get(key) {
-      return store.get(key) ?? null;
-    },
-    async set(key, value, opts) {
-      if (opts?.nx && store.has(key)) return null;
-      store.set(key, value);
-      return "OK";
+/**
+ * A fake `match_poll_votes` that enforces what the real table enforces: the
+ * (fixture_id, voter_id) primary key, and the CHECK on `choice`. The SQL the
+ * store builds is inspected rather than parsed — the statements themselves are
+ * rehearsed against a real Neon branch, which is where the schema is proven.
+ */
+function fakeDb() {
+  const rows: { fixture: number; voter: string; choice: string }[] = [];
+  const db: PollDb & { rows: typeof rows; fail: boolean } = {
+    rows,
+    fail: false,
+    async execute(query: unknown) {
+      if (db.fail) throw new Error("connection terminated");
+      // A drizzle template is an alternating list: {value: [sqlText]} chunks
+      // and raw parameter values.
+      const chunks = (query as { queryChunks: unknown[] }).queryChunks;
+      let text = "";
+      const params: unknown[] = [];
+      for (const chunk of chunks) {
+        const fragment = (chunk as { value?: unknown })?.value;
+        if (Array.isArray(fragment)) text += fragment.join("");
+        else params.push(chunk);
+      }
+
+      if (text.includes("INSERT INTO match_poll_votes")) {
+        const [fixture, voter, choice] = params as [number, string, string];
+        if (!["home", "draw", "away"].includes(choice)) {
+          throw new Error('violates check constraint "match_poll_votes_choice_check"');
+        }
+        if (rows.some((r) => r.fixture === fixture && r.voter === voter)) return { rows: [] };
+        rows.push({ fixture, voter, choice });
+        return { rows: [{ choice }] };
+      }
+      if (text.includes("SELECT choice, count(*)")) {
+        const fixture = params[0] as number;
+        const counts = new Map<string, number>();
+        for (const r of rows.filter((r) => r.fixture === fixture)) {
+          counts.set(r.choice, (counts.get(r.choice) ?? 0) + 1);
+        }
+        return { rows: [...counts].map(([choice, n]) => ({ choice, n })) };
+      }
+      if (text.includes("SELECT choice FROM match_poll_votes")) {
+        const [fixture, voter] = params as [number, string];
+        const row = rows.find((r) => r.fixture === fixture && r.voter === voter);
+        return { rows: row ? [{ choice: row.choice }] : [] };
+      }
+      throw new Error(`unexpected query: ${text.slice(0, 120)}`);
     },
   };
+  return db;
 }
 
 describe("toPercentages", () => {
@@ -67,53 +98,58 @@ describe("isPollChoice", () => {
 
 describe("castVote", () => {
   beforeEach(() => vi.spyOn(console, "error").mockImplementation(() => {}));
+  const A = "11111111-1111-1111-1111-111111111111";
+  const B = "22222222-2222-2222-2222-222222222222";
 
-  it("records one vote and increments only that choice", async () => {
-    const r = fakeRedis();
-    const res = await castVote(1, "voter-a", "home", r);
+  it("records one vote and counts only that choice", async () => {
+    const db = fakeDb();
+    const res = await castVote(1, A, "home", db);
     expect(res).toMatchObject({ status: "recorded", choice: "home", counts: { home: 1, draw: 0, away: 0 } });
-    expect(r.store.get(voterKey(1, "voter-a"))).toBe("home");
-    expect(r.hashes.get(countsKey(1))).toEqual({ home: 1 });
+    expect(db.rows).toHaveLength(1);
   });
 
   it("does not count a second vote from the same visitor, and reports the original choice", async () => {
-    const r = fakeRedis();
-    await castVote(1, "voter-a", "home", r);
-    const again = await castVote(1, "voter-a", "away", r);
+    const db = fakeDb();
+    await castVote(1, A, "home", db);
+    const again = await castVote(1, A, "away", db);
     expect(again).toMatchObject({ status: "already-voted", choice: "home" });
-    expect(await readCounts(1, r)).toEqual({ home: 1, draw: 0, away: 0 });
+    expect(await readCounts(1, db)).toEqual({ home: 1, draw: 0, away: 0 });
+    expect(db.rows).toHaveLength(1);
   });
 
   it("counts different visitors separately and keeps fixtures apart", async () => {
-    const r = fakeRedis();
-    await castVote(1, "a", "home", r);
-    await castVote(1, "b", "draw", r);
-    await castVote(2, "a", "away", r);
-    expect(await readCounts(1, r)).toEqual({ home: 1, draw: 1, away: 0 });
-    expect(await readCounts(2, r)).toEqual({ home: 0, draw: 0, away: 1 });
+    const db = fakeDb();
+    await castVote(1, A, "home", db);
+    await castVote(1, B, "draw", db);
+    await castVote(2, A, "away", db);
+    expect(await readCounts(1, db)).toEqual({ home: 1, draw: 1, away: 0 });
+    expect(await readCounts(2, db)).toEqual({ home: 0, draw: 0, away: 1 });
   });
 
-  it("reports unavailable instead of throwing when there is no store", async () => {
-    expect(await castVote(1, "a", "home", null)).toEqual({ status: "unavailable" });
+  it("reports unavailable instead of throwing when there is no database", async () => {
+    expect(await castVote(1, A, "home", null)).toEqual({ status: "unavailable" });
     expect(await readCounts(1, null)).toBeNull();
-    expect(await readVote(1, "a", null)).toBeNull();
+    expect(await readVote(1, A, null)).toBeNull();
   });
 
-  it("reports unavailable when Redis throws", async () => {
-    const broken: PollRedis = {
-      hgetall: async () => { throw new Error("down"); },
-      hincrby: async () => { throw new Error("down"); },
-      get: async () => { throw new Error("down"); },
-      set: async () => { throw new Error("down"); },
-    };
-    expect(await castVote(1, "a", "home", broken)).toEqual({ status: "unavailable" });
-    expect(await readCounts(1, broken)).toBeNull();
+  it("reports unavailable when the database throws", async () => {
+    const db = fakeDb();
+    db.fail = true;
+    expect(await castVote(1, A, "home", db)).toEqual({ status: "unavailable" });
+    expect(await readCounts(1, db)).toBeNull();
+    expect(await readVote(1, A, db)).toBeNull();
   });
 
-  it("ignores junk stored under a voter key", async () => {
-    const r = fakeRedis();
-    r.store.set(voterKey(9, "a"), "not-a-choice");
-    expect(await readVote(9, "a", r)).toBeNull();
+  it("never writes a choice the table's CHECK would reject", async () => {
+    const db = fakeDb();
+    // The route rejects this first; this proves the store does not smuggle it in.
+    await expect(castVote(1, A, "win" as never, db)).resolves.toEqual({ status: "unavailable" });
+    expect(db.rows).toHaveLength(0);
+  });
+
+  it("reads back nothing for a visitor who has not voted", async () => {
+    const db = fakeDb();
+    expect(await readVote(9, A, db)).toBeNull();
   });
 });
 
