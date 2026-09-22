@@ -88,7 +88,12 @@ export function windowRows(
   return [...top, { gap: true }, ...bottom];
 }
 
-/** The excerpt for a fixture, or null when there is nothing honest to show. */
+/**
+ * The excerpt for a fixture, or null when there is nothing honest to show:
+ * no table, the two teams in different groups, or a table nobody has played
+ * in yet — before round one the API returns every row at zero, and six rows
+ * of zeros tell the reader nothing.
+ */
 export function standingsExcerpt(
   groups: ApiStandingRow[][],
   homeTeamId: number,
@@ -96,6 +101,7 @@ export function standingsExcerpt(
 ): { rows: ExcerptRow[]; group: ApiStandingRow[] } | null {
   const group = pickGroup(groups, homeTeamId, awayTeamId);
   if (!group) return null;
+  if (!group.some((r) => r.all.played > 0)) return null;
   const rankOf = (id: number) => group.find((r) => r.team.id === id)!.rank;
   return { rows: windowRows(group, rankOf(homeTeamId), rankOf(awayTeamId)), group };
 }

@@ -62,12 +62,14 @@ function isIndexable(fx, ids) {
 async function get(path, init) {
   // COOKIE: the `_vercel_jwt=…` session from a preview share link, when the
   // deployment sits behind Vercel Authentication.
-  const headers = { "user-agent": "mfm-verify/1.0" };
+  const headers = { "user-agent": "mfm-verify/1.0", ...(init?.headers ?? {}) };
   if (process.env.COOKIE) headers.cookie = process.env.COOKIE;
   const res = await fetch(`${BASE}${path}`, {
     redirect: "manual",
-    headers,
     ...init,
+    // After the spread: a caller's `headers` must not drop the preview session
+    // cookie, or every POST comes back 401 from Vercel Authentication.
+    headers,
   });
   const text = await res.text();
   return { status: res.status, headers: res.headers, text };
@@ -248,6 +250,12 @@ if (mode === "lint" || mode === "tests") {
   const current = count(standings, /aria-current="true"/g);
   if (current !== 2) fail(`${current} highlighted standings rows, expected 2`);
   if (!/<caption/.test(standings)) fail("standings excerpt has no <caption>");
+  // The visible title is a heading BEFORE the table, not the caption under it.
+  const headingAt = standings.search(/<h2\b/);
+  const tableAt = standings.search(/<table\b/);
+  if (headingAt < 0 || tableAt < 0 || headingAt > tableAt) {
+    fail("standings excerpt has no <h2> before its <table>");
+  }
   if (count(standings, /<th[^>]*scope="col"/g) < 8) fail("standings excerpt headers lack scope=\"col\"");
   // Excerpt, not the whole table: the full competition table is ≥ 16 rows.
   if (count(html, /<tr[^>]*data-rank=/g) !== bodyRows) fail("more ranked rows outside the excerpt — full table leaked?");
@@ -256,6 +264,12 @@ if (mode === "lint" || mode === "tests") {
   if (!results) fail("no data-block=\"results\"");
   const badges = count(results, /data-result="[WDL]"/g);
   if (badges < 2) fail(`only ${badges} result badges in recent results`);
+  // Every rendered row names exactly one opponent and marks the venue, so the
+  // column's own team never changes sides from line to line.
+  const opponents = count(results, /data-opponent="\d+"/g);
+  const venues = count(results, /data-venue="(home|away)"/g);
+  if (opponents !== badges) fail(`${opponents} opponent slots for ${badges} result rows`);
+  if (venues !== badges) fail(`${venues} venue markers for ${badges} result rows`);
   // Derived stats must be x/N with N = number of rendered rows with a result, per column.
   const cols = ["home", "away"]
     .map((side) => [side, sliceBetween(results, `data-form-column="${side}"`, /data-form-column="/g)])
@@ -279,6 +293,11 @@ if (mode === "lint" || mode === "tests") {
     const rows = count(h2h, /data-h2h-row/g);
     const sum = counters.reduce((a, [, , v]) => a + Number(v), 0);
     if (sum !== rows) fail(`H2H counters sum ${sum} ≠ ${rows} rendered meetings`);
+    const first = count(h2h, /data-slot="first"/g);
+    const second = count(h2h, /data-slot="second"/g);
+    if (first !== rows || second !== rows) {
+      fail(`H2H rows do not keep fixed slots: ${first} first / ${second} second for ${rows} rows`);
+    }
   }
   console.log(`fixture ${id}: standings rows=${bodyRows}, badges=${badges}, h2h=${h2h ? "yes" : "no"}`);
   console.log("SERVED-BLOCKS OK");
@@ -335,6 +354,58 @@ if (mode === "lint" || mode === "tests") {
   console.log(`links=${links.size} (all indexable), unlinked rows=${plain}`);
   if (plain === 0) console.log("note: no unlinked row on this page — the negative branch was not exercised here; unit tests cover it");
   console.log("SERVED-LINKS OK");
+} else if (mode === "served-poll") {
+  // The poll ships as a container with three choices and NO counts in the HTML
+  // (they are per-visitor and volatile); the API answers, rejects junk, and
+  // refuses a vote on a match that has kicked off.
+  const fx = await discoverFixture();
+  const finishedId = fx.fixture.id;
+  const page = await get(`/ar/matches/${finishedId}`);
+  if (page.status !== 200) fail(`/ar/matches/${finishedId} → ${page.status}`);
+  const visible = visibleMarkup(page.text);
+  const poll = sliceBetween(visible, 'data-block="poll"', /data-block="/g);
+  if (!poll) fail('no data-block="poll" on the match page');
+  const choices = [...poll.matchAll(/data-choice="(home|draw|away)"/g)].map((m) => m[1]);
+  if (choices.join(",") !== "home,draw,away") fail(`poll choices are ${choices.join(",") || "(none)"}`);
+  if (/data-share=/.test(poll)) fail("poll percentages are in the server HTML");
+  if (/\d+\s*%/.test(poll.replace(/<[^>]+>/g, ""))) fail("poll shows a percentage in the server HTML");
+
+  const counts = await get(`/api/matches/${finishedId}/poll`);
+  if (counts.status !== 200) fail(`GET poll → ${counts.status}`);
+  const data = JSON.parse(counts.text);
+  if (typeof data.available !== "boolean") fail("poll GET has no `available` flag");
+  if (data.available) {
+    const sum = data.percentages.home + data.percentages.draw + data.percentages.away;
+    if (data.total > 0 && sum !== 100) fail(`percentages sum to ${sum}`);
+  } else {
+    console.log("note: poll store unavailable on this deployment (no Redis credentials) — the island hides itself");
+  }
+
+  const bad = await get(`/api/matches/${finishedId}/poll`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ choice: "win" }),
+  });
+  if (bad.status !== 400) fail(`POST with an invalid choice → ${bad.status}, expected 400`);
+
+  // A finished fixture must refuse a well-formed vote.
+  const closed = await get(`/api/matches/${finishedId}/poll`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ choice: "home" }),
+  });
+  if (![409, 503].includes(closed.status)) {
+    fail(`POST on a finished fixture → ${closed.status}, expected 409 (or 503 without a store)`);
+  }
+  if (closed.status === 409) {
+    const after = await get(`/api/matches/${finishedId}/poll`);
+    const now = JSON.parse(after.text);
+    if (now.available && data.available && now.total !== data.total) {
+      fail(`refused vote still changed the total: ${data.total} → ${now.total}`);
+    }
+  }
+  console.log(`fixture ${finishedId}: poll rendered with 3 choices, no counts in HTML; API 400 on junk, ${closed.status} on a closed fixture`);
+  console.log("SERVED-POLL OK");
 } else if (mode === "served-sitemap") {
   const sm = await get(`/sitemap.xml`);
   if (sm.status !== 200) fail(`/sitemap.xml → ${sm.status}`);

@@ -4,15 +4,26 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import type { ApiFixture } from "@/lib/api-football/types";
 import { getMatchStatus } from "@/lib/api-football/types";
+import { describeStatus } from "@/lib/api-football/status";
 import { localizeTeam } from "@/lib/api-football/localize";
 import { useFixture } from "@/hooks/useFixture";
-import { cn, formatDate, formatTime } from "@/lib/utils";
+import { cn, formatTime } from "@/lib/utils";
 
 type Props = {
   initial: ApiFixture;
   locale: string;
 };
 
+/**
+ * The score card. Its centre follows the fixture's phase:
+ *  - scheduled: the kick-off time (or "time to be confirmed");
+ *  - live: the score and the minute, or the break/shoot-out label;
+ *  - finished: the final score and how it ended (FT / AET / penalties);
+ *  - anything else (postponed, cancelled, abandoned, awarded): the status
+ *    label and no score — a postponed match is not a 0-0 draw.
+ * Labels come from `match.status.*`; the date, venue and referee live in
+ * the details card below, not here.
+ */
 export function LiveScoreboard({ initial, locale }: Props) {
   const t = useTranslations("match");
   // The hook self-governs: it polls a live match every 30s, stops at full time,
@@ -24,12 +35,16 @@ export function LiveScoreboard({ initial, locale }: Props) {
     kickoffTs: new Date(initial.fixture.date).getTime(),
   });
   const fixture = latest ?? initial;
-  const status = getMatchStatus(fixture.fixture.status.short);
+  const short = fixture.fixture.status.short;
+  const status = getMatchStatus(short);
+  const { labelKey } = describeStatus(short);
+  const label = labelKey ? t(`status.${labelKey}`) : null;
   const { home, away } = fixture.teams;
   const goals = fixture.goals;
+  const showScore = status === "live" || status === "finished";
 
   return (
-    <div className="bg-card rounded-lg border border-border p-6 mb-8">
+    <div className="bg-card rounded-lg border border-border p-6 mb-8" data-phase={status}>
       <div className="flex items-center justify-between">
         <div className="flex flex-col items-center gap-2 flex-1">
           <Image src={home.logo} alt={home.name} width={56} height={56} />
@@ -39,32 +54,37 @@ export function LiveScoreboard({ initial, locale }: Props) {
         </div>
 
         <div className="flex flex-col items-center mx-4">
-          {status === "scheduled" ? (
-            <>
-              <span className="text-2xl font-bold text-muted-foreground">vs</span>
-              <span className="text-sm text-muted-foreground mt-1">
-                {formatTime(fixture.fixture.date, locale)}
-              </span>
-            </>
+          {showScore ? (
+            <div className="flex items-center gap-3 text-4xl font-bold tabular-nums">
+              <span>{goals.home ?? 0}</span>
+              <span className="text-muted-foreground text-2xl">-</span>
+              <span>{goals.away ?? 0}</span>
+            </div>
+          ) : status === "scheduled" && short !== "TBD" ? (
+            <span className="text-2xl font-bold text-muted-foreground">vs</span>
           ) : (
-            <>
-              <div className="flex items-center gap-3 text-4xl font-bold tabular-nums">
-                <span>{goals.home ?? 0}</span>
-                <span className="text-muted-foreground text-2xl">-</span>
-                <span>{goals.away ?? 0}</span>
-              </div>
-              <span
-                className={cn(
-                  "text-xs font-medium mt-1 px-2 py-0.5 rounded",
-                  status === "live" && "bg-live/20 text-live",
-                  status === "finished" && "bg-secondary text-muted-foreground",
-                )}
-              >
-                {status === "live"
-                  ? `${t("live")} ${fixture.fixture.status.elapsed || ""}'`
-                  : t("fullTime")}
-              </span>
-            </>
+            <span className="text-2xl font-bold text-muted-foreground" aria-hidden="true">—</span>
+          )}
+
+          {status === "scheduled" && short !== "TBD" && (
+            <span className="text-sm text-muted-foreground mt-1">
+              {formatTime(fixture.fixture.date, locale)}
+            </span>
+          )}
+          {status === "live" && (
+            <span className="text-xs font-medium mt-1 px-2 py-0.5 rounded bg-live/20 text-live" data-status={short}>
+              {label ?? `${t("live")} ${fixture.fixture.status.elapsed || ""}'`}
+            </span>
+          )}
+          {status === "finished" && (
+            <span className="text-xs font-medium mt-1 px-2 py-0.5 rounded bg-secondary text-muted-foreground" data-status={short}>
+              {label ?? t("fullTime")}
+            </span>
+          )}
+          {(status === "other" || short === "TBD") && label && (
+            <span className="text-xs font-medium mt-1 px-2 py-0.5 rounded bg-secondary text-muted-foreground" data-status={short}>
+              {label}
+            </span>
           )}
         </div>
 
@@ -74,12 +94,6 @@ export function LiveScoreboard({ initial, locale }: Props) {
             {localizeTeam(away.id, away.name, locale)}
           </span>
         </div>
-      </div>
-
-      <div className="mt-4 pt-4 border-t border-border flex flex-wrap gap-4 text-xs text-muted-foreground justify-center">
-        <span>{formatDate(fixture.fixture.date, locale)}</span>
-        {fixture.fixture.venue?.name && <span>{fixture.fixture.venue.name}</span>}
-        {fixture.fixture.referee && <span>{fixture.fixture.referee}</span>}
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { SectionHeader } from "@/components/shared/SectionHeader";
 import type { ApiFixture } from "@/lib/api-football/types";
 import { localizeTeam } from "@/lib/api-football/localize";
 import { formStats } from "@/lib/football/formStats";
@@ -9,6 +10,7 @@ export type RecentResultsLabels = ResultLabels & {
   scoredIn: string;
   over25: string;
   bothScored: string;
+  noResults: string;
 };
 
 export type TeamForm = {
@@ -37,28 +39,35 @@ function FormColumn({ side, form, locale, labels }: { side: "home" | "away"; for
         <Image src={form.team.logo} alt="" width={24} height={24} />
         <span>{localizeTeam(form.team.id, form.team.name, locale)}</span>
       </h3>
-      <ul>
-        {form.fixtures.map((fx) => (
-          <ResultRow
-            key={fx.fixture.id}
-            fixture={fx}
-            perspectiveTeamId={form.team.id}
-            locale={locale}
-            labels={labels}
-            showCompetition
-          />
-        ))}
-      </ul>
-      <dl className="mt-3 pt-3 border-t border-border grid grid-cols-[1fr_auto] gap-y-1 text-xs">
-        {rows.map((r) => (
-          <div key={r.key} className="contents">
-            <dt className="text-muted-foreground">{r.label}</dt>
-            <dd data-stat={r.key} data-value={`${r.value}/${stats.total}`} className="tabular-nums font-medium">
-              {r.value}/{stats.total}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      {form.fixtures.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted-foreground" data-empty>
+          {labels.noResults}
+        </p>
+      ) : (
+        <>
+          <ul>
+            {form.fixtures.map((fx) => (
+              <ResultRow
+                key={fx.fixture.id}
+                fixture={fx}
+                perspectiveTeamId={form.team.id}
+                locale={locale}
+                labels={labels}
+              />
+            ))}
+          </ul>
+          <dl className="mt-3 pt-3 border-t border-border grid grid-cols-[1fr_auto] gap-y-1 text-xs">
+            {rows.map((r) => (
+              <div key={r.key} className="contents">
+                <dt className="text-muted-foreground">{r.label}</dt>
+                <dd data-stat={r.key} data-value={`${r.value}/${stats.total}`} className="tabular-nums font-medium">
+                  {r.value}/{stats.total}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </>
+      )}
     </div>
   );
 }
@@ -67,13 +76,16 @@ function FormColumn({ side, form, locale, labels }: { side: "home" | "away"; for
  * Each team's last five matches with the three "x/N" rows computed from the
  * same five rows — see lib/football/formStats for why that matters. Home
  * column first in the DOM so it sits on the right under dir="rtl", mirroring
- * the scoreboard above it.
+ * the scoreboard above it. A team with nothing to show gets one line, not an
+ * empty card with 0/0 statistics.
  */
 export function RecentResults({ home, away, locale, labels }: Props) {
   if (home.fixtures.length === 0 && away.fixtures.length === 0) return null;
   return (
     <section data-block="results" aria-labelledby="recent-results-heading" className="mb-8">
-      <h2 id="recent-results-heading" className="text-xl font-bold mb-4">{labels.title}</h2>
+      <div id="recent-results-heading">
+        <SectionHeader title={labels.title} />
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormColumn side="home" form={home} locale={locale} labels={labels} />
         <FormColumn side="away" form={away} locale={locale} labels={labels} />

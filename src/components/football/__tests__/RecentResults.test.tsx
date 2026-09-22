@@ -5,7 +5,8 @@ import { makeFixture, PHYSICAL_DIRECTION } from "./fixtures";
 
 const labels = {
   title: "آخر النتائج", scoredIn: "سجّل في", over25: "أكثر من 2.5 هدف", bothScored: "سجّل كلا الفريقين",
-  win: "فوز", draw: "تعادل", loss: "خسارة",
+  win: "فوز", draw: "تعادل", loss: "خسارة", atHome: "مستضيف", away: "خارج الديار",
+  noResults: "لا توجد نتائج سابقة",
 };
 const WAC = 968;
 const RCA = 967;
@@ -58,6 +59,27 @@ describe("RecentResults", () => {
   it("labels each row with its competition", () => {
     const { container } = render(<RecentResults home={{ team: wac, fixtures: wacForm }} away={{ team: rca, fixtures: rcaForm }} locale="ar" labels={labels} />);
     expect(container.textContent).toContain("البطولة الاحترافية");
+  });
+
+  it("keeps the column's own team out of every row, so the rows do not swap sides", () => {
+    const { container } = render(<RecentResults home={{ team: wac, fixtures: wacForm }} away={{ team: rca, fixtures: rcaForm }} locale="ar" labels={labels} />);
+    const homeCol = container.querySelector("[data-form-column='home']")!;
+    const rows = homeCol.querySelectorAll("li");
+    expect(rows).toHaveLength(5);
+    for (const r of rows) {
+      expect(r.querySelectorAll("[data-opponent]")).toHaveLength(1);
+      expect(r.querySelector("[data-venue]")).not.toBeNull();
+      expect(r.textContent).not.toContain("Wydad");
+    }
+  });
+
+  it("shows one empty-state line, not 0/0 statistics, for a team with no results", () => {
+    const { container } = render(<RecentResults home={{ team: wac, fixtures: wacForm }} away={{ team: rca, fixtures: [] }} locale="ar" labels={labels} />);
+    const awayCol = container.querySelector("[data-form-column='away']")!;
+    expect(awayCol.querySelector("[data-empty]")).toHaveTextContent("لا توجد نتائج سابقة");
+    expect(awayCol.querySelector("[data-stat]")).toBeNull();
+    // The other column is unaffected.
+    expect(container.querySelector("[data-form-column='home'] [data-stat='scoredIn']")).not.toBeNull();
   });
 
   it("renders nothing when neither team has results", () => {

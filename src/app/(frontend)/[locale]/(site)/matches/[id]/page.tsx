@@ -15,11 +15,12 @@ import { StandingsExcerptBlock } from "@/components/football/blocks/StandingsExc
 import { RecentResultsBlock } from "@/components/football/blocks/RecentResultsBlock";
 import { HeadToHeadBlock } from "@/components/football/blocks/HeadToHeadBlock";
 import { BlockSkeleton } from "@/components/football/blocks/BlockSkeleton";
+import { WinnerPoll } from "@/components/football/WinnerPoll";
 import { SectionHeader } from "@/components/shared/SectionHeader";
 import { localizeLeague, localizeTeam } from "@/lib/api-football/localize";
-import { describeStatus } from "@/lib/api-football/status";
 import { isIndexableFixture } from "@/lib/seo/matchIndexing";
 import { matchJsonLd } from "@/lib/seo/matchJsonLd";
+import { isVotingOpen } from "@/lib/poll/voting";
 import { formatDate } from "@/lib/utils";
 
 // ISR: regenerate the match shell at most once a minute; live score/events
@@ -83,10 +84,14 @@ export default async function MatchPage({ params }: Props) {
     getTranslations({ locale, namespace: "competition" }),
   ]);
   const { home, away } = fixture.teams;
-  const status = describeStatus(fixture.fixture.status.short);
-  const statusLabel = status.labelKey ? t(`status.${status.labelKey}`) : null;
 
-  const resultLabels = { win: t("resultWin"), draw: t("resultDraw"), loss: t("resultLoss") };
+  const resultLabels = {
+    win: t("resultWin"),
+    draw: t("resultDraw"),
+    loss: t("resultLoss"),
+    atHome: t("atHome"),
+    away: t("away"),
+  };
   const standingsLabels = {
     captionTemplate: (competition: string) => t("standingsExcerpt", { competition }),
     fullStandings: t("fullStandings"),
@@ -108,7 +113,7 @@ export default async function MatchPage({ params }: Props) {
         }}
       />
 
-      <MatchHeader fixture={fixture} locale={locale} statusLabel={statusLabel} />
+      <MatchHeader fixture={fixture} locale={locale} />
 
       <MatchDetailsCard
         fixture={fixture}
@@ -178,6 +183,27 @@ export default async function MatchPage({ params }: Props) {
         </section>
       )}
 
+      {/* Reader prediction. A client island: the counts are volatile and
+          per-visitor, so they stay out of the cached HTML and a vote never
+          invalidates it. */}
+      <WinnerPoll
+        fixtureId={fixture.fixture.id}
+        home={home}
+        away={away}
+        homeName={localizeTeam(home.id, home.name, locale)}
+        awayName={localizeTeam(away.id, away.name, locale)}
+        open={isVotingOpen(fixture)}
+        labels={{
+          title: t("pollTitle"),
+          draw: t("pollDraw"),
+          vote: t("pollVote"),
+          thanks: t("pollThanks"),
+          closed: t("pollClosed"),
+          votes: t("pollVotes"),
+          error: t("pollError"),
+        }}
+      />
+
       {/* Pre-match context: table position, form, history. Each block streams
           behind its own boundary and renders nothing on upstream trouble, so a
           quota outage costs a widget, never the page. The three read the
@@ -196,6 +222,7 @@ export default async function MatchPage({ params }: Props) {
             scoredIn: t("scoredIn"),
             over25: t("over25"),
             bothScored: t("bothScored"),
+            noResults: t("noResults"),
           }}
         />
       </Suspense>

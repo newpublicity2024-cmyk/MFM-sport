@@ -1,11 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
 import { HeadToHead } from "@/components/football/HeadToHead";
+import { localizeTeam } from "@/lib/api-football/localize";
 import { makeFixture, PHYSICAL_DIRECTION } from "./fixtures";
 
-const labels = { title: "المواجهات المباشرة (آخر 5 مباريات)", wins: "انتصارات", draws: "تعادلات", goals: "أهداف", win: "فوز", draw: "تعادل", loss: "خسارة" };
-const NC = 1;
-const PAT = 2;
+const labels = { title: "المواجهات المباشرة (آخر 5 مباريات)", wins: "انتصارات", draws: "تعادلات", goals: "أهداف", win: "فوز", draw: "تعادل", loss: "خسارة", atHome: "مستضيف", away: "خارج الديار" };
+const NC = 90001;
+const PAT = 90002;
 const nc = { id: NC, name: "Nueva Chicago", logo: "/nc.png", winner: null };
 const pat = { id: PAT, name: "Patronato", logo: "/pat.png", winner: null };
 
@@ -32,6 +33,19 @@ describe("HeadToHead", () => {
     const bar = container.querySelector("[role='img'][aria-label*='أهداف']")!;
     expect(bar.getAttribute("aria-label")).toContain("5");
     expect(bar.getAttribute("aria-label")).toContain("4");
+  });
+
+  it("keeps team A in the first slot in every row, whoever hosted", () => {
+    const { container } = render(<HeadToHead fixtures={meetings} teamA={nc} teamB={pat} locale="ar" labels={labels} />);
+    const rows = container.querySelectorAll("[data-h2h-row]");
+    expect(rows).toHaveLength(5);
+    for (const r of rows) {
+      expect(r.querySelector("[data-slot='first']")!.textContent).toContain(localizeTeam(NC, `Team ${NC}`, "ar"));
+      expect(r.querySelector("[data-slot='second']")!.textContent).toContain(localizeTeam(PAT, `Team ${PAT}`, "ar"));
+      expect(r.querySelector("[data-venue]")).not.toBeNull();
+    }
+    // Scores follow the slots: NC 2–1 PAT even though PAT hosted that one.
+    expect(rows[0]!.querySelector("[data-score]")!.getAttribute("data-score")).toBe("2-1");
   });
 
   it("links only indexable meetings", () => {

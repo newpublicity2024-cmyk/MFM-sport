@@ -1,6 +1,6 @@
 import Image from "next/image";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { SectionHeader } from "@/components/shared/SectionHeader";
 import {
   Table,
   TableBody,
@@ -52,9 +52,17 @@ export function StandingsExcerpt({ rows, highlightTeamIds, locale, labels, fullS
 
   return (
     <section data-block="standings" aria-labelledby="standings-excerpt-caption" className="mb-8">
+      {/* The visible title is the section header (the table primitive puts a
+          <caption> at the bottom, which read as a stray line under the table);
+          the caption stays for assistive tech and is hidden visually. */}
+      <SectionHeader
+        title={labels.caption}
+        href={fullStandingsHref ?? undefined}
+        linkText={fullStandingsHref ? labels.fullStandings : undefined}
+      />
       <div className="rounded-lg border border-border overflow-hidden">
         <Table>
-          <caption id="standings-excerpt-caption" className="text-start text-base font-bold p-3 border-b border-border">
+          <caption id="standings-excerpt-caption" className="sr-only">
             {labels.caption}
           </caption>
           <TableHeader>
@@ -115,16 +123,6 @@ export function StandingsExcerpt({ rows, highlightTeamIds, locale, labels, fullS
           </TableBody>
         </Table>
       </div>
-      {fullStandingsHref && (
-        <div className="mt-3 text-center">
-          <Link
-            href={fullStandingsHref}
-            className="inline-block rounded-md border border-border px-4 py-2 text-sm hover:border-primary/40 transition-colors"
-          >
-            {labels.fullStandings}
-          </Link>
-        </div>
-      )}
     </section>
   );
 }

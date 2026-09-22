@@ -6,19 +6,17 @@ import { LiveScoreboard } from "./LiveScoreboard";
 type Props = {
   fixture: ApiFixture;
   locale: string;
-  /** Human label for states the scoreboard cannot express (postponed, TBD…); null otherwise. */
-  statusLabel: string | null;
 };
 
 /**
  * The top of a match page: competition + round, the page's single `<h1>`
- * ("home ضد away", Arabic names), the live scoreboard island, and a status
- * label for the states the scoreboard's score/time centre cannot express.
+ * ("home ضد away", Arabic names) and the live scoreboard island, whose
+ * centre carries the status (kick-off, minute, final, postponed…).
  *
  * Server component. The names go through `localizeTeam`, the same dictionary
  * the `<title>` uses, so the heading and the tab title never disagree.
  */
-export function MatchHeader({ fixture, locale, statusLabel }: Props) {
+export function MatchHeader({ fixture, locale }: Props) {
   const home = localizeTeam(fixture.teams.home.id, fixture.teams.home.name, locale);
   const away = localizeTeam(fixture.teams.away.id, fixture.teams.away.name, locale);
   const league = localizeLeague(fixture.league.id, fixture.league.name, locale);
@@ -40,14 +38,6 @@ export function MatchHeader({ fixture, locale, statusLabel }: Props) {
         {home} ضد {away}
       </h1>
       <LiveScoreboard initial={fixture} locale={locale} />
-      {statusLabel && (
-        <p
-          data-status={fixture.fixture.status.short}
-          className="-mt-4 mb-4 text-center text-sm font-medium text-muted-foreground"
-        >
-          {statusLabel}
-        </p>
-      )}
     </header>
   );
 }
