@@ -135,13 +135,20 @@ const nextConfig: NextConfig = {
       // (middleware only consults it for unprefixed legacy paths), so they
       // belong here.
       {
-        source: "/:locale(ar|fr|en)/author/adahouimfmsportma",
-        destination: "/ar/author/a-dahouimfmsport-ma",
-        permanent: true,
-      },
-      {
         source: "/:locale(ar|fr|en)/author/mabousahlmfmsportma",
         destination: "/ar/author/m-abousahlmfmsport-ma",
+        permanent: true,
+      },
+      // 29 September 2026: the newsroom kept two named bylines (Mounir Oubry,
+      // Mohamed Abou Sahl) and moved every other author's articles onto the
+      // editorial-team byline, so these author pages no longer exist. They are
+      // indexed, so they point at the byline their articles now carry rather
+      // than 404. `demo-editorial-team` is the same record under its old
+      // WordPress-era slug.
+      {
+        source:
+          "/:locale(ar|fr|en)/author/:old(a-dahouimfmsport-ma|adahouimfmsportma|mfmsport|bsoufianemfmsportma|zchafikmfmsportma|tnafatimfmsportma|khaoula-cherkani|adirarmfmsportma|yassine-elbassri|demo-editorial-team)",
+        destination: "/ar/author/editorial-team",
         permanent: true,
       },
       // The old site's /club/{cc} pages were league hubs by country, not clubs

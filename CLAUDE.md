@@ -185,11 +185,42 @@ authors 13 → 11, 0 orphaned `authors_locales` rows.
 `/ar/`-prefixed, which middleware deliberately keeps away from the redirects
 collection (that map is for unprefixed legacy paths only).
 
-**Still to do — four author records are still named after staff emails**
-(`Z.chafik@`, `b.soufiane@`, `a.dirar@`, `t.nafati@`; 3,514 articles). Unlike
-Dahoui and Abou Sahl they have no properly-named twin to merge into, so they
-need the journalists' real names from the owner before anything is renamed —
-a guessed Arabic name is worse than the email it replaces.
+**Then the owner decided the masthead: keep two named bylines only.** Rather
+than rename the email-named records, every author except **Mounir Oubry** and
+**Mohamed Abou Sahl** was folded into the house byline **فريق التحرير**
+(`editorial-team`, id 2 — slug renamed from the WordPress-era
+`demo-editorial-team`). Articles were reassigned *before* the records were
+deleted, so nothing hit the `SET NULL` trap:
+
+| | articles |
+|---|---|
+| `editorial-team` فريق التحرير | **9,222** |
+| `mounir-oubry` منير أوبري | 124 |
+| `m-abousahlmfmsport-ma` محمد أبوسهل | 35 |
+
+9,222 + 124 + 35 = **9,381**, the unchanged article total; 0 null bylines,
+0 dead references, 0 orphaned locale rows, authors 11 → 3. Rehearsed on Neon
+branch `br-bold-fire-a2j0rdve`. Ten retired author slugs 308 to
+`/ar/author/editorial-team` in `next.config.ts`.
+
+**Yassine Elbassri has a login but no author record** — he was among the
+deleted (0 articles at the time). He is an active editor, and `author` is
+required on Articles, so one must be re-created before he can publish under
+his own name.
+
+### Admin accounts (29 September 2026)
+
+`test@gmail.com` ("yahia", admin) was deleted and replaced by
+**`ybencheddi@gmail.com`** (admin, id 5), created by hand: Payload's scheme is
+`salt` = 32 random bytes hex and `hash` = `pbkdf2(password, salt, 25000, 512,
+'sha256')` hex (`payload/dist/auth/strategies/local/generatePasswordSaltHash.js`)
+— there is no `.env` on this machine, so the local API was not an option.
+Verified by a real `POST /api/users/login` against production: 200, role
+`admin`, token issued. The generated password went to `.env.local`
+(gitignored, chmod 600) for the owner to change and delete.
+
+Remaining accounts: Mounir Oubry (admin), Yassine El Bassri (editor),
+Yahia Bencheddi (admin). Abdelilah Dahoui had none — his was already gone.
 
 ---
 
