@@ -152,6 +152,47 @@ expect Google to take days to weeks to re-render the result.
 
 ---
 
+## Session state — author cleanup after a departure (29 September 2026)
+
+Owner: a journalist (Abdelilah Dahoui) left and his access had to go, with his
+bylines kept.
+
+**His access was already gone.** No `users` row (ids present: 1, 2, 4; the
+sequence reached 4, so his id 3 was deleted successfully at some point) and no
+`users_sessions`. Nothing more was needed — the thing that "would not delete"
+was his **author** record, which is a different collection and must not be
+deleted (see the landmine above).
+
+**The WordPress import had created a second author per journalist, named after
+their work email**, each with a live, sitemap-listed page at
+`/ar/author/<email-ish-slug>` — six staff addresses published and indexable:
+`a.dahoui@` (3,200 articles), `Z.chafik@` (2,255), `b.soufiane@` (752),
+`a.dirar@` (494), `m.abousahl@` (22), `t.nafati@` (13).
+
+Done on production (rehearsed first on Neon branch
+`br-polished-rain-a2rnpknj`, which still exists for diffing):
+
+| Merge | Moved | Result |
+|---|---|---|
+| author 6 `a.dahoui@mfmsport.ma` → 3 `عبد الإله الدهوي` | 3,200 | 3,895 articles credited to his name |
+| author 10 `m.abousahl@mfmsport.ma` → 4 `محمد أبوسهل` | 22 | 35 |
+
+Then `DELETE FROM authors WHERE id IN (6,10)`. Invariants before and after:
+9,381 articles, **0** with a null author, **0** pointing at a missing author,
+authors 13 → 11, 0 orphaned `authors_locales` rows.
+
+`next.config.ts` 308s the two dead author slugs to the kept ones — they are
+`/ar/`-prefixed, which middleware deliberately keeps away from the redirects
+collection (that map is for unprefixed legacy paths only).
+
+**Still to do — four author records are still named after staff emails**
+(`Z.chafik@`, `b.soufiane@`, `a.dirar@`, `t.nafati@`; 3,514 articles). Unlike
+Dahoui and Abou Sahl they have no properly-named twin to merge into, so they
+need the journalists' real names from the owner before anything is renamed —
+a guessed Arabic name is worse than the email it replaces.
+
+---
+
 ## Session state — match page round two: poll + screenshot fixes (22 September 2026)
 
 Branch `feat/match-poll-and-polish`, PR #76. Owner reviewed the deployed page
@@ -794,6 +835,17 @@ carry the same options.
 `HOME_FIXTURE_WINDOW` in `(site)/page.tsx` (live + 12 results + 12 upcoming).
 Passing a competition's full fixture list to a client component put 240
 fixtures and 784 crest `<img>`s in the homepage HTML — 1.25 MB.
+
+**Deleting an author deletes the byline — silently, on every article they
+wrote.** `articles.author_id` is `ON DELETE SET NULL` while Payload declares the
+field `required: true`, so the admin lets you remove an author and Postgres
+quietly blanks the credit on their whole archive. There is no warning and no
+failed row. A journalist leaving is an HR event, not a data one: remove their
+**user** (login) and leave their **author** record alone — they are separate
+collections and the byline lives in the author record. On 29 September 2026 a
+delete was attempted on a record carrying 3,895 articles; had it gone through,
+every one of them would have lost its author. To retire someone's *profile*
+while keeping credit, hide the author page — never delete the record.
 
 **Never add a `loading.tsx` to a route segment that has 404-capable children.** Its Suspense boundary flushes the response shell before the page body runs, committing HTTP 200 — so `notFound()` renders its page inside an already-successful response and every 404 on the site silently becomes a soft 200. This happened; see the principles doc. `/search` has the only `loading.tsx`, and it has no child routes and never calls `notFound()`.
 

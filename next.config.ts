@@ -126,6 +126,24 @@ const nextConfig: NextConfig = {
         destination: "/ar/category/:slug",
         permanent: true,
       },
+      // Merged author records (29 September 2026). The WordPress import created
+      // a second author per journalist, named after their work email, and those
+      // pages were live and in the sitemap — publishing staff addresses. Their
+      // articles were moved onto the properly-named record and the duplicates
+      // deleted, so these slugs would now 404 with their indexed history. They
+      // are /ar/-prefixed, which the redirects collection deliberately skips
+      // (middleware only consults it for unprefixed legacy paths), so they
+      // belong here.
+      {
+        source: "/:locale(ar|fr|en)/author/adahouimfmsportma",
+        destination: "/ar/author/a-dahouimfmsport-ma",
+        permanent: true,
+      },
+      {
+        source: "/:locale(ar|fr|en)/author/mabousahlmfmsportma",
+        destination: "/ar/author/m-abousahlmfmsport-ma",
+        permanent: true,
+      },
       // The old site's /club/{cc} pages were league hubs by country, not clubs
       // (Speed Insights recorded /ar/club/ma, /sa, /dz, /es, /qa, /ae, /world —
       // all landing on the 404, RES 35). Send the two countries whose league
