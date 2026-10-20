@@ -10,6 +10,9 @@ import { getOurLeagueIds } from "@/lib/payload/queries";
  */
 export const revalidate = 60;
 
+/** Mirrors the upstream tolerance for a day's fixtures. */
+const DATE_ROUTE_SMAXAGE = 60;
+
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export function isValidIsoDate(s: string | null): s is string {
@@ -27,5 +30,16 @@ export async function GET(req: Request) {
   }
   const leagueIds = await getOurLeagueIds();
   const fixtures = await getFixturesByDateForLeagues(date, leagueIds);
-  return NextResponse.json({ fixtures });
+  // Reading searchParams makes this handler dynamic, so the `revalidate` above
+  // never applied to the response and every request reached the function
+  // (verified on production: x-vercel-cache MISS on every call). An explicit
+  // header lets the CDN serve repeats for the same day.
+  return NextResponse.json(
+    { fixtures },
+    {
+      headers: {
+        "cache-control": `public, s-maxage=${DATE_ROUTE_SMAXAGE}, stale-while-revalidate=${DATE_ROUTE_SMAXAGE * 2}`,
+      },
+    },
+  );
 }
