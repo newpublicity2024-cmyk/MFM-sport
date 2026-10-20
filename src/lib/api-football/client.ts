@@ -2,9 +2,14 @@ import type { ApiResponse } from "./types";
 
 const API_BASE = "https://v3.football.api-sports.io";
 
-// Either a plain revalidate (today's default) or an explicit cache mode. When a
-// call is wrapped by the shared Redis cache, pass `{ cache: "no-store" }` so we
-// don't double-cache (Redis is the source of truth there).
+// Either a plain revalidate (today's default) or an explicit cache mode.
+//
+// NOTE: the getters deliberately pass `revalidate` even though they are wrapped
+// by the shared cache in `@/lib/cache`. `cache: "no-store"` would avoid
+// double-caching, but it also opts the calling route out of static rendering,
+// and these getters are read from ISR pages whose caching is doing real work.
+// Several tiers holding the same bounded-age value is harmless; losing ISR is
+// not. See the comment on `fixturesCached`.
 export type FetchOpts =
   | number
   | {

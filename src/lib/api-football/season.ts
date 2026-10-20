@@ -1,7 +1,8 @@
 import { cache } from "react";
 import type { ApiLeagueInfo } from "./types";
 import { fetchApi } from "./client";
-import { cachedJson, hasUpstash } from "@/lib/cache";
+import { cachedJson } from "@/lib/cache";
+import { TTL, STALE } from "./ttl";
 
 export type SeasonInfo = { season: number; start: string | null; end: string | null };
 
@@ -34,13 +35,14 @@ export function seasonYearFallback(now: Date = new Date()): number {
 export const getCurrentSeason = cache(
   async (leagueId: number, fallback: number): Promise<SeasonInfo> => {
     const params = { id: leagueId };
-    const response = hasUpstash()
-      ? await cachedJson(
-          `cur-season:${leagueId}`,
-          { ttlSeconds: 21600, staleSeconds: 21600 },
-          () => fetchApi<ApiLeagueInfo>("/leagues", params, { cache: "no-store" }),
-        )
-      : await fetchApi<ApiLeagueInfo>("/leagues", params, 21600);
+    const response = await cachedJson(
+      `cur-season:${leagueId}`,
+      { ttlSeconds: TTL.CURRENT_SEASON, staleSeconds: STALE.CURRENT_SEASON },
+      () =>
+        fetchApi<ApiLeagueInfo>("/leagues", params, {
+          revalidate: TTL.CURRENT_SEASON,
+        }),
+    );
     return pickCurrentSeason(response[0], fallback);
   },
 );

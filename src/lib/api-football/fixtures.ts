@@ -1,26 +1,47 @@
 import { cache } from "react";
 import type { ApiFixture } from "./types";
 import { fetchApi } from "./client";
-import { cachedJson, hasUpstash } from "@/lib/cache";
+import { cachedJson, type CacheOpts } from "@/lib/cache";
+import { TTL, STALE } from "./ttl";
 
-// Route a /fixtures call through the shared Redis cache when Upstash is
-// configured, else fall back to Next.js fetch-cache (today's exact behavior).
-// The public getters below are additionally wrapped in React cache() for
-// per-request dedupe (e.g. getFixtureById is called twice while rendering a
-// match page — once in generateMetadata, once in the body).
+/**
+ * Route a `/fixtures` call through the shared cache.
+ *
+ * Two things changed here and both matter for quota:
+ *
+ * 1. This no longer branches on `hasUpstash()`. It used to call `cachedJson`
+ *    only when Redis credentials were present and otherwise hand the request
+ *    straight to `fetchApi` — which meant that on a deployment without those
+ *    exact variable names (i.e. every Vercel deployment this project has ever
+ *    had) nothing between the getter and the network retained anything. The
+ *    cache now always runs; Redis is one optional tier inside it.
+ * 2. `revalidate` is derived from `opts.ttlSeconds` rather than passed
+ *    separately, so the Next-level and cache-level ages cannot drift apart
+ *    the way they had (see `./ttl`).
+ *
+ * `next.revalidate` is kept rather than `cache: "no-store"` even when Redis is
+ * live: `no-store` would opt the calling route out of static rendering, and
+ * these getters are read from ISR pages whose caching is doing real work.
+ * Several tiers holding the same bounded-age value is harmless; losing ISR is
+ * not.
+ *
+ * The public getters stay wrapped in React `cache()` for per-request dedupe,
+ * but note that it only spans one render pass — `generateMetadata` and the page
+ * body are separate passes, which is why the match page used to issue two
+ * identical `/fixtures?id=` requests. The memo tier is what collapses those.
+ */
 function fixturesCached(
   key: string,
-  opts: { ttlSeconds: number; staleSeconds?: number },
-  revalidate: number,
+  opts: CacheOpts,
   params: Record<string, string | number>,
   { throwOnFailure = false }: { throwOnFailure?: boolean } = {},
 ): Promise<ApiFixture[]> {
-  if (hasUpstash()) {
-    return cachedJson(key, opts, () =>
-      fetchApi<ApiFixture>("/fixtures", params, { cache: "no-store", throwOnFailure }),
-    );
-  }
-  return fetchApi<ApiFixture>("/fixtures", params, { revalidate, throwOnFailure });
+  return cachedJson(key, opts, () =>
+    fetchApi<ApiFixture>("/fixtures", params, {
+      revalidate: opts.ttlSeconds,
+      throwOnFailure,
+    }),
+  );
 }
 
 function isTodayUtc(date: string): boolean {
@@ -31,9 +52,9 @@ export const getFixturesByDate = cache((date: string): Promise<ApiFixture[]> => 
   // Today: short TTL (live scores overlay this via the live endpoint). Past/
   // future dates: schedules and results barely move → cache much longer.
   const opts = isTodayUtc(date)
-    ? { ttlSeconds: 60, staleSeconds: 120 }
-    : { ttlSeconds: 1800, staleSeconds: 3600 };
-  return fixturesCached(`date:${date}`, opts, 60, { date });
+    ? { ttlSeconds: TTL.DATE_TODAY, staleSeconds: STALE.DATE_TODAY }
+    : { ttlSeconds: TTL.DATE_OTHER, staleSeconds: STALE.DATE_OTHER };
+  return fixturesCached(`date:${date}`, opts, { date });
 });
 
 /**
@@ -51,8 +72,7 @@ export const getFixtureById = cache(
   async (id: number): Promise<ApiFixture | null> => {
     const fixtures = await fixturesCached(
       `fx:${id}`,
-      { ttlSeconds: 30 },
-      30,
+      { ttlSeconds: TTL.FIXTURE_BY_ID },
       { id },
       { throwOnFailure: true },
     );
@@ -80,8 +100,7 @@ export const getFixturesByLeague = cache(
           : "all";
     return fixturesCached(
       `lg:${leagueId}:${season}:${tag}`,
-      { ttlSeconds: 900, staleSeconds: 1800 },
-      60,
+      { ttlSeconds: TTL.LEAGUE_SEASON, staleSeconds: STALE.LEAGUE_SEASON },
       params,
     );
   },
@@ -103,8 +122,7 @@ export const getFixturesByTeam = cache(
         : "all";
     return fixturesCached(
       `tm:${teamId}:${season}:${tag}`,
-      { ttlSeconds: 900, staleSeconds: 1800 },
-      60,
+      { ttlSeconds: TTL.TEAM_FIXTURES, staleSeconds: STALE.TEAM_FIXTURES },
       params,
     );
   },
@@ -120,15 +138,14 @@ export const getTeamRecentFixtures = cache(
   (teamId: number, last: number): Promise<ApiFixture[]> =>
     fixturesCached(
       `tm:${teamId}:last:${last}`,
-      { ttlSeconds: 900, staleSeconds: 1800 },
-      60,
+      { ttlSeconds: TTL.TEAM_FIXTURES, staleSeconds: STALE.TEAM_FIXTURES },
       { team: teamId, last },
     ),
 );
 
 export const getLiveFixtures = cache(
   (): Promise<ApiFixture[]> =>
-    fixturesCached("live:all", { ttlSeconds: 30 }, 30, { live: "all" }),
+    fixturesCached("live:all", { ttlSeconds: TTL.LIVE_ALL }, { live: "all" }),
 );
 
 // --- League scoping (Part B) ------------------------------------------------
