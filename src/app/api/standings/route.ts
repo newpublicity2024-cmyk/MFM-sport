@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import { getStandings } from "@/lib/api-football/standings";
 import { TTL } from "@/lib/api-football/ttl";
 
-export const revalidate = TTL.STANDINGS_LIVE;
+// NOTE: Next requires a route segment config export to be a statically
+// analyzable literal — `export const revalidate = TTL.X` fails the build with
+// "Invalid segment configuration export detected" even though it typechecks
+// and every test passes. The number is therefore duplicated from
+// lib/api-football/ttl.ts, and `src/app/api/__tests__/segmentConfig.test.ts`
+// asserts the two never drift.
+export const revalidate = 60; // TTL.STANDINGS_LIVE
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
