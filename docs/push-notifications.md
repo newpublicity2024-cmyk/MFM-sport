@@ -72,7 +72,7 @@ subscribe from Safari.
 
 | Variable | Where | Notes |
 |---|---|---|
-| `ONESIGNAL_APP_API_KEY` | Vercel → **Production only**, Sensitive | App API key, `os_v2_app_…`. OneSignal → Settings → Keys & IDs. Without it the site still collects subscribers but sends nothing. |
+| `ONESIGNAL_APP_API_KEY` | Vercel → **Production only**, Sensitive | App API key, `os_v2_app_…`. OneSignal → Settings → Keys & IDs: key `mfmsport-web-push (Vercel Production)`, `token_id e9a6b4c9-9689-4de7-a5e5-ea246b0d40da` (24 Nov 2026). Without it the site still collects subscribers but sends nothing. Env changes reach only new deployments — redeploy after setting it. |
 | `NEXT_PUBLIC_ONESIGNAL_APP_ID` | optional | Defaults to the app above (`src/lib/push/webSdk.ts`). |
 
 Never put the **Organization** key (`os_v2_org_…`) in Vercel or the repo: it can

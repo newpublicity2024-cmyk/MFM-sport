@@ -6,11 +6,20 @@ Arabic-language Moroccan football news site. Next.js 16 (App Router) + Payload C
 
 ## Session state — OneSignal web push for new articles (24 November 2026)
 
-Branch `feat/onesignal-article-push`, **committed locally, not pushed** — the
-push was refused by the session's permission classifier and needs the owner's
-yes. Owner asked: notify readers of every new article via OneSignal; they had
-pasted a OneSignal key into `.env.local`. Operator doc:
-`docs/push-notifications.md`. Ledger: `.unlazy/GATES-onesignal-push.md`.
+Branch `feat/onesignal-article-push`. Owner asked: notify readers of every new
+article via OneSignal; they had pasted a OneSignal key into `.env.local`. Later
+the same day the owner said yes to minting the App key, to push, and to merge on
+green. Operator doc: `docs/push-notifications.md`. Ledger:
+`.unlazy/GATES-onesignal-push.md`.
+
+**App API key minted** with the org key (owner's yes): name
+`mfmsport-web-push (Vercel Production)`, `token_id
+e9a6b4c9-9689-4de7-a5e5-ea246b0d40da` — the app's only key. Value is in
+`.env.local` only (never printed). `verify-push live` passed with it: key
+accepted for the app, `Subscribed Users` exists, the real payload accepted
+and delivered to nobody (`All included players are not subscribed`), a
+corrupted key → 401. **It is NOT in Vercel yet** — see the access finding
+below.
 
 ### Found
 
@@ -36,9 +45,14 @@ pasted a OneSignal key into `.env.local`. Operator doc:
 - Publishing rate: 6–15 editorial articles a day (14-day sample), 100 % with a
   featured image, **0 % with an excerpt** → the notification text is the
   opening of the body.
-- **Both the Vercel connector and the Vercel CLI have lost access to team
-  `mfm-sport-s-projects`** (connector 403; the CLI login sees only
-  `tomobile360` and `newpublicitys-projects`).
+- **No route from a session to Vercel team `mfm-sport-s-projects`.** The CLI,
+  the claude.ai Vercel connector and the `.mcp.json` Vercel server are all
+  signed in as **`newpublicity2024-5287`**, which is not a member of that team:
+  project reads 403, and `authorize_team_access` answers 404 "Team not found"
+  (there is nothing to authorise for a non-member). Fix: invite that account to
+  the team, or sign the connector / CLI in with an account that is a member.
+  Do not put the key in Vercel through an MCP call — the value would land in
+  the transcript; use `vercel env add … --sensitive` fed from `.env.local`.
 - Nothing else in the repo reads `VERCEL_ENV` at runtime. The hook requires
   `VERCEL_ENV === "production"`; if the project's *Automatically expose System
   Environment Variables* is off, every publish logs `reason: not-production`
@@ -74,15 +88,17 @@ is inside the viewport.
 
 ### Owner's tasks
 
-1. **App API key.** OneSignal → app `mfmsport.ma` → Settings → Keys & IDs →
-   *Add key* (or let a session mint one with the org key — refused by the
-   classifier without an explicit yes). Put it in Vercel → Production only →
-   `ONESIGNAL_APP_API_KEY`, Sensitive; and in `.env.local` for the `live` gate.
-2. **Vercel access** for the connector (`authorize_team_access` link) or the
-   CLI (`vercel login` with an account in the team).
-3. Say yes to push → PR → CI → merge (and a redeploy after the key is added).
-4. **Rotate the Organization key** in OneSignal; delete `onesignal_api` from
-   `.env.local`.
+1. ~~App API key~~ **minted** (see above). **Put it in Vercel**: Project →
+   Settings → Environment Variables → `ONESIGNAL_APP_API_KEY`, value = the
+   `ONESIGNAL_APP_API_KEY=` line in `.env.local`, **Production only**,
+   Sensitive → then **Redeploy** production (env changes only reach new
+   deployments). Until then every publish logs `reason: not-configured`.
+2. **Vercel access** for sessions: invite `newpublicity2024-5287` to
+   `mfm-sport-s-projects`, or sign the CLI/connector in with a member account.
+   Needed for `verify-push vercel-env`, `autoExposeSystemEnvs`, and logs.
+3. ~~Say yes to push → PR → CI → merge~~ — yes given 24 November.
+4. **Rotate the Organization key** in OneSignal (Organization → Keys); delete
+   `onesignal_api` from `.env.local`. The App key does not depend on it.
 5. Then: `served` + `prompt --no-route` on production, and `prod-sent --since
    <deploy instant>` after the next real publish. Never "test" by publishing
    an article — that notifies every subscriber.
