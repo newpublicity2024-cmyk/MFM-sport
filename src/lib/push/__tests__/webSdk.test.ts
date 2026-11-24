@@ -8,6 +8,8 @@ import { OneSignalLoader } from "@/components/push/OneSignalLoader";
 import {
   ONESIGNAL_PAGE_SDK_URL,
   ONESIGNAL_WORKER_SOURCE,
+  PROMPT_DELAY_MS,
+  PROMPT_SESSION_KEY,
   PROMPT_TEXT,
   WELCOME_NOTIFICATION,
   buildOneSignalInitScript,
@@ -18,26 +20,81 @@ const SITE = "https://www.mfmsport.ma";
 const ROOT = process.cwd();
 
 type FakeEl = { id?: string; src?: string; defer?: boolean };
+type Timer = { fn: () => void; ms: number };
+
+/** A per-tab sessionStorage stand-in (a new one = a new visit). */
+function fakeSessionStorage(): Storage {
+  const m = new Map<string, string>();
+  return {
+    getItem: (k: string) => m.get(k) ?? null,
+    setItem: (k: string, v: string) => void m.set(k, v),
+    removeItem: (k: string) => void m.delete(k),
+    clear: () => m.clear(),
+    key: () => null,
+    get length() {
+      return m.size;
+    },
+  };
+}
 
 /** Runs the inline bootstrap against a stand-in window/document/location. */
-function runBootstrap(origin: string, readyState: "loading" | "complete" = "loading") {
+function runBootstrap(
+  origin: string,
+  readyState: "loading" | "complete" = "loading",
+  browser: {
+    permission?: NotificationPermission | null; // null = no Notification API at all
+    serviceWorker?: boolean;
+    sessionStorage?: Storage;
+  } = {},
+) {
   const appended: FakeEl[] = [];
   const listeners: Record<string, () => void> = {};
+  const timers: Timer[] = [];
   const document = {
     readyState,
     head: { appendChild: (el: FakeEl) => appended.push(el) },
     createElement: () => ({}) as FakeEl,
     getElementById: (id: string) => appended.find((el) => el.id === id) ?? null,
   };
+  const permission = browser.permission === undefined ? "default" : browser.permission;
   const window: Record<string, unknown> = {
     addEventListener: (type: string, fn: () => void) => {
       listeners[type] = fn;
     },
     requestIdleCallback: (fn: () => void) => fn(),
+    setTimeout: (fn: () => void, ms: number) => timers.push({ fn, ms }),
+    navigator: browser.serviceWorker === false ? {} : { serviceWorker: {} },
+    sessionStorage: browser.sessionStorage ?? fakeSessionStorage(),
+    ...(permission === null ? {} : { Notification: { permission } }),
   };
   const code = buildOneSignalInitScript(APP_ID, SITE);
-  new Function("window", "document", "location", code)(window, document, { origin });
-  return { window, appended, fireLoad: () => listeners.load?.(), rerun: () => new Function("window", "document", "location", code)(window, document, { origin }) };
+  const run = () => new Function("window", "document", "location", code)(window, document, { origin });
+  run();
+  return { window, appended, timers, fireLoad: () => listeners.load?.(), rerun: run };
+}
+
+/** What the SDK hands to a OneSignalDeferred callback, with the calls we care about. */
+function fakeOneSignal(opts: { promptPush?: () => Promise<void> } = {}) {
+  const prompts: unknown[] = [];
+  return {
+    prompts,
+    sdk: {
+      init: async () => undefined,
+      Slidedown: {
+        promptPush: (o: unknown) => {
+          prompts.push(o);
+          return opts.promptPush ? opts.promptPush() : Promise.resolve();
+        },
+      },
+    },
+  };
+}
+
+/** Runs the queued init the way the SDK would, then lets the ask() step run. */
+async function initialise(env: ReturnType<typeof runBootstrap>, os = fakeOneSignal()) {
+  const queue = env.window.OneSignalDeferred as Array<(sdk: unknown) => Promise<unknown>>;
+  await queue[queue.length - 1](os.sdk);
+  return os;
 }
 
 describe("OneSignal web SDK bootstrap", () => {
@@ -83,8 +140,74 @@ describe("OneSignal web SDK bootstrap", () => {
       welcomeNotification: { disable: false, title: "إم إف إم سبور", url: `${SITE}/ar` },
     });
     const prompt = options?.promptOptions.slidedown.prompts[0];
-    expect(prompt).toMatchObject({ type: "push", autoPrompt: true, text: PROMPT_TEXT });
-    expect(prompt?.delay.timeDelay).toBeGreaterThanOrEqual(10);
+    // The text OneSignal uses for a manual promptPush(); its own scheduler is off.
+    expect(prompt).toMatchObject({ type: "push", autoPrompt: false, text: PROMPT_TEXT });
+  });
+
+  it("asks on a visit: forces the Arabic slidedown a few seconds after the SDK is ready", async () => {
+    const env = runBootstrap(SITE);
+    const os = await initialise(env);
+    expect(env.timers).toHaveLength(1);
+    expect(env.timers[0].ms).toBe(PROMPT_DELAY_MS);
+    expect(PROMPT_DELAY_MS).toBeLessThanOrEqual(5_000);
+    expect(os.prompts).toHaveLength(0); // not before the delay
+    env.timers[0].fn();
+    // force: true is what skips OneSignal's days-long back-off after «لاحقًا»
+    expect(os.prompts).toEqual([{ force: true }]);
+    expect((env.window.sessionStorage as Storage).getItem(PROMPT_SESSION_KEY)).toBe("1");
+  });
+
+  it("asks once per visit: not again on the next page of the same tab", async () => {
+    const tab = fakeSessionStorage();
+    const first = runBootstrap(SITE, "loading", { sessionStorage: tab });
+    (await initialise(first), first.timers[0].fn());
+    const nextPage = runBootstrap(SITE, "loading", { sessionStorage: tab });
+    const os = await initialise(nextPage);
+    expect(nextPage.timers).toHaveLength(0);
+    expect(os.prompts).toHaveLength(0);
+  });
+
+  it("asks again on a new visit after «لاحقًا» (a new tab session, permission still default)", async () => {
+    const earlier = runBootstrap(SITE, "loading", { sessionStorage: fakeSessionStorage() });
+    (await initialise(earlier), earlier.timers[0].fn());
+    const laterVisit = runBootstrap(SITE, "loading", { sessionStorage: fakeSessionStorage() });
+    const os = await initialise(laterVisit);
+    laterVisit.timers[0].fn();
+    expect(os.prompts).toEqual([{ force: true }]);
+  });
+
+  it("never asks a reader who has decided in the browser (granted or denied)", async () => {
+    for (const permission of ["granted", "denied"] as const) {
+      const env = runBootstrap(SITE, "loading", { permission });
+      const os = await initialise(env);
+      expect(env.timers).toHaveLength(0);
+      expect(os.prompts).toHaveLength(0);
+    }
+  });
+
+  it("never asks where web push cannot work (no Notification API, no service workers)", async () => {
+    for (const browser of [{ permission: null }, { serviceWorker: false }] as const) {
+      const env = runBootstrap(SITE, "loading", browser);
+      const os = await initialise(env);
+      expect(env.timers).toHaveLength(0);
+      expect(os.prompts).toHaveLength(0);
+    }
+  });
+
+  it("a blocked sessionStorage or a failing promptPush never escapes as a page error", async () => {
+    const blocked = {
+      getItem: () => {
+        throw new Error("SecurityError");
+      },
+      setItem: () => {
+        throw new Error("SecurityError");
+      },
+    } as unknown as Storage;
+    const env = runBootstrap(SITE, "loading", { sessionStorage: blocked });
+    const os = await initialise(env, fakeOneSignal({ promptPush: () => Promise.reject(new Error("opted out")) }));
+    expect(() => env.timers[0].fn()).not.toThrow();
+    expect(os.prompts).toEqual([{ force: true }]); // still asks, once per page
+    await new Promise((r) => setTimeout(r, 0)); // the rejection is caught, not unhandled
   });
 
   it("fetches the SDK only after load, exactly once, even if the bootstrap runs twice", () => {

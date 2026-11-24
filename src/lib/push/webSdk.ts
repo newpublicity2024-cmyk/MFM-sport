@@ -51,6 +51,24 @@ export const PROMPT_TEXT = {
   cancelButton: "لاحقًا",
 } as const;
 
+/**
+ * When to ask (owner's request, 24 November 2026: "whenever a user connects").
+ *
+ * On EVERY visit until the reader has decided in the browser — i.e. while
+ * `Notification.permission` is still "default" — a few seconds after the SDK
+ * is ready, at most once per tab session (not on every page of a visit).
+ * `force: true` skips OneSignal's own back-off after «لاحقًا», which otherwise
+ * hides the prompt for days. A reader who subscribed ("granted") or blocked
+ * notifications ("denied") is never asked.
+ *
+ * Only this soft prompt repeats: the browser's own permission dialog appears
+ * only after «اشترك», so its accept rate — which Chrome watches to decide
+ * whether to quiet a site's prompts — stays high.
+ */
+export const PROMPT_DELAY_MS = 3_000;
+/** sessionStorage marker: per tab, so a new visit (or tab) asks again. */
+export const PROMPT_SESSION_KEY = "mfm-push-asked";
+
 /** Replaces the dashboard's English "Thanks for subscribing!". */
 export const WELCOME_NOTIFICATION = {
   title: SITE_NAME_AR,
@@ -77,11 +95,11 @@ export function oneSignalInitOptions(appId: string, siteUrl: string = SITE_URL) 
         prompts: [
           {
             type: "push",
-            autoPrompt: true,
+            // Shown by the bootstrap (see PROMPT_DELAY_MS), not by OneSignal's
+            // scheduler, whose back-off after a dismissal lasts days. A manual
+            // `Slidedown.promptPush()` still takes its text from this entry.
+            autoPrompt: false,
             text: { ...PROMPT_TEXT },
-            // The soft prompt first; the browser's own permission dialog only
-            // after "اشترك". Not on arrival: a reader gets 15 s with the page.
-            delay: { pageViews: 1, timeDelay: 15 },
           },
         ],
       },
@@ -102,7 +120,15 @@ export function buildOneSignalInitScript(appId: string, siteUrl: string = SITE_U
     "(function(){",
     `if(location.origin!==${scriptSafeJson(origin)})return;`,
     "var w=window;w.OneSignalDeferred=w.OneSignalDeferred||[];",
-    `w.OneSignalDeferred.push(function(OneSignal){return OneSignal.init(${scriptSafeJson(oneSignalInitOptions(appId, siteUrl))});});`,
+    `w.OneSignalDeferred.push(function(OneSignal){return OneSignal.init(${scriptSafeJson(oneSignalInitOptions(appId, siteUrl))}).then(function(){ask(OneSignal);});});`,
+    // The visit-level prompt (see PROMPT_DELAY_MS). Every step is guarded: a
+    // storage or SDK failure must never surface as a page error.
+    "function ask(OneSignal){",
+    "try{if(!w.Notification||!w.navigator||!('serviceWorker' in w.navigator)||w.Notification.permission!=='default')return;}catch(e){return;}",
+    `var k=${scriptSafeJson(PROMPT_SESSION_KEY)};try{if(w.sessionStorage.getItem(k))return;}catch(e){}`,
+    "w.setTimeout(function(){try{w.sessionStorage.setItem(k,'1');}catch(e){}",
+    "try{var p=OneSignal.Slidedown.promptPush({force:true});if(p&&p.catch)p.catch(function(){});}catch(e){}",
+    `},${PROMPT_DELAY_MS});}`,
     "function load(){if(document.getElementById('onesignal-sdk'))return;",
     `var s=document.createElement('script');s.id='onesignal-sdk';s.src=${scriptSafeJson(ONESIGNAL_PAGE_SDK_URL)};s.defer=true;document.head.appendChild(s);}`,
     "function idle(){if('requestIdleCallback' in w){w.requestIdleCallback(load,{timeout:4000});}else{setTimeout(load,1);}}",
