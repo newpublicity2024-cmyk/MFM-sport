@@ -69,8 +69,11 @@ describe("OneSignal web SDK bootstrap", () => {
     const env = runBootstrap(SITE);
     const queue = env.window.OneSignalDeferred as Array<(os: unknown) => unknown>;
     expect(queue).toHaveLength(1);
-    let options: Record<string, any> | undefined;
-    await queue[0]({ init: async (o: Record<string, unknown>) => void (options = o) });
+    type CapturedInit = Record<string, unknown> & {
+      promptOptions: { slidedown: { prompts: Array<Record<string, unknown> & { delay: { timeDelay: number } }> } };
+    };
+    let options: CapturedInit | undefined;
+    await queue[0]({ init: async (o: Record<string, unknown>) => void (options = o as CapturedInit) });
     expect(options).toMatchObject({
       appId: APP_ID,
       serviceWorkerPath: "OneSignalSDKWorker.js",
@@ -81,7 +84,7 @@ describe("OneSignal web SDK bootstrap", () => {
     });
     const prompt = options?.promptOptions.slidedown.prompts[0];
     expect(prompt).toMatchObject({ type: "push", autoPrompt: true, text: PROMPT_TEXT });
-    expect(prompt.delay.timeDelay).toBeGreaterThanOrEqual(10);
+    expect(prompt?.delay.timeDelay).toBeGreaterThanOrEqual(10);
   });
 
   it("fetches the SDK only after load, exactly once, even if the bootstrap runs twice", () => {
