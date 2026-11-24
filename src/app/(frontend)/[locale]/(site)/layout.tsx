@@ -3,6 +3,8 @@ import { Footer } from "@/components/layout/Footer";
 import { AdSlot } from "@/components/ads/AdSlot";
 import { StickyMobileAd } from "@/components/ads/StickyMobileAd";
 import { SocialFloater } from "@/components/social/SocialFloater";
+import { OneSignalLoader } from "@/components/push/OneSignalLoader";
+import { ONESIGNAL_APP_ID } from "@/lib/push/webSdk";
 
 const adsenseClientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
 
@@ -50,6 +52,10 @@ export default async function SiteLayout({ children, params }: Props) {
           crossOrigin="anonymous"
         />
       )}
+
+      {/* Web-push subscription prompt. Inside this route group for the same
+          reason as the ads: an error page is no place to ask for anything. */}
+      <OneSignalLoader appId={ONESIGNAL_APP_ID} />
     </>
   );
 }

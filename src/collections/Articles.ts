@@ -1,6 +1,7 @@
 import type { CollectionConfig, CollectionBeforeChangeHook } from "payload";
 import { revalidateArticleChange, revalidateArticleDelete } from "@/lib/payload/revalidate";
 import { slugFromTitle } from "@/lib/payload/slugFromTitle";
+import { notifyArticlePublished } from "@/lib/push/notifyArticlePublished";
 
 // When an article is published without an explicit date, stamp it with the
 // current time so editors don't have to set it manually. Never overwrites an
@@ -22,7 +23,10 @@ export const Articles: CollectionConfig = {
   },
   hooks: {
     beforeChange: [setPublishedAtOnPublish],
-    afterChange: [revalidateArticleChange],
+    // Order: caches first, so the page a notification links to is already the
+    // fresh one. The push itself is deferred until after the response (after()),
+    // i.e. after this save's transaction has committed. See lib/push.
+    afterChange: [revalidateArticleChange, notifyArticlePublished],
     afterDelete: [revalidateArticleDelete],
   },
   admin: {
