@@ -16,6 +16,11 @@
  * Secrets: `live` and `prod-sent` read ONESIGNAL_APP_API_KEY from the
  * environment or .env.local and never print it.
  *
+ * Protected previews (Vercel Authentication): run `served` / `prompt` under
+ *   vercel env run --scope newpublicitys-projects --project mfm-sport -- pnpm exec tsx scripts/verify-push.ts served <preview-url>
+ * which provides a short-lived VERCEL_OIDC_TOKEN; it is sent as
+ * `x-vercel-trusted-oidc-idp-token` to *.vercel.app hosts only, never printed.
+ *
  * `live` is built so that it CANNOT reach a subscriber: it strips the segment
  * from the real payload, targets one freshly generated subscription id that
  * does not exist, and asserts both before sending.
@@ -383,26 +388,34 @@ async function checkLive(): Promise<void> {
 // vercel-env — names and targets only; values are never requested
 // ---------------------------------------------------------------------------
 
-const VERCEL_SCOPE = "mfm-sport-s-projects";
+// The project moved from team `mfm-sport-s-projects` to `newpublicitys-projects`
+// (same project id) — read 24 November 2026 from `vercel project inspect`.
+const VERCEL_SCOPE = "newpublicitys-projects";
 const VERCEL_PROJECT = "prj_yLFKRNjsrMdH31Kc2or1W5VVAcKL";
 
-function vercelEnvNames(target: string): string[] {
+/** Name → type for one target, from the CLI's table ("Hidden" in the value
+ *  column — `--json` is never used, it decrypts). */
+function vercelEnv(target: string): Map<string, string> {
   const res = spawnSync("vercel", ["env", "ls", target, "--scope", VERCEL_SCOPE, "--project", VERCEL_PROJECT], {
     encoding: "utf8",
     timeout: 120_000,
   });
   const text = `${res.stdout}${res.stderr}`;
   assertEq(res.status, 0, `vercel env ls ${target} succeeded${res.status === 0 ? "" : `: ${text.trim().split("\n").slice(-2).join(" ")}`}`);
-  return [...text.matchAll(/^\s*([A-Z][A-Z0-9_]+)\s+(?:Encrypted|Sensitive)\b/gm)].map((m) => m[1]);
+  const rows = [...text.matchAll(/^\s*([A-Z][A-Z0-9_]+)\s+\S+\s+(Secret|Sensitive|Encrypted|Config|Plain)\b/gm)];
+  return new Map(rows.map((m) => [m[1], m[2]]));
 }
 
 function checkVercelEnv(): void {
-  const production = vercelEnvNames("production");
+  const productionTypes = vercelEnv("production");
+  const production = [...productionTypes.keys()];
   assert(production.length >= 5, `read the production variable list (${production.length} names)`);
   assert(production.includes("DATABASE_URL"), "positive control: the parser sees DATABASE_URL in production");
   assert(production.includes("ONESIGNAL_APP_API_KEY"), "ONESIGNAL_APP_API_KEY is set for production");
+  const keyType = productionTypes.get("ONESIGNAL_APP_API_KEY") ?? "";
+  assert(["Secret", "Sensitive"].includes(keyType), `…stored as a secret, not readable config (${keyType})`);
   for (const target of ["preview", "development"]) {
-    assert(!vercelEnvNames(target).includes("ONESIGNAL_APP_API_KEY"), `ONESIGNAL_APP_API_KEY is NOT set for ${target}`);
+    assert(!vercelEnv(target).has("ONESIGNAL_APP_API_KEY"), `ONESIGNAL_APP_API_KEY is NOT set for ${target}`);
   }
   const orgLike = production.filter((n) => /ONESIGNAL/.test(n) && n !== "ONESIGNAL_APP_API_KEY" && n !== "NEXT_PUBLIC_ONESIGNAL_APP_ID");
   assertEq(orgLike.length, 0, `no other OneSignal credential (e.g. an org key) in production (${orgLike.join(", ")})`);
@@ -420,8 +433,19 @@ function countLoaderTags(html: string): number {
   return (html.match(/<script id="onesignal-init">/g) ?? []).length;
 }
 
+/** Vercel's Trusted Sources header for a protected deployment — only ever sent
+ *  to a *.vercel.app host, and only when `vercel env run` provided a token. */
+function protectionHeaders(url: string): Record<string, string> {
+  const token = process.env.VERCEL_OIDC_TOKEN;
+  return token && new URL(url).hostname.endsWith(".vercel.app") ? { "x-vercel-trusted-oidc-idp-token": token } : {};
+}
+
 async function get(url: string): Promise<{ status: number; type: string; body: string }> {
-  const res = await fetch(url, { headers: { "User-Agent": UA }, redirect: "follow", signal: AbortSignal.timeout(30_000) });
+  const res = await fetch(url, {
+    headers: { "User-Agent": UA, ...protectionHeaders(url) },
+    redirect: "follow",
+    signal: AbortSignal.timeout(30_000),
+  });
   return { status: res.status, type: res.headers.get("content-type") ?? "", body: await res.text() };
 }
 
@@ -434,12 +458,14 @@ async function checkServed(baseArg: string | undefined): Promise<void> {
   assertEq(countLoaderTags('["$","script",null,{"id":"onesignal-init"}]'), 0, "control: the counter ignores the RSC copy");
 
   const worker = await get(`${base}/OneSignalSDKWorker.js`);
+  if (worker.type.startsWith("text/html") && /vercel\.com\/(login|sso)|Vercel Authentication/i.test(worker.body)) {
+    console.error("  (Vercel Authentication page: run under `vercel env run --scope … --project …` — see the header comment)");
+  }
   assertEq(worker.status, 200, "/OneSignalSDKWorker.js answers 200");
   assert(/javascript/.test(worker.type), `…as JavaScript (${worker.type})`);
   assertEq(worker.body.trim(), ONESIGNAL_WORKER_SOURCE, "…with exactly the v16 import line");
 
   const home = await get(`${base}/ar`);
-  if (home.status === 401) console.error("  (401: the deployment is behind Vercel Authentication — use a bypass or the production URL)");
   assertEq(home.status, 200, "/ar answers 200");
   assertEq(countLoaderTags(home.body), 1, "/ar carries exactly one loader tag");
   const tag = home.body.match(/<script id="onesignal-init">([\s\S]*?)<\/script>/)?.[1] ?? "";
@@ -493,7 +519,11 @@ async function checkPrompt(baseArg: string | undefined, noRoute: boolean): Promi
         // origin the OneSignal app accepts.
         await context.route(`${PROD_ORIGIN}/**`, async (route) => {
           const u = new URL(route.request().url());
-          const response = await route.fetch({ url: `${base}${u.pathname}${u.search}` });
+          const target = `${base}${u.pathname}${u.search}`;
+          const response = await route.fetch({
+            url: target,
+            headers: { ...route.request().headers(), ...protectionHeaders(target) },
+          });
           await route.fulfill({ response });
         });
       }

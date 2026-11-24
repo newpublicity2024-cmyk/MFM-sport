@@ -18,8 +18,9 @@ e9a6b4c9-9689-4de7-a5e5-ea246b0d40da` — the app's only key. Value is in
 `.env.local` only (never printed). `verify-push live` passed with it: key
 accepted for the app, `Subscribed Users` exists, the real payload accepted
 and delivered to nobody (`All included players are not subscribed`), a
-corrupted key → 401. **It is NOT in Vercel yet** — see the access finding
-below.
+corrupted key → 401. The owner then added it to Vercel (Production only) and
+gave a fine-grained GitHub token in `.env.local` (`fine_grained_token`) for
+push / PR / merge — PR #80.
 
 ### Found
 
@@ -45,14 +46,21 @@ below.
 - Publishing rate: 6–15 editorial articles a day (14-day sample), 100 % with a
   featured image, **0 % with an excerpt** → the notification text is the
   opening of the body.
-- **No route from a session to Vercel team `mfm-sport-s-projects`.** The CLI,
-  the claude.ai Vercel connector and the `.mcp.json` Vercel server are all
-  signed in as **`newpublicity2024-5287`**, which is not a member of that team:
-  project reads 403, and `authorize_team_access` answers 404 "Team not found"
-  (there is nothing to authorise for a non-member). Fix: invite that account to
-  the team, or sign the connector / CLI in with an account that is a member.
-  Do not put the key in Vercel through an MCP call — the value would land in
-  the transcript; use `vercel env add … --sensitive` fed from `.env.local`.
+- **The Vercel project MOVED teams.** `mfm-sport` (same id
+  `prj_yLFKRNjsrMdH31Kc2or1W5VVAcKL`, www.mfmsport.ma) now belongs to
+  **`newpublicitys-projects`** (`team_YHjAKFMsNSO1sCyOuAat2LeN`), not
+  `mfm-sport-s-projects` (`team_fTocfmy9…`, which answers 403 / "Team not
+  found"). The CLI and both Vercel MCP servers (signed in as
+  `newpublicity2024-5287`) reach it with `--scope newpublicitys-projects`.
+  Read 24 November: `autoExposeSystemEnvs: true` (the hook sees `VERCEL_ENV`);
+  `ssoProtection: all_except_custom_domains` → previews are behind Vercel
+  Authentication; fetch them with `vercel env run --scope newpublicitys-projects
+  --project mfm-sport -- <cmd>` (OIDC token → `x-vercel-trusted-oidc-idp-token`,
+  sent by `verify-push` to `*.vercel.app` only). Never `vercel link` here
+  without checking: it can offer to overwrite `.env.local`, which holds keys.
+- `ONESIGNAL_APP_API_KEY` was added to Vercel by the owner: **Production only,
+  type Secret** (`verify-push vercel-env`). Never put a key in Vercel through an
+  MCP call — the value would land in the transcript.
 - **No write route to GitHub from a session either** (24 November): `git push`
   over HTTPS finds no keychain credential for `newpublicity2024-cmyk` ("could
   not read Password … Device not configured"), `gh` is not installed, and the
@@ -95,15 +103,12 @@ is inside the viewport.
 
 ### Owner's tasks
 
-1. ~~App API key~~ **minted** (see above). **Put it in Vercel**: Project →
-   Settings → Environment Variables → `ONESIGNAL_APP_API_KEY`, value = the
-   `ONESIGNAL_APP_API_KEY=` line in `.env.local`, **Production only**,
-   Sensitive → then **Redeploy** production (env changes only reach new
-   deployments). Until then every publish logs `reason: not-configured`.
-2. **Vercel access** for sessions: invite `newpublicity2024-5287` to
-   `mfm-sport-s-projects`, or sign the CLI/connector in with a member account.
-   Needed for `verify-push vercel-env`, `autoExposeSystemEnvs`, and logs.
+1. ~~App API key~~ minted; ~~put it in Vercel~~ done by the owner.
+2. ~~Vercel access~~ — the project moved to `newpublicitys-projects`, which
+   sessions can reach (see above).
 3. ~~Say yes to push → PR → CI → merge~~ — yes given 24 November.
+   **Delete or expire `fine_grained_token` in `.env.local`** once it is no
+   longer needed (and renew `GITHUB_PAT_NEWPUBLICITY` for the MCP server).
 4. **Rotate the Organization key** in OneSignal (Organization → Keys); delete
    `onesignal_api` from `.env.local`. The App key does not depend on it.
 5. Then: `served` + `prompt --no-route` on production, and `prod-sent --since
@@ -823,7 +828,7 @@ See **Resume here** at the top for the next command.
 
 - **Google Search Console — nobody on this repo has ever had access.** The one data source that would show the old Yoast sitemap's status, the "Not found (404)" bucket, and the before/after cutover traffic. Likely trap: the old site was non-www, the new canonical is www; if only the old URL-prefix property exists, the new site is invisible there. Checklist for whoever holds it: `docs/archive-import-runbook.md` § *Search Console*.
 - **Ahrefs connector not authorised** — blocks referring-domain data, which would set import *order* (highest-value URLs first). Does not block the import itself. Note `robots.txt` also disallows `AhrefsBot`, so a fresh Ahrefs crawl of the new site would be blind regardless.
-- ~~**Vercel connector scoped to the wrong account**~~ **RESOLVED** 16 September 2026 — now scoped to `mfm-sport-s-projects` (`team_fTocfmy9K34vLfmtwxTkCzIb`, project `prj_yLFKRNjsrMdH31Kc2or1W5VVAcKL`, linked to this repo). Deploy history is readable. The WAF/ASN breakdown is still to do.
+- ~~**Vercel connector scoped to the wrong account**~~ **RESOLVED** 16 September 2026 (**superseded 24 November 2026: the project now lives in `newpublicitys-projects`, see the OneSignal section**) — then scoped to `mfm-sport-s-projects` (`team_fTocfmy9K34vLfmtwxTkCzIb`, project `prj_yLFKRNjsrMdH31Kc2or1W5VVAcKL`, linked to this repo). Deploy history is readable. The WAF/ASN breakdown is still to do.
 - **Neon MCP scoped to the wrong org** (16 September 2026) — lists only `icy-union-71150532` (Lalla Fatima), not `broad-snow-50246164`. There is no `.env` on this machine and `/api/articles` is 403 (correctly), so there is currently **no route to the production DB** from a session. Re-authorise the connector against the MFM Sport org before any DB verification.
 - **API-Football daily quota exhausted** — match pages return null upstream. Blocks verifying that a *whitelisted* fixture is indexable; the non-whitelisted `noindex` case is verified.
 - **`wp-content/uploads` backup** — owner is checking. All 43,584 legacy images already 404; the WordPress REST API is gone. Bodies import with `<img>` stripped. Images can be backfilled later against `legacy_slug` without re-importing text.

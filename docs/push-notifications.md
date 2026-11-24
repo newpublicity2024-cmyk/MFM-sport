@@ -72,7 +72,7 @@ subscribe from Safari.
 
 | Variable | Where | Notes |
 |---|---|---|
-| `ONESIGNAL_APP_API_KEY` | Vercel → **Production only**, Sensitive | App API key, `os_v2_app_…`. OneSignal → Settings → Keys & IDs: key `mfmsport-web-push (Vercel Production)`, `token_id e9a6b4c9-9689-4de7-a5e5-ea246b0d40da` (24 Nov 2026). Without it the site still collects subscribers but sends nothing. Env changes reach only new deployments — redeploy after setting it. |
+| `ONESIGNAL_APP_API_KEY` | Vercel (`newpublicitys-projects/mfm-sport`) → **Production only**, type Secret | App API key, `os_v2_app_…`. OneSignal → Settings → Keys & IDs: key `mfmsport-web-push (Vercel Production)`, `token_id e9a6b4c9-9689-4de7-a5e5-ea246b0d40da` (24 Nov 2026). Without it the site still collects subscribers but sends nothing. Env changes reach only new deployments — redeploy after setting it. |
 | `NEXT_PUBLIC_ONESIGNAL_APP_ID` | optional | Defaults to the app above (`src/lib/push/webSdk.ts`). |
 
 Never put the **Organization** key (`os_v2_org_…`) in Vercel or the repo: it can
@@ -86,7 +86,10 @@ redeploy. **To stop asking readers:** remove `<OneSignalLoader>` from the layout
 ```bash
 pnpm exec tsx scripts/verify-push.ts decide|payload|hook|sender|loader|no-secret|static|suite
 pnpm exec tsx scripts/verify-push.ts live                      # key + segment + payload accepted; sends to nobody
+pnpm exec tsx scripts/verify-push.ts vercel-env                # key is Production-only, a Secret; no org key
 pnpm exec tsx scripts/verify-push.ts served https://www.mfmsport.ma
+# a preview is behind Vercel Authentication — wrap served/prompt in:
+vercel env run --scope newpublicitys-projects --project mfm-sport -- pnpm exec tsx scripts/verify-push.ts served <preview-url>
 pnpm exec tsx scripts/verify-push.ts prompt https://www.mfmsport.ma --no-route
 pnpm exec tsx scripts/verify-push.ts prod-sent --since <deploy instant>   # one push per article published since
 ```
