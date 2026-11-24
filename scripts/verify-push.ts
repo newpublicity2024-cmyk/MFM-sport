@@ -39,6 +39,8 @@ import { sendOneSignalNotification } from "../src/lib/push/onesignal";
 import {
   ONESIGNAL_APP_ID,
   ONESIGNAL_WORKER_SOURCE,
+  PROMPT_DELAY_MS,
+  PROMPT_SESSION_KEY,
   PROMPT_TEXT,
   buildOneSignalInitScript,
 } from "../src/lib/push/webSdk";
@@ -197,11 +199,19 @@ function checkLoader(): void {
   const script = buildOneSignalInitScript(ONESIGNAL_APP_ID);
   assert(script.includes('"scope":"/"'), "the init registers the worker at scope '/' (the WordPress plugin's scope)");
   assert(script.includes(`location.origin!==${JSON.stringify(PROD_ORIGIN)}`), "the init is guarded to the production origin");
+  assert(script.includes("promptPush({force:true})") && script.includes(PROMPT_SESSION_KEY), "the bootstrap forces the prompt once per tab session");
+  assert(PROMPT_DELAY_MS <= 5_000, `the prompt comes a few seconds after the SDK is ready (${PROMPT_DELAY_MS} ms)`);
   const results = runTestFile(`${TEST_DIR}/webSdk.test.ts`);
   requireTests(results, "OneSignal web SDK bootstrap", [
     "keeps the Arabic prompt within OneSignal's limits (90 / 15 / 15)",
     "does nothing at all on any origin but production (previews, localhost)",
     "on production queues one init with scope '/', the root worker and the Arabic prompt",
+    "asks on a visit: forces the Arabic slidedown a few seconds after the SDK is ready",
+    "asks once per visit: not again on the next page of the same tab",
+    "asks again on a new visit after «لاحقًا» (a new tab session, permission still default)",
+    "never asks a reader who has decided in the browser (granted or denied)",
+    "never asks where web push cannot work (no Notification API, no service workers)",
+    "a blocked sessionStorage or a failing promptPush never escapes as a page error",
     "fetches the SDK only after load, exactly once, even if the bootstrap runs twice",
     "cannot break out of its <script> tag whatever the configured values contain",
   ]);
@@ -534,9 +544,13 @@ async function checkPrompt(baseArg: string | undefined, noRoute: boolean): Promi
         if (m.type() === "error") errors.push(m.text());
       });
       await page.goto(`${PROD_ORIGIN}/ar`, { waitUntil: "load", timeout: 60_000 });
+      const loadedAt = Date.now();
 
       const dialog = page.locator("#onesignal-slidedown-dialog");
       await dialog.waitFor({ state: "visible", timeout: 60_000 });
+      // SDK after load + idle (≤ 4 s) + init + PROMPT_DELAY_MS: a few seconds.
+      const shownAfterMs = Date.now() - loadedAt;
+      assert(shownAfterMs <= 15_000, `${vp.name}: the prompt appears a few seconds after the page loads (${(shownAfterMs / 1000).toFixed(1)} s)`);
       // "Visible" fires while the dialog is still sliding in from above the
       // viewport (measured: y = -231 px on mobile). Let it settle, then require
       // it to be on screen — present-but-off-screen is a failure for a reader.
@@ -567,6 +581,41 @@ async function checkPrompt(baseArg: string | undefined, noRoute: boolean): Promi
       });
       assertEq(state.permission, "default", `${vp.name}: no permission was granted by the check`);
       assertEq(state.subscribed, false, `${vp.name}: no push subscription was created`);
+      if (vp.name === "desktop") {
+        // A reader who says «لاحقًا»: not asked again on the next page of the
+        // same visit, asked again on a new visit (a new tab session) — through
+        // OneSignal's own "previously dismissed" back-off.
+        await page.locator("#onesignal-slidedown-cancel-button").click();
+        await dialog.waitFor({ state: "hidden", timeout: 10_000 });
+        const href = await page.locator('a[href^="/ar/articles/"]:not([href*="/page/"])').first().getAttribute("href");
+        assert(href, "found an article link to continue the visit");
+        await page.goto(`${PROD_ORIGIN}${href}`, { waitUntil: "load", timeout: 60_000 });
+        await page.waitForTimeout(PROMPT_DELAY_MS + 9_000);
+        // Control: the SDK is running on this page, so "no prompt" is the
+        // once-per-visit rule deciding, not a page where nothing loaded.
+        assertEq(
+          await page.evaluate(() => typeof (window as unknown as { OneSignal?: { Slidedown?: { promptPush?: unknown } } }).OneSignal?.Slidedown?.promptPush),
+          "function",
+          "control: the OneSignal SDK is running on the next page",
+        );
+        assertEq(await dialog.isVisible(), false, "same visit, next page, after «لاحقًا»: not asked again");
+
+        const nextVisit = await context.newPage();
+        nextVisit.on("pageerror", (e) => errors.push(e.message));
+        await nextVisit.goto(`${PROD_ORIGIN}/ar`, { waitUntil: "load", timeout: 60_000 });
+        const again = nextVisit.locator("#onesignal-slidedown-dialog");
+        await again.waitFor({ state: "visible", timeout: 30_000 });
+        await nextVisit.waitForTimeout(2_500);
+        const box2 = await again.boundingBox();
+        assert(box2 && box2.y >= -1 && box2.y + box2.height <= vp.height + 1, "new visit after «لاحقًا»: asked again, on screen");
+        assertEq(
+          await nextVisit.evaluate(() => Notification.permission),
+          "default",
+          "…and the check still granted nothing",
+        );
+        await nextVisit.close();
+      }
+
       const oneSignalErrors = errors.filter((e) => /onesignal/i.test(e));
       for (const e of oneSignalErrors) console.error(`  page error: ${e}`);
       assertEq(oneSignalErrors.length, 0, `${vp.name}: OneSignal raised no page error`);

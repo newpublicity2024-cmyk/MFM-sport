@@ -50,13 +50,25 @@ At the current publishing rate that is roughly **6–15 notifications a day**.
 
 `<OneSignalLoader>` in `[locale]/(site)/layout.tsx` (so never on a 404 or in the
 admin). On `https://www.mfmsport.ma` only, after the page has loaded, it fetches
-the OneSignal SDK and, 15 seconds into the first page view, shows a slidedown:
+the OneSignal SDK and, **3 seconds after the SDK is ready** (`PROMPT_DELAY_MS`),
+shows a slidedown:
 
 > فعّل الإشعارات لتصلك أهم أخبار الرياضة فور نشرها. يمكنك إيقافها متى شئت.
 > [اشترك] [لاحقًا]
 
-The browser's own permission dialog appears only after «اشترك». New subscribers
-get an Arabic welcome notification.
+**When it is shown** (owner's request, 24 Nov 2026: "whenever a user connects"):
+on **every visit** until the reader decides in the browser — once per tab
+session, not on every page. A reader who tapped «لاحقًا» is asked again on
+their next visit (`promptPush({ force: true })` skips OneSignal's days-long
+back-off). Never shown to a reader whose browser permission is already
+`granted` (subscribed) or `denied` (blocked), nor where web push is unsupported.
+
+The browser's own permission dialog appears only after «اشترك», so Chrome's
+accept-rate heuristics (which can silence a site's prompts) see only readers who
+already said yes. New subscribers get an Arabic welcome notification.
+
+To make it less insistent, change the `sessionStorage` marker in
+`src/lib/push/webSdk.ts` to a `localStorage` timestamp (e.g. once a day).
 
 The worker is `public/OneSignalSDKWorker.js` at scope `/`: **the same scope the
 WordPress plugin registered** (archived homepage, March 2025). A returning
