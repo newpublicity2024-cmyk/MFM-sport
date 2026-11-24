@@ -53,6 +53,13 @@ below.
   the team, or sign the connector / CLI in with an account that is a member.
   Do not put the key in Vercel through an MCP call — the value would land in
   the transcript; use `vercel env add … --sensitive` fed from `.env.local`.
+- **No write route to GitHub from a session either** (24 November): `git push`
+  over HTTPS finds no keychain credential for `newpublicity2024-cmyk` ("could
+  not read Password … Device not configured"), `gh` is not installed, and the
+  `.mcp.json` GitHub server's token answers **401 Bad credentials** (expired or
+  revoked — renew `GITHUB_PAT_NEWPUBLICITY`). The repo is public, so CI status,
+  PRs and Vercel's preview URL (GitHub deployment statuses) are readable
+  unauthenticated at `api.github.com`.
 - Nothing else in the repo reads `VERCEL_ENV` at runtime. The hook requires
   `VERCEL_ENV === "production"`; if the project's *Automatically expose System
   Environment Variables* is off, every publish logs `reason: not-production`
