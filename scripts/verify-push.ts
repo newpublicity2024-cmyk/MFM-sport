@@ -476,7 +476,11 @@ async function checkPrompt(baseArg: string | undefined, noRoute: boolean): Promi
   if (noRoute) assertEq(base, PROD_ORIGIN, "--no-route runs against the production origin itself");
   const { chromium } = await import("playwright");
   const shots = process.env.VERIFY_PUSH_SHOTS || tmpdir();
-  const browser = await chromium.launch();
+  // Full Chromium in new-headless mode, NOT the default headless shell: the
+  // shell reports Notification.permission === "denied", and OneSignal (rightly)
+  // never prompts a browser that has refused — the check would fail for a
+  // reason no reader ever has. Needs `pnpm exec playwright install chromium`.
+  const browser = await chromium.launch({ channel: "chromium" });
   try {
     for (const vp of [
       { name: "desktop", width: 1280, height: 800 },
@@ -503,6 +507,15 @@ async function checkPrompt(baseArg: string | undefined, noRoute: boolean): Promi
 
       const dialog = page.locator("#onesignal-slidedown-dialog");
       await dialog.waitFor({ state: "visible", timeout: 60_000 });
+      // "Visible" fires while the dialog is still sliding in from above the
+      // viewport (measured: y = -231 px on mobile). Let it settle, then require
+      // it to be on screen — present-but-off-screen is a failure for a reader.
+      await page.waitForTimeout(2_500);
+      const box = await dialog.boundingBox();
+      assert(
+        box && box.y >= -1 && box.x >= -1 && box.y + box.height <= vp.height + 1 && box.x + box.width <= vp.width + 1,
+        `${vp.name}: the slidedown sits inside the viewport (${box ? `${Math.round(box.x)},${Math.round(box.y)} ${Math.round(box.width)}×${Math.round(box.height)}` : "no box"})`,
+      );
       const message = (await page.locator(".slidedown-body-message").innerText()).trim();
       const allow = (await page.locator("#onesignal-slidedown-allow-button").innerText()).trim();
       const cancel = (await page.locator("#onesignal-slidedown-cancel-button").innerText()).trim();

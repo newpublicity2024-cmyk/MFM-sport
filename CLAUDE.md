@@ -4,6 +4,93 @@ Arabic-language Moroccan football news site. Next.js 16 (App Router) + Payload C
 
 ---
 
+## Session state — OneSignal web push for new articles (24 November 2026)
+
+Branch `feat/onesignal-article-push`, **committed locally, not pushed** — the
+push was refused by the session's permission classifier and needs the owner's
+yes. Owner asked: notify readers of every new article via OneSignal; they had
+pasted a OneSignal key into `.env.local`. Operator doc:
+`docs/push-notifications.md`. Ledger: `.unlazy/GATES-onesignal-push.md`.
+
+### Found
+
+- The pasted key (`onesignal_api = …` in `.env.local`) is an **Organization**
+  key (`os_v2_org_…`): it cannot send notifications, but can list/create apps
+  and mint keys across the whole org. **Its value was printed into the
+  24 November session transcript** (a redaction regex expected `NAME=value`
+  without spaces) — rotate it in OneSignal once setup is done. Never put it in
+  Vercel.
+- The org has four apps (also Attahadi, challenge.ma, MFM Radio). Ours:
+  **`mfmsport.ma` = `a32a8dec-858d-40eb-98d2-b6e447b78a34`**, created 2019 by
+  the WordPress plugin, origin `https://www.mfmsport.ma`, **1,364 messageable**
+  of 40,483 players. Dashboard integration kind is still `wordpress`, which
+  SDK v16 treats exactly like `custom` (init options in code win) — read in
+  `OneSignalSDK.page.es6.js`: `case "custom": case "wordpress": return
+  {configuration: 1}`. Every dashboard prompt is disabled; the welcome
+  notification is on and English → overridden in code.
+- The WordPress plugin registered its worker at **scope `/`** (Wayback,
+  March 2025). The new worker is `/OneSignalSDKWorker.js` at scope `/`, so a
+  returning subscriber's registration is updated, not duplicated. **Do not move
+  the worker or change its scope** — a second scope means two subscriptions and
+  every article twice.
+- Publishing rate: 6–15 editorial articles a day (14-day sample), 100 % with a
+  featured image, **0 % with an excerpt** → the notification text is the
+  opening of the body.
+- **Both the Vercel connector and the Vercel CLI have lost access to team
+  `mfm-sport-s-projects`** (connector 403; the CLI login sees only
+  `tomobile360` and `newpublicitys-projects`).
+- Nothing else in the repo reads `VERCEL_ENV` at runtime. The hook requires
+  `VERCEL_ENV === "production"`; if the project's *Automatically expose System
+  Environment Variables* is off, every publish logs `reason: not-production`
+  and nothing is sent. Check `autoExposeSystemEnvs` once access is back.
+
+### What changed (no DDL)
+
+| Area | Change |
+|---|---|
+| Sending | `Articles.afterChange` += `notifyArticlePublished` (after revalidation). `decideArticlePush`: first publish only; `seoTier === "editorial"` only (missing tier fails closed); not under `context.disableRevalidate`/`disablePush`; `VERCEL_ENV === "production"`; key present; `publishedAt` < 12 h. UUIDv5 idempotency key per article → OneSignal drops repeats for 30 days. Sent in `after()` (post-commit, off the Save), 5 s × 2 attempts, cannot fail the save. Arabic re-read (`locale: "ar"`, depth 1, **with `req`** — on a create the row is not committed yet). |
+| Content | `headings`/`contents` carry the same Arabic in `en` (mandatory, and the fallback for French-language browsers) and `ar`; hero image 1200×630; icon `/apple-icon.png`; TTL 24 h; `web_push_topic: article-<id>`; segment `Subscribed Users`. |
+| Subscribing | `<OneSignalLoader>` in `[locale]/(site)/layout.tsx` only (never 404s/admin): plain inline `<script id="onesignal-init">`, origin-guarded to www, SDK fetched after `load` in idle time, Arabic slidedown 15 s into the first page view, Arabic welcome notification. |
+| Config | App ID is a public constant (`ONESIGNAL_APP_ID`, env-overridable). Only secret: `ONESIGNAL_APP_API_KEY`, **Production only**. Without it the site still collects subscribers and sends nothing. |
+
+### Verified so far
+
+G0–G8 met: decision matrix, payload, hook, sender (timeout bound), loader,
+no key literal in the tree (with a planted-key control), `tsc` 5,059 files /
+ESLint 421 files / 0 errors, whole suite 899 tests. Four mutants (tier guard,
+in-transaction `req`, worker scope, TTL) each killed by their gate.
+
+Pre-deploy, a synthetic RTL page served under the production origin in
+Playwright, with the real SDK and the real app config: slidedown on screen
+after 16 s on desktop and mobile, Arabic text exact, `direction: rtl`, no
+OneSignal error, permission left `default`.
+
+**Playwright landmine:** the default headless shell reports
+`Notification.permission === "denied"`, so OneSignal never prompts and a prompt
+check fails for a reason no reader has. Use `channel: "chromium"` (full
+Chromium, new headless; `pnpm exec playwright install chromium`). And
+"visible" fires mid-animation (mobile y = −231 px) — wait, then assert the box
+is inside the viewport.
+
+### Owner's tasks
+
+1. **App API key.** OneSignal → app `mfmsport.ma` → Settings → Keys & IDs →
+   *Add key* (or let a session mint one with the org key — refused by the
+   classifier without an explicit yes). Put it in Vercel → Production only →
+   `ONESIGNAL_APP_API_KEY`, Sensitive; and in `.env.local` for the `live` gate.
+2. **Vercel access** for the connector (`authorize_team_access` link) or the
+   CLI (`vercel login` with an account in the team).
+3. Say yes to push → PR → CI → merge (and a redeploy after the key is added).
+4. **Rotate the Organization key** in OneSignal; delete `onesignal_api` from
+   `.env.local`.
+5. Then: `served` + `prompt --no-route` on production, and `prod-sent --since
+   <deploy instant>` after the next real publish. Never "test" by publishing
+   an article — that notifies every subscriber.
+6. Later, optional: per-article "don't notify" toggle (needs DDL on
+   `articles`); a web app manifest so iOS readers can subscribe.
+
+---
+
 ## Session state — homepage refresh (17 September 2026)
 
 Branch `feat/home-big-four-latest-news-videos`, **not pushed, not deployed**
