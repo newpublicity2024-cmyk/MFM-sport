@@ -73,6 +73,23 @@ push / PR / merge — PR #80.
   Environment Variables* is off, every publish logs `reason: not-production`
   and nothing is sent. Check `autoExposeSystemEnvs` once access is back.
 
+### Live — first real sends (24 November 2026)
+
+PR #80 deployed 15:05:13 UTC (`dpl_4k1k…`), PR #81 (prompt on every visit)
+15:51:48 UTC (`dpl_6Mhv…`). First editorial publishes after that:
+
+| Article | Queued (UTC) | successful | failed | errored | converted |
+|---|---|---|---|---|---|
+| 10122 النص الكامل لقرار … الطاس | 16:16:00 | 1,120 | 239 | 5 | 0 |
+| 10123 الجامعة ترد على قرار "الطاس" | 16:24:49 | 1,120 | 0 | 5 | 1 |
+
+Exactly one notification per article; `[push] article notification sent` once
+each in the logs. **Real reach ≈ 1,120** (Chrome 1,116 + Safari 4): the 239
+failures on the first send were dead WordPress-era endpoints, dropped by
+OneSignal. `verify-push prod-sent` takes its article list from the news
+sitemap **and** the notifications — the news sitemap is cached 15 min
+(`revalidate = 900`, `s-maxage=900`, SWR 3600) and lags new articles.
+
 ### What changed (no DDL)
 
 | Area | Change |
