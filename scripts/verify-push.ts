@@ -658,7 +658,6 @@ async function checkProdSent(args: string[]): Promise<void> {
       date: Date.parse(m[1].match(/<news:publication_date>([^<]+)<\/news:publication_date>/)?.[1] ?? ""),
     }))
     .filter((a) => a.loc && a.date >= since);
-  assert(published.length >= 1, `at least one article was published since the deploy (${published.length}) — otherwise there is nothing to verify yet`);
 
   const res = await fetch(`https://api.onesignal.com/notifications?app_id=${ONESIGNAL_APP_ID}&limit=50&offset=0`, {
     headers: { Authorization: `Key ${key}`, Accept: "application/json" },
@@ -667,21 +666,34 @@ async function checkProdSent(args: string[]): Promise<void> {
   assertEq(res.status, 200, "OneSignal's message list is readable with the App key");
   const list = ((await res.json()) as { notifications?: OsNotification[] }).notifications ?? [];
   const ours = list.filter((n) => n.name?.startsWith("article:") && (n.queued_at ?? 0) * 1000 >= since);
+  assert(published.length + ours.length >= 1, `at least one article was published since the deploy (${published.length} in the sitemap, ${ours.length} notified) — otherwise there is nothing to verify yet`);
 
-  const locs = new Set(published.map((a) => decodePath(a.loc)));
+  // Articles to verify = the news sitemap's ∪ the notified ones. The sitemap
+  // is cached (revalidate 900 + s-maxage 900, SWR 3600), so an article
+  // published minutes ago is legitimately missing from it — measured
+  // 24 Nov 2026: article 10123 notified at 16:24:49, absent at 16:29. Its
+  // notification still has to point at a live article page.
+  const inSitemap = new Set(published.map((a) => decodePath(a.loc)));
+  const articleUrls = new Map(published.map((a) => [decodePath(a.loc), a.loc]));
   for (const n of ours) {
-    assert(n.url && locs.has(decodePath(n.url)), `notification ${n.id} points at an article published since the deploy (${n.url ? decodePath(n.url) : "no url"})`);
+    assert(n.url, `notification ${n.id} carries an article URL`);
+    const path = decodePath(n.url);
+    if (!inSitemap.has(path)) console.log(`  …    ${path}: notified, not in the news sitemap yet (cached ≤ 15 min)`);
+    if (!articleUrls.has(path)) articleUrls.set(path, n.url);
   }
-  for (const a of published) {
-    const hits = ours.filter((n) => n.url && decodePath(n.url) === decodePath(a.loc));
-    assertEq(hits.length, 1, `exactly one notification for ${decodePath(a.loc)}`);
+  const names = ours.map((n) => n.name);
+  assertEq(new Set(names).size, names.length, `no article was notified twice (${names.join(", ")})`);
+
+  for (const [path, url] of articleUrls) {
+    const hits = ours.filter((n) => n.url && decodePath(n.url) === path);
+    assertEq(hits.length, 1, `exactly one notification for ${path}`);
     const n = hits[0];
-    console.log(`  …    ${n.id}: successful=${n.successful} failed=${n.failed} errored=${n.errored} remaining=${n.remaining}`);
+    console.log(`  …    ${n.id} (${n.name}): successful=${n.successful} failed=${n.failed} errored=${n.errored} remaining=${n.remaining}`);
     assert((n.successful ?? 0) >= 1, "…and it reached at least one subscriber");
-    const page = await get(a.loc);
+    const page = await get(url);
     assertEq(page.status, 200, "…and the article it links to answers 200");
   }
-  console.log(`PROD SENT GATE OK (${published.length} article(s), ${ours.length} notification(s))`);
+  console.log(`PROD SENT GATE OK (${articleUrls.size} article(s), ${ours.length} notification(s))`);
 }
 
 // ---------------------------------------------------------------------------
